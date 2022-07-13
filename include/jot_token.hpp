@@ -20,6 +20,7 @@ enum TokenKind {
     FalseKeyword,
     NullKeyword,
 
+    Dot,
     Comma,
     Colon,
     Semicolon,
@@ -78,6 +79,7 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::FalseKeyword, "False"},
     {TokenKind::NullKeyword, "Null"},
     
+    {TokenKind::Dot, "Dot ."},
     {TokenKind::Comma, "Comma ,"},
     {TokenKind::Colon, "Colon :"},
     {TokenKind::Semicolon, "Semicolon ;"},
@@ -109,8 +111,8 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::CloseParen, ")"},
     {TokenKind::OpenBracket, "["},
     {TokenKind::CloseBracket, "]"},
-    {TokenKind::OpenBrace, "{",
-    {TokenKind::CloseBrace, "{",
+    {TokenKind::OpenBrace, "{"},
+    {TokenKind::CloseBrace, "{"},
     
     {TokenKind::Symbol, "Symbol"},
     {TokenKind::String, "String"},
