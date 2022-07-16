@@ -2,6 +2,7 @@
 
 #include <string> 
 #include <unordered_map>
+#include <unordered_set>
 
 enum TokenKind {
     LoadKeyword,
@@ -140,6 +141,13 @@ static std::unordered_map<std::string, TokenKind> language_keywords = {
     {"null", TokenKind::NullKeyword}, 
 };
 
+static std::unordered_set<TokenKind> unary_operators {
+    TokenKind::Minus,
+    TokenKind::Bang,
+    TokenKind::Star,
+    TokenKind::Address,
+};
+
 class TokenSpan {
 public:
     TokenSpan(std::string file, size_t l, size_t cs, size_t cd)
@@ -176,6 +184,10 @@ public:
     bool is_invalid() { return kind == TokenKind::Invalid; }
 
     bool is_end_of_file() { return kind == TokenKind::EndOfFile; }
+
+    bool is_unary_operator() {
+        return unary_operators.find(kind) != unary_operators.end();
+    }
 
 private:
     TokenKind kind;

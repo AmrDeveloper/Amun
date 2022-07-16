@@ -1,5 +1,4 @@
 #include "../include/jot_tokenizer.hpp"
-#include "../include/jot_token.hpp"
 
 #include <iostream>
 
@@ -134,23 +133,12 @@ Token JotTokenizer::consume_symbol() {
     }
     auto kind = language_keywords[literal];
     return build_token(kind, literal);
-
 }
 
 Token JotTokenizer::consume_number() {
     auto kind = TokenKind::Integer;
     while (is_digit(peek())) {
         advance();
-    }
-
-    if (peek() == '.' && is_digit(peek_next())) {
-        kind = TokenKind::Float;
-        
-        advance();
-
-        while (is_digit(peek())) {
-            advance();
-        }
     }
 
     size_t len = current_position - start_position + 1;
@@ -176,7 +164,6 @@ Token JotTokenizer::consume_string() {
 }
 
 Token JotTokenizer::consume_character() {
-    advance();
     char c = peek();
     advance();
 
