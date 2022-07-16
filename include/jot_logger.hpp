@@ -1,6 +1,6 @@
 #pragma once
 
-#include "jot_color.h"
+#include "jot_color.hpp"
 
 #include <unordered_map>
 
