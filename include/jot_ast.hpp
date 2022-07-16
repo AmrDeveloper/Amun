@@ -13,7 +13,7 @@ class Statement {
 
 class Expression {
 public:
-    virtual TypeNode get_type_node() = 0;
+    virtual std::shared_ptr<TypeNode> get_type_node() = 0;
 };
 
 class CompilationUnit {
@@ -40,49 +40,49 @@ private:
 
 class Parameter {
 public:
-    Parameter(Token name, TypeNode type) : name(name), type(type) {}
+    Parameter(Token name, std::shared_ptr<TypeNode> type) : name(name), type(type) {}
 
     Token get_name() { return name; }
 
-    TypeNode get_type() { return type; }
+    std::shared_ptr<TypeNode> get_type() { return type; }
 
 private:
     Token name;
-    TypeNode type;
+    std::shared_ptr<TypeNode> type;
 };
 
 class FieldDeclaration : public Statement {
 public:
-    FieldDeclaration(Token name, TypeNode type, std::shared_ptr<Expression> value)
+    FieldDeclaration(Token name, std::shared_ptr<TypeNode> type, std::shared_ptr<Expression> value)
         : name(name), type(type), value(value) {}
 
     Token get_name() { return name; }
 
-    TypeNode get_type() { return type; }
+    std::shared_ptr<TypeNode> get_type() { return type; }
 
     std::shared_ptr<Expression> get_value() { return value; }
 
 private:
     Token name;
-    TypeNode type;
+    std::shared_ptr<TypeNode> type;
     std::shared_ptr<Expression> value;
 };
 
 class FunctionPrototype : public Statement {
 public:
-    FunctionPrototype(Token name, std::vector<std::shared_ptr<Parameter>> parameters, TypeNode return_type) 
+    FunctionPrototype(Token name, std::vector<std::shared_ptr<Parameter>> parameters, std::shared_ptr<TypeNode> return_type)
         : name(name), parameters(parameters), return_type(return_type) {}
 
     Token get_name() { return name; }
 
     std::vector<std::shared_ptr<Parameter>> get_parameters() { return parameters; }
 
-    TypeNode get_return_type() { return return_type; }
+    std::shared_ptr<TypeNode> get_return_type() { return return_type; }
 
 private:
     Token name;
     std::vector<std::shared_ptr<Parameter>> parameters;
-    TypeNode return_type;
+    std::shared_ptr<TypeNode> return_type;
 };
 
 class FunctionDeclaration : public Statement {
@@ -147,7 +147,7 @@ public:
 
     std::shared_ptr<Expression> get_expression() { return expression; }
 
-    TypeNode get_type_node() override { return expression->get_type_node(); }
+    std::shared_ptr<TypeNode> get_type_node() override { return expression->get_type_node(); }
 private:
     Token position;
     std::shared_ptr<Expression> expression;
@@ -164,7 +164,7 @@ public:
 
     std::shared_ptr<Expression> get_left() { return left; }
 
-    TypeNode get_type_node() override { return right->get_type_node(); }
+    std::shared_ptr<TypeNode> get_type_node() override { return right->get_type_node(); }
 
 private:
     std::shared_ptr<Expression> left;
@@ -181,7 +181,7 @@ public:
 
     std::shared_ptr<Expression> get_right() { return right; }
 
-    TypeNode get_type_node() override { return right->get_type_node(); }
+    std::shared_ptr<TypeNode> get_type_node() override { return right->get_type_node(); }
 
 private:
     Token operator_token;
@@ -199,7 +199,7 @@ public:
 
     std::vector<std::shared_ptr<Expression>> get_arguments() { return arguments; }
 
-    TypeNode get_type_node() override { return callee->get_type_node(); }
+    std::shared_ptr<TypeNode> get_type_node() override { return callee->get_type_node(); }
 
 private:
     Token position;
@@ -210,21 +210,21 @@ private:
 class LiteralExpression : public Expression {
 public:
     LiteralExpression(Token name)
-        : name(name), type(TypeNode(JotNull(), name.get_span())) {}
+        : name(name), type(std::make_shared<AbsoluteTypeNode>(JotNull(), name.get_span())) {}
 
     Token get_name() { return name; }
 
-    TypeNode get_type_node() override { return type; }
+    std::shared_ptr<TypeNode> get_type_node() override { return type; }
 
 private:
     Token name;
-    TypeNode type;
+    std::shared_ptr<AbsoluteTypeNode> type;
 };
 
 class NumberExpression : public Expression {
 public:
     NumberExpression(Token value)
-        : value(value), type(TypeNode(
+        : value(value), type(std::make_shared<AbsoluteTypeNode>(
             JotNumber(value.get_kind() == TokenKind::Integer ?
             NumberKind::Integer64
             : NumberKind::Float64),
@@ -232,52 +232,52 @@ public:
 
     Token get_value() { return value; }
 
-    TypeNode get_type_node() override { return type; }
+    std::shared_ptr<TypeNode> get_type_node() override { return type; }
 
 private:
     Token value;
-    TypeNode type;
+    std::shared_ptr<TypeNode> type;
 };
 
 class CharacterExpression : public Expression {
 public:
     CharacterExpression(Token value)
-        : value(value), type(TypeNode(JotNumber(NumberKind::Integer8), value.get_span())) {}
+        : value(value), type(std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer8), value.get_span())) {}
 
     Token get_value() { return value; }
 
-    TypeNode get_type_node() override { return type; }
+    std::shared_ptr<TypeNode> get_type_node() override { return type; }
 
 private:
     Token value;
-    TypeNode type;
+    std::shared_ptr<TypeNode> type;
 };
 
 class BooleanExpression : public Expression {
 public:
     BooleanExpression(Token value)
-        : value(value), type(TypeNode(JotNumber(NumberKind::Integer1), value.get_span())) {}
+        : value(value), type(std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer1), value.get_span())) {}
 
     Token get_value() { return value; }
 
-    TypeNode get_type_node() override { return type; }
+    std::shared_ptr<TypeNode> get_type_node() override { return type; }
 
 private:
     Token value;
-    TypeNode type;
+    std::shared_ptr<TypeNode> type;
 };
 
 class NullExpression : public Expression {
 public:
     NullExpression(Token value)
-        : value(value), type(TypeNode(JotNull(), value.get_span())) {}
+        : value(value), type(std::make_shared<AbsoluteTypeNode>(JotNull(), value.get_span())) {}
 
     Token get_value() { return value; }
 
-    TypeNode get_type_node() override { return type; }
+    std::shared_ptr<TypeNode> get_type_node() override { return type; }
 
 private:
     Token value;
-    TypeNode type;
+    std::shared_ptr<TypeNode> type;
 };
 

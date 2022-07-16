@@ -56,9 +56,15 @@ private:
 
     std::shared_ptr<Expression> parse_primary_expression();
 
-    TypeNode parse_type();
+    std::shared_ptr<TypeNode> parse_type();
 
-    TypeNode parse_identifier_type();
+    std::shared_ptr<TypeNode> parse_type_with_prefix();
+
+    std::shared_ptr<TypeNode> parse_type_with_postfix();
+
+    std::shared_ptr<TypeNode> parse_primary_type();
+
+    std::shared_ptr<TypeNode> parse_identifier_type();
 
     void advanced_token();
 

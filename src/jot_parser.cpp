@@ -114,7 +114,7 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration() {
 std::shared_ptr<Parameter> JotParser::parse_parameter() {
     jot::logi << "Parse Function Parameter\n";
     Token name = consume_kind(TokenKind::Symbol, "Expect identifier as parameter name.");
-    TypeNode type = parse_type();
+    auto type = parse_type();
     return std::make_shared<Parameter>(name, type);
 }
 
@@ -285,18 +285,73 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
     }
 }
 
-TypeNode JotParser::parse_type() {
-    return parse_identifier_type();
+std::shared_ptr<TypeNode> JotParser::parse_type() {
+    return parse_type_with_prefix();
 }
 
-TypeNode JotParser::parse_identifier_type() {
-    if (is_current_kind(TokenKind::Symbol)) {
-        auto type_name = peek_current();
+std::shared_ptr<TypeNode> JotParser::parse_type_with_prefix() {
+    if (is_current_kind(TokenKind::Star) || is_current_kind(TokenKind::Address)) {
+        Token unary_operator = peek_current();
         advanced_token();
-        return TypeNode(JotNull(), type_name.get_span());
+        auto operand = parse_type_with_prefix();
+        return std::make_shared<UnaryTypeNode>(unary_operator, operand);
+    }
+    return parse_type_with_postfix();
+}
+
+std::shared_ptr<TypeNode> JotParser::parse_type_with_postfix() {
+    auto primary_type = parse_primary_type();
+    // TODO: will used later to support [] and maybe ?
+    return primary_type;
+}
+
+std::shared_ptr<TypeNode> JotParser::parse_primary_type() {
+    if (is_current_kind(TokenKind::Symbol)) {
+        return parse_identifier_type();
     }
     jot::loge << "Expected symbol as type but got " << peek_current().get_kind_literal() << '\n';
     exit(EXIT_FAILURE);
+}
+
+std::shared_ptr<TypeNode> JotParser::parse_identifier_type() {
+    Token symbol_token = consume_kind(TokenKind::Symbol, "Expect identifier as type");
+    std::string type_literal = symbol_token.get_literal();
+
+    if (type_literal == "int16") {
+        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer16), symbol_token.get_span());
+    }
+
+    if (type_literal == "int32") {
+        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer32), symbol_token.get_span());
+    }
+
+    if (type_literal == "int64") {
+        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer64), symbol_token.get_span());
+    }
+
+    if (type_literal == "float32") {
+        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Float32), symbol_token.get_span());
+    }
+
+    if (type_literal == "float64") {
+        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Float64), symbol_token.get_span());
+    }
+
+    if (type_literal == "char" || type_literal == "int8") {
+        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer8), symbol_token.get_span());
+    }
+
+    if (type_literal == "bool") {
+        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer8), symbol_token.get_span());
+    }
+
+    jot::loge << "Unexpected identifier type " << type_literal << '\n';
+    exit(EXIT_FAILURE);
+
+    /**
+     *  TODO: should return a named type node but for now just allow primitive types
+     *  return std::make_shared<NamedTypeNode>(symbol_token);
+     */
 }
 
 void JotParser::advanced_token() {
