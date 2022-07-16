@@ -270,6 +270,14 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
         advanced_token();
         return std::make_shared<LiteralExpression>(peek_previous());
     }
+    case TokenKind::OpenParen: {
+        jot::logi << "Parse Primary Grouping Expression\n";
+        Token position = peek_current();
+        advanced_token();
+        auto expression = parse_expression();
+        assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
+        return std::make_shared<GroupExpression>(position, expression);
+    }
     default: {
         jot::loge << "Unexpected or unsupported expression :" << peek_current().get_kind_literal() << '\n';
         exit(EXIT_FAILURE);

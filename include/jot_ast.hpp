@@ -138,6 +138,21 @@ private:
     std::shared_ptr<Expression> expression;
 };
 
+class GroupExpression : public Expression {
+public:
+    GroupExpression(Token position, std::shared_ptr<Expression> expression)
+        : position(position), expression(expression) {}
+
+    Token get_position() { return position; }
+
+    std::shared_ptr<Expression> get_expression() { return expression; }
+
+    TypeNode get_type_node() override { return expression->get_type_node(); }
+private:
+    Token position;
+    std::shared_ptr<Expression> expression;
+};
+
 class BinaryExpression : public Expression {
 public:
     BinaryExpression(std::shared_ptr<Expression> left, Token token, std::shared_ptr<Expression> right)
