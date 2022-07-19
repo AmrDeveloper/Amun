@@ -190,7 +190,7 @@ TokenSpan JotTokenizer::build_token_span() {
 }
 
 void JotTokenizer::skip_whitespaces() {
-    while (true) {
+    while (is_source_available()) {
         char c = peek();
         switch(c) {
         case ' ':
