@@ -14,6 +14,9 @@ std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit() {
 std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
     jot::logi << "Parse Declaration statement Current " << peek_current().get_literal() << "\n";
     switch (peek_current().get_kind()) {
+    case TokenKind::ExternKeyword: {
+        return parse_external_prototype();
+    }
     case TokenKind::FunKeyword: {
         return parse_function_declaration();
     }
@@ -72,6 +75,14 @@ std::shared_ptr<FieldDeclaration> JotParser::parse_field_declaration() {
     auto value = parse_expression();
     assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after field declaration");
     return std::make_shared<FieldDeclaration>(name, value->get_type_node(), value);
+}
+
+std::shared_ptr<ExternalPrototype> JotParser::parse_external_prototype() {
+    auto external_token = peek_current();
+    advanced_token();
+    auto prototype = parse_function_prototype();
+    assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after external declaration");
+    return std::make_shared<ExternalPrototype>(external_token, prototype);
 }
 
 std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype() {

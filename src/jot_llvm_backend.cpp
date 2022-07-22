@@ -55,6 +55,10 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
     return 0;
 }
 
+std::any JotLLVMBackend::visit(ExternalPrototype *node) {
+    return node->get_prototype()->accept(this);
+}
+
 std::any JotLLVMBackend::visit(FunctionPrototype *node) {
     auto parameters = node->get_parameters();
     std::vector<llvm::Type *> arguments(parameters.size(), llvm_int64_type);

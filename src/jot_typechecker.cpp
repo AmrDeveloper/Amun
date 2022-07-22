@@ -1,5 +1,6 @@
 #include "../include/jot_typechecker.hpp"
 #include "../include/jot_logger.hpp"
+#include "jot_ast_visitor.hpp"
 
 #include <memory>
 
@@ -39,6 +40,10 @@ std::any JotTypeChecker::visit(FieldDeclaration *node) {
     }
 
     return 0;
+}
+
+std::any JotTypeChecker::visit(ExternalPrototype *node) {
+    return node->get_prototype()->accept(this);
 }
 
 std::any JotTypeChecker::visit(FunctionPrototype *node) {
