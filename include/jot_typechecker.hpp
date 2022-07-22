@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 class JotTypeChecker : public TreeVisitor {
-public:
+  public:
     void check_compilation_unit(std::shared_ptr<CompilationUnit> compilation_unit);
 
     std::any visit(BlockStatement *node) override;
@@ -48,6 +48,6 @@ public:
 
     bool is_same_type(std::shared_ptr<JotType> left, std::shared_ptr<JotType> right);
 
-private:
+  private:
     JotSymbolTable symbol_table;
 };

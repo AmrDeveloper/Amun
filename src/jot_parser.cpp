@@ -13,17 +13,18 @@ std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit() {
 std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
     jot::logi << "Parse Declaration statement Current " << peek_current().get_literal() << "\n";
     switch (peek_current().get_kind()) {
-        case TokenKind::FunKeyword: {
-            return parse_function_declaration();
-        }
-        case TokenKind::VarKeyword: {
-            jot::logi << "Parse global Var statement\n";
-            return parse_field_declaration();
-        }
-        default: {
-            jot::loge << "Can't find declaration statement that start with " << peek_current().get_kind_literal() << '\n';
-            exit(EXIT_FAILURE);
-        }
+    case TokenKind::FunKeyword: {
+        return parse_function_declaration();
+    }
+    case TokenKind::VarKeyword: {
+        jot::logi << "Parse global Var statement\n";
+        return parse_field_declaration();
+    }
+    default: {
+        jot::loge << "Can't find declaration statement that start with "
+                  << peek_current().get_kind_literal() << '\n';
+        exit(EXIT_FAILURE);
+    }
     }
 }
 
@@ -73,7 +74,7 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype() {
     jot::logi << "Parse Function Prototype\n";
     assert_kind(TokenKind::FunKeyword, "Expect function keyword.");
     Token name = consume_kind(TokenKind::Symbol, "Expect identifier as function name.");
-    
+
     std::vector<std::shared_ptr<Parameter>> parameters;
     if (is_current_kind(TokenKind::OpenParen)) {
         advanced_token();
@@ -152,9 +153,7 @@ std::shared_ptr<ExpressionStatement> JotParser::parse_expression_statement() {
     return std::make_shared<ExpressionStatement>(expression);
 }
 
-std::shared_ptr<Expression> JotParser::parse_expression() {
-    return parse_equality_expression();
-}
+std::shared_ptr<Expression> JotParser::parse_expression() { return parse_equality_expression(); }
 
 std::shared_ptr<Expression> JotParser::parse_equality_expression() {
     auto expression = parse_comparison_expression();
@@ -170,10 +169,8 @@ std::shared_ptr<Expression> JotParser::parse_equality_expression() {
 
 std::shared_ptr<Expression> JotParser::parse_comparison_expression() {
     auto expression = parse_term_expression();
-    while (is_current_kind(TokenKind::Greater)
-    || is_current_kind(TokenKind::GreaterEqual)
-    || is_current_kind(TokenKind::Smaller)
-    || is_current_kind(TokenKind::SmallerEqual)) {
+    while (is_current_kind(TokenKind::Greater) || is_current_kind(TokenKind::GreaterEqual) ||
+           is_current_kind(TokenKind::Smaller) || is_current_kind(TokenKind::SmallerEqual)) {
         jot::logi << "Parse Comparison Expression\n";
         Token operator_token = peek_current();
         advanced_token();
@@ -185,7 +182,7 @@ std::shared_ptr<Expression> JotParser::parse_comparison_expression() {
 
 std::shared_ptr<Expression> JotParser::parse_term_expression() {
     auto expression = parse_factor_expression();
-    while (is_current_kind(TokenKind::Plus)|| is_current_kind(TokenKind::Minus)) {
+    while (is_current_kind(TokenKind::Plus) || is_current_kind(TokenKind::Minus)) {
         jot::logi << "Parse Term Expression\n";
         Token operator_token = peek_current();
         advanced_token();
@@ -197,9 +194,8 @@ std::shared_ptr<Expression> JotParser::parse_term_expression() {
 
 std::shared_ptr<Expression> JotParser::parse_factor_expression() {
     auto expression = parse_prefix_expression();
-    while (is_current_kind(TokenKind::Star)
-    || is_current_kind(TokenKind::Slash)
-    || is_current_kind(TokenKind::Percent)) {
+    while (is_current_kind(TokenKind::Star) || is_current_kind(TokenKind::Slash) ||
+           is_current_kind(TokenKind::Percent)) {
         jot::logi << "Parse Factor Expression\n";
         Token operator_token = peek_current();
         advanced_token();
@@ -231,12 +227,12 @@ std::shared_ptr<Expression> JotParser::parse_postfix_expression() {
             std::vector<std::shared_ptr<Expression>> arguments;
             while (is_source_available() && !is_current_kind(TokenKind::CloseParen)) {
                 arguments.push_back(parse_expression());
-                if (is_current_kind(TokenKind::Comma)) advanced_token();
+                if (is_current_kind(TokenKind::Comma))
+                    advanced_token();
             }
             assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
             expression = std::make_shared<CallExpression>(position, expression, arguments);
-        }
-        else {
+        } else {
             break;
         }
     }
@@ -273,7 +269,8 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
         jot::logi << "Parse Primary Literal Expression\n";
         Token symbol_token = peek_current();
         advanced_token();
-        return std::make_shared<LiteralExpression>(symbol_token, std::make_shared<JotNamedType>(symbol_token));
+        return std::make_shared<LiteralExpression>(symbol_token,
+                                                   std::make_shared<JotNamedType>(symbol_token));
     }
     case TokenKind::OpenParen: {
         jot::logi << "Parse Primary Grouping Expression\n";
@@ -284,15 +281,14 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
         return std::make_shared<GroupExpression>(position, expression);
     }
     default: {
-        jot::loge << "Unexpected or unsupported expression :" << peek_current().get_kind_literal() << '\n';
+        jot::loge << "Unexpected or unsupported expression :" << peek_current().get_kind_literal()
+                  << '\n';
         exit(EXIT_FAILURE);
     }
     }
 }
 
-std::shared_ptr<JotType> JotParser::parse_type() {
-    return parse_type_with_prefix();
-}
+std::shared_ptr<JotType> JotParser::parse_type() { return parse_type_with_prefix(); }
 
 std::shared_ptr<JotType> JotParser::parse_type_with_prefix() {
     if (is_current_kind(TokenKind::Star) || is_current_kind(TokenKind::Address)) {
@@ -369,31 +365,19 @@ void JotParser::advanced_token() {
     next_token = tokenizer->scan_next_token();
 }
 
-Token JotParser::peek_previous() {
-    return previous_token.value();
-}
+Token JotParser::peek_previous() { return previous_token.value(); }
 
-Token JotParser::peek_current() {
-    return current_token.value();
-}
+Token JotParser::peek_current() { return current_token.value(); }
 
-Token JotParser::peek_next() {
-    return next_token.value();
-}
+Token JotParser::peek_next() { return next_token.value(); }
 
-bool JotParser::is_previous_kind(TokenKind kind) {
-    return peek_previous().get_kind() == kind;
-}
+bool JotParser::is_previous_kind(TokenKind kind) { return peek_previous().get_kind() == kind; }
 
-bool JotParser::is_current_kind(TokenKind kind) {
-    return peek_current().get_kind() == kind;
-}
+bool JotParser::is_current_kind(TokenKind kind) { return peek_current().get_kind() == kind; }
 
-bool JotParser::is_next_kind(TokenKind kind) {
-    return peek_next().get_kind() == kind;
-}
+bool JotParser::is_next_kind(TokenKind kind) { return peek_next().get_kind() == kind; }
 
-Token JotParser::consume_kind(TokenKind kind, const char* message) {
+Token JotParser::consume_kind(TokenKind kind, const char *message) {
     if (is_current_kind(kind)) {
         advanced_token();
         return previous_token.value();
@@ -402,7 +386,7 @@ Token JotParser::consume_kind(TokenKind kind, const char* message) {
     exit(EXIT_FAILURE);
 }
 
-void JotParser::assert_kind(TokenKind kind, const char* message) {
+void JotParser::assert_kind(TokenKind kind, const char *message) {
     if (is_current_kind(kind)) {
         advanced_token();
         return;
@@ -411,6 +395,4 @@ void JotParser::assert_kind(TokenKind kind, const char* message) {
     exit(EXIT_FAILURE);
 }
 
-bool JotParser::is_source_available() {
-    return !peek_current().is_end_of_file();
-}
+bool JotParser::is_source_available() { return !peek_current().is_end_of_file(); }

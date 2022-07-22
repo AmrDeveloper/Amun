@@ -1,11 +1,12 @@
 #include "../include/jot_files.hpp"
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 std::string read_file_content(const char *file_path) {
     std::ifstream ifStream(file_path);
-    std::string content((std::istreambuf_iterator<char>(ifStream)), (std::istreambuf_iterator<char>()));
+    std::string content((std::istreambuf_iterator<char>(ifStream)),
+                        (std::istreambuf_iterator<char>()));
     return content;
 }
 

@@ -36,7 +36,8 @@ static auto llvm_void_type = llvm::Type::getVoidTy(llvm_context);
 
 class JotLLVMBackend : public TreeVisitor {
   public:
-    std::unique_ptr<llvm::Module> compile(std::string module_name, std::shared_ptr<CompilationUnit> compilation_unit);
+    std::unique_ptr<llvm::Module> compile(std::string module_name,
+                                          std::shared_ptr<CompilationUnit> compilation_unit);
 
     std::any visit(BlockStatement *node) override;
 
@@ -74,7 +75,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Value *llvm_number_value(std::string value_litearl, NumberKind size);
 
-    llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function, const std::string var_name, llvm::Type *type);
+    llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function,
+                                                const std::string var_name, llvm::Type *type);
 
     llvm::Function *lookup_function(std::string name);
 };

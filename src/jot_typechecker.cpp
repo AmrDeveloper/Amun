@@ -7,13 +7,13 @@ void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> com
         for (auto &statement : statements) {
             statement->accept(this);
         }
-    } catch(const std::bad_any_cast& e) {
+    } catch (const std::bad_any_cast &e) {
         std::cout << e.what() << '\n';
     }
 }
 
 std::any JotTypeChecker::visit(BlockStatement *node) {
-    for (auto& statement : node->get_nodes()) {
+    for (auto &statement : node->get_nodes()) {
         statement->accept(this);
     }
     return 0;
@@ -24,7 +24,8 @@ std::any JotTypeChecker::visit(FieldDeclaration *node) {
     auto right_type = std::any_cast<std::shared_ptr<JotType>>(node->get_value()->accept(this));
 
     if (!is_same_type(left_type, right_type)) {
-        jot::loge << "Field type and value must be the same type expect " << left_type->type_literal() << " but got " << right_type->type_literal() << '\n';
+        jot::loge << "Field type and value must be the same type expect "
+                  << left_type->type_literal() << " but got " << right_type->type_literal() << '\n';
         exit(1);
     }
 
@@ -41,7 +42,7 @@ std::any JotTypeChecker::visit(FieldDeclaration *node) {
 std::any JotTypeChecker::visit(FunctionPrototype *node) {
     auto name = node->get_name();
     std::vector<std::shared_ptr<JotType>> parameters;
-    for (auto& parameter : node->get_parameters()) {
+    for (auto &parameter : node->get_parameters()) {
         parameters.push_back(parameter->get_type());
     }
     auto return_type = node->get_return_type();
@@ -64,7 +65,8 @@ std::any JotTypeChecker::visit(FunctionDeclaration *node) {
 std::any JotTypeChecker::visit(WhileStatement *node) {
     auto left_type = std::any_cast<std::shared_ptr<JotType>>(node->get_condition()->accept(this));
     if (!is_number_type(left_type)) {
-        jot::loge << "While condition mush be a number but got " << left_type->type_literal() << '\n';
+        jot::loge << "While condition mush be a number but got " << left_type->type_literal()
+                  << '\n';
         exit(1);
     }
     node->get_body()->accept(this);
@@ -92,10 +94,12 @@ std::any JotTypeChecker::visit(BinaryExpression *node) {
     bool is_right_number = is_number_type(right_type);
     if (!is_left_number || !is_right_number) {
         if (!is_left_number) {
-            jot::loge << "Expected binary left to be number but got " << left_type->type_literal() << '\n';
+            jot::loge << "Expected binary left to be number but got " << left_type->type_literal()
+                      << '\n';
         }
         if (!is_right_number) {
-            jot::loge << "Expected binary right to be number but got " << right_type->type_literal() << '\n';
+            jot::loge << "Expected binary right to be number but got " << right_type->type_literal()
+                      << '\n';
         }
         exit(1);
     }
@@ -109,23 +113,27 @@ std::any JotTypeChecker::visit(UnaryExpression *node) {
 
     if (unary_operator == TokenKind::Star) {
         if (is_pointer_type(left_type)) {
-            return std::make_shared<JotPointerType>(left_type->get_type_token(), left_type);;
+            return std::make_shared<JotPointerType>(left_type->get_type_token(), left_type);
+            ;
         } else {
-            jot::loge << "expect unary operator `*` right node to be pointer but got " << left_type->type_literal() << '\n';
+            jot::loge << "expect unary operator `*` right node to be pointer but got "
+                      << left_type->type_literal() << '\n';
             exit(1);
         }
     } else {
         if (is_number_type(left_type)) {
             return left_type;
         } else {
-            jot::loge << "expect unary expression to be number but got " << left_type->type_literal() << '\n';
+            jot::loge << "expect unary expression to be number but got "
+                      << left_type->type_literal() << '\n';
             exit(1);
         }
     }
 }
 
 std::any JotTypeChecker::visit(CallExpression *node) {
-    if (std::shared_ptr<LiteralExpression> literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee())) {
+    if (std::shared_ptr<LiteralExpression> literal =
+            std::dynamic_pointer_cast<LiteralExpression>(node->get_callee())) {
         auto name = literal->get_name().get_literal();
         if (symbol_table.is_defined(name)) {
             auto value = symbol_table.lookup(name);
@@ -133,19 +141,23 @@ std::any JotTypeChecker::visit(CallExpression *node) {
                 auto parameters = type->get()->get_parameters();
                 auto arguments = node->get_arguments();
                 if (parameters.size() != arguments.size()) {
-                    jot::loge << "Invalid number of arguments " << name << " expect " << parameters.size() << " got " << arguments.size() << '\n';
+                    jot::loge << "Invalid number of arguments " << name << " expect "
+                              << parameters.size() << " got " << arguments.size() << '\n';
                     exit(1);
                 }
 
                 std::vector<std::shared_ptr<JotType>> arguments_types;
-                for (auto& argument : arguments) {
-                    arguments_types.push_back(std::any_cast<std::shared_ptr<JotType>>(argument->accept(this)));
+                for (auto &argument : arguments) {
+                    arguments_types.push_back(
+                        std::any_cast<std::shared_ptr<JotType>>(argument->accept(this)));
                 }
 
                 size_t arguments_size = arguments_types.size();
-                for (size_t i = 0 ; i < arguments_size; i++) {
+                for (size_t i = 0; i < arguments_size; i++) {
                     if (!is_same_type(parameters[i], arguments_types[i])) {
-                        jot::loge << "Argument type didn't match parameter type expect " << parameters[i]->type_literal() << " got " << arguments_types[i]->type_literal() << '\n';
+                        jot::loge << "Argument type didn't match parameter type expect "
+                                  << parameters[i]->type_literal() << " got "
+                                  << arguments_types[i]->type_literal() << '\n';
                         exit(1);
                     }
                 }
@@ -177,21 +189,13 @@ std::any JotTypeChecker::visit(LiteralExpression *node) {
     }
 }
 
-std::any JotTypeChecker::visit(NumberExpression *node) {
-    return node->get_type_node();
-}
+std::any JotTypeChecker::visit(NumberExpression *node) { return node->get_type_node(); }
 
-std::any JotTypeChecker::visit(CharacterExpression *node) {
-    return node->get_type_node();
-}
+std::any JotTypeChecker::visit(CharacterExpression *node) { return node->get_type_node(); }
 
-std::any JotTypeChecker::visit(BooleanExpression *node) {
-    return node->get_type_node();
-}
+std::any JotTypeChecker::visit(BooleanExpression *node) { return node->get_type_node(); }
 
-std::any JotTypeChecker::visit(NullExpression *node) {
-    return node->get_type_node();
-}
+std::any JotTypeChecker::visit(NullExpression *node) { return node->get_type_node(); }
 
 bool JotTypeChecker::is_number_type(std::shared_ptr<JotType> type) {
     return type->get_type_kind() == TypeKind::Number;

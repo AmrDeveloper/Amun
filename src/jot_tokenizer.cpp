@@ -5,7 +5,7 @@
 std::vector<Token> JotTokenizer::scan_all_tokens() {
     std::vector<Token> tokens;
     while (is_source_available()) {
-       tokens.push_back(scan_next_token());
+        tokens.push_back(scan_next_token());
     }
     tokens.push_back(build_token(TokenKind::EndOfFile));
     return tokens;
@@ -26,28 +26,28 @@ Token JotTokenizer::scan_next_token() {
     column_current = column_start;
 
     switch (c) {
-    case '(': return build_token(TokenKind::OpenParen); 
-    case ')': return build_token(TokenKind::CloseParen); 
-    case '[': return build_token(TokenKind::OpenBracket); 
-    case ']': return build_token(TokenKind::CloseBracket); 
-    case '{': return build_token(TokenKind::OpenBrace); 
+    case '(': return build_token(TokenKind::OpenParen);
+    case ')': return build_token(TokenKind::CloseParen);
+    case '[': return build_token(TokenKind::OpenBracket);
+    case ']': return build_token(TokenKind::CloseBracket);
+    case '{': return build_token(TokenKind::OpenBrace);
     case '}': return build_token(TokenKind::CloseBrace);
-    case '.': return build_token(TokenKind::Dot); 
-    case ',': return build_token(TokenKind::Comma); 
-    case ':': return build_token(TokenKind::Colon); 
-    case ';': return build_token(TokenKind::Semicolon); 
+    case '.': return build_token(TokenKind::Dot);
+    case ',': return build_token(TokenKind::Comma);
+    case ':': return build_token(TokenKind::Colon);
+    case ';': return build_token(TokenKind::Semicolon);
     case '&': return build_token(TokenKind::Address);
 
-    case '=': return build_token(match('=') ? TokenKind::EqualEqual : TokenKind::Equal); 
-    case '!': return build_token(match('=') ? TokenKind::BangEqual : TokenKind::Bang); 
-    case '>': return build_token(match('=') ? TokenKind::GreaterEqual : TokenKind::Greater); 
-    case '<': return build_token(match('=') ? TokenKind::SmallerEqual : TokenKind::Smaller); 
-    case '+': return build_token(match('=') ? TokenKind::PlusEqual : TokenKind::Plus); 
-    case '-': return build_token(match('=') ? TokenKind::MinusEqual : TokenKind::Minus); 
-    case '*': return build_token(match('=') ? TokenKind::StarEqual : TokenKind::Star); 
-    case '/': return build_token(match('=') ? TokenKind::SlashEqual : TokenKind::Slash); 
-    case '%': return build_token(match('=') ? TokenKind::PercentEqual : TokenKind::Percent); 
-    
+    case '=': return build_token(match('=') ? TokenKind::EqualEqual : TokenKind::Equal);
+    case '!': return build_token(match('=') ? TokenKind::BangEqual : TokenKind::Bang);
+    case '>': return build_token(match('=') ? TokenKind::GreaterEqual : TokenKind::Greater);
+    case '<': return build_token(match('=') ? TokenKind::SmallerEqual : TokenKind::Smaller);
+    case '+': return build_token(match('=') ? TokenKind::PlusEqual : TokenKind::Plus);
+    case '-': return build_token(match('=') ? TokenKind::MinusEqual : TokenKind::Minus);
+    case '*': return build_token(match('=') ? TokenKind::StarEqual : TokenKind::Star);
+    case '/': return build_token(match('=') ? TokenKind::SlashEqual : TokenKind::Slash);
+    case '%': return build_token(match('=') ? TokenKind::PercentEqual : TokenKind::Percent);
+
     case 'A':
     case 'B':
     case 'C':
@@ -115,7 +115,7 @@ Token JotTokenizer::scan_next_token() {
     case '6':
     case '7':
     case '8':
-    case '9': return consume_number(); 
+    case '9': return consume_number();
 
     case '\0': return build_token(TokenKind::EndOfFile);
     default: return build_token(TokenKind::Invalid, "Unexpected character");
@@ -148,7 +148,8 @@ Token JotTokenizer::consume_number() {
 
 Token JotTokenizer::consume_string() {
     while (is_source_available() && peek() != '"') {
-        if (peek() == '\n') line_number++;
+        if (peek() == '\n')
+            line_number++;
         advance();
     }
 
@@ -170,15 +171,13 @@ Token JotTokenizer::consume_character() {
     if (peek() != '\'') {
         return build_token(TokenKind::Invalid, "Unterminated character");
     }
-    
+
     advance();
 
     return build_token(TokenKind::Character, std::string(1, c));
 }
 
-Token JotTokenizer::build_token(TokenKind kind) {
-    return build_token(kind, "");
-}
+Token JotTokenizer::build_token(TokenKind kind) { return build_token(kind, ""); }
 
 Token JotTokenizer::build_token(TokenKind kind, std::string literal) {
     TokenSpan span = build_token_span();
@@ -192,19 +191,16 @@ TokenSpan JotTokenizer::build_token_span() {
 void JotTokenizer::skip_whitespaces() {
     while (is_source_available()) {
         char c = peek();
-        switch(c) {
+        switch (c) {
         case ' ':
         case '\r':
-        case '\t':
-            advance();
-            break;
+        case '\t': advance(); break;
         case '\n':
             line_number++;
             advance();
             column_current = 0;
             break;
-        default:
-            return;
+        default: return;
         }
     }
 }
@@ -227,30 +223,23 @@ char JotTokenizer::advance() {
     return '\0';
 }
 
-char JotTokenizer::peek() {
-    return source_code[current_position];
-}
+char JotTokenizer::peek() { return source_code[current_position]; }
 
 char JotTokenizer::peek_next() {
     if (current_position + 1 < source_code_length) {
-       return source_code[current_position + 1];
+        return source_code[current_position + 1];
     }
     return '\0';
 }
 
-bool JotTokenizer::is_digit(char c) {
-    return '9' >= c && c >= '0';
-}
+bool JotTokenizer::is_digit(char c) { return '9' >= c && c >= '0'; }
 
 bool JotTokenizer::is_alpha(char c) {
-    if ('z' >= c && c >= 'a') return true;
+    if ('z' >= c && c >= 'a')
+        return true;
     return 'Z' >= c && c >= 'A';
 }
 
-bool JotTokenizer::is_alpha_num(char c) {
-    return is_alpha(c) || is_digit(c);
-}
+bool JotTokenizer::is_alpha_num(char c) { return is_alpha(c) || is_digit(c); }
 
-bool JotTokenizer::is_source_available() {
-    return current_position < source_code_length;
-}
+bool JotTokenizer::is_source_available() { return current_position < source_code_length; }

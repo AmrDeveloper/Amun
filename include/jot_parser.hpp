@@ -1,24 +1,23 @@
 #pragma once
 
+#include "jot_ast.hpp"
 #include "jot_parser.hpp"
 #include "jot_token.hpp"
 #include "jot_tokenizer.hpp"
-#include "jot_ast.hpp"
 
 #include <memory>
 #include <optional>
 
 class JotParser {
-public:
-    explicit JotParser(std::unique_ptr<JotTokenizer> tokenizer): tokenizer(std::move(tokenizer)) {
+  public:
+    explicit JotParser(std::unique_ptr<JotTokenizer> tokenizer) : tokenizer(std::move(tokenizer)) {
         advanced_token();
         advanced_token();
     }
 
     std::shared_ptr<CompilationUnit> parse_compilation_unit();
 
-private:
-
+  private:
     std::shared_ptr<Statement> parse_declaration_statement();
 
     std::shared_ptr<Statement> parse_statement();
@@ -74,14 +73,14 @@ private:
     Token peek_next();
 
     bool is_previous_kind(TokenKind);
-    
+
     bool is_current_kind(TokenKind);
-    
+
     bool is_next_kind(TokenKind);
 
-    Token consume_kind(TokenKind, const char*);
+    Token consume_kind(TokenKind, const char *);
 
-    void assert_kind(TokenKind, const char*);
+    void assert_kind(TokenKind, const char *);
 
     bool is_source_available();
 
@@ -90,4 +89,3 @@ private:
     std::optional<Token> current_token;
     std::optional<Token> next_token;
 };
-

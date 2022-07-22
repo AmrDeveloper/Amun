@@ -17,7 +17,7 @@ enum TypeKind {
 };
 
 class JotType {
-public:
+  public:
     virtual Token get_type_token() = 0;
     virtual std::string type_literal() = 0;
     virtual TypeKind get_type_kind() = 0;
@@ -35,185 +35,132 @@ enum NumberKind {
 };
 
 class JotNumber : public JotType {
-public:
-    JotNumber(Token token, NumberKind kind)
-        : token(token), kind(kind) {}
+  public:
+    JotNumber(Token token, NumberKind kind) : token(token), kind(kind) {}
 
     NumberKind get_kind() { return kind; }
 
-    Token get_type_token() override {
-        return token;
-    }
+    Token get_type_token() override { return token; }
 
-    std::string type_literal() override {
-        return token.get_literal();
-    }
+    std::string type_literal() override { return token.get_literal(); }
 
-    TypeKind get_type_kind() override {
-        return TypeKind::Number;
-    }
+    TypeKind get_type_kind() override { return TypeKind::Number; }
 
-    TokenSpan get_type_position() override {
-        return token.get_span();
-    }
+    TokenSpan get_type_position() override { return token.get_span(); }
 
-private:
+  private:
     Token token;
     NumberKind kind;
 };
 
 class JotPointerType : public JotType {
-public:
+  public:
     JotPointerType(Token token, std::shared_ptr<JotType> point_to)
         : token(token), point_to(point_to) {}
 
     std::shared_ptr<JotType> get_point_to() { return point_to; }
 
-    Token get_type_token() override {
-        return token;
-    }
+    Token get_type_token() override { return token; }
 
-    std::string type_literal() override {
-        return "*" + token.get_literal();
-    }
+    std::string type_literal() override { return "*" + token.get_literal(); }
 
-    TypeKind get_type_kind() override {
-        return TypeKind::Pointer;
-    }
+    TypeKind get_type_kind() override { return TypeKind::Pointer; }
 
-    TokenSpan get_type_position() override {
-        return token.get_span();
-    }
-private:
+    TokenSpan get_type_position() override { return token.get_span(); }
+
+  private:
     Token token;
     std::shared_ptr<JotType> point_to;
 };
 
 class JotFunctionType : public JotType {
-public:
-    JotFunctionType(Token name, std::vector<std::shared_ptr<JotType>> parameters,std::shared_ptr<JotType> return_type)
+  public:
+    JotFunctionType(Token name, std::vector<std::shared_ptr<JotType>> parameters,
+                    std::shared_ptr<JotType> return_type)
         : name(name), parameters(parameters), return_type(return_type) {}
 
     std::vector<std::shared_ptr<JotType>> get_parameters() { return parameters; }
 
     std::shared_ptr<JotType> get_return_type() { return return_type; }
 
-    Token get_type_token() override {
-        return name;
-    }
+    Token get_type_token() override { return name; }
 
-    std::string type_literal() override {
-        return name.get_literal();
-    }
+    std::string type_literal() override { return name.get_literal(); }
 
-    TypeKind get_type_kind() override {
-        return TypeKind::Function;
-    }
+    TypeKind get_type_kind() override { return TypeKind::Function; }
 
-    TokenSpan get_type_position() override {
-        return name.get_span();
-    }
+    TokenSpan get_type_position() override { return name.get_span(); }
 
-private:
+  private:
     Token name;
     std::vector<std::shared_ptr<JotType>> parameters;
     std::shared_ptr<JotType> return_type;
 };
 
 class JotUnaryType : public JotType {
-public:
+  public:
     JotUnaryType(Token unary_operator, std::shared_ptr<JotType> type)
         : unary_operator(unary_operator), type(type) {}
 
-    Token get_type_token() override {
-        return type->get_type_token();
-    }
+    Token get_type_token() override { return type->get_type_token(); }
 
     std::string type_literal() override {
         return unary_operator.get_kind_literal() + type->type_literal();
     }
 
-    TypeKind get_type_kind() override {
-        return TypeKind::Unary;
-    }
+    TypeKind get_type_kind() override { return TypeKind::Unary; }
 
-    TokenSpan get_type_position() override {
-        return unary_operator.get_span();
-    }
+    TokenSpan get_type_position() override { return unary_operator.get_span(); }
 
-private:
+  private:
     Token unary_operator;
     std::shared_ptr<JotType> type;
 };
 
 class JotNamedType : public JotType {
-public:
+  public:
     JotNamedType(Token name) : name(name) {}
 
-    Token get_type_token() override {
-        return name;
-    }
+    Token get_type_token() override { return name; }
 
-    std::string type_literal() override {
-        return name.get_literal();
-    }
+    std::string type_literal() override { return name.get_literal(); }
 
-    TypeKind get_type_kind() override {
-        return TypeKind::Named;
-    }
+    TypeKind get_type_kind() override { return TypeKind::Named; }
 
-    TokenSpan get_type_position() override {
-        return name.get_span();
-    }
+    TokenSpan get_type_position() override { return name.get_span(); }
 
-private:
+  private:
     Token name;
 };
 
 class JotVoid : public JotType {
-public:
+  public:
     explicit JotVoid(Token token) : token(token) {}
 
-    Token get_type_token() override {
-        return token;
-    }
+    Token get_type_token() override { return token; }
 
-    std::string type_literal() override {
-        return "void";
-    }
+    std::string type_literal() override { return "void"; }
 
-    TypeKind get_type_kind() override {
-        return TypeKind::Void;
-    }
+    TypeKind get_type_kind() override { return TypeKind::Void; }
 
-    TokenSpan get_type_position() override {
-        return token.get_span();
-    }
+    TokenSpan get_type_position() override { return token.get_span(); }
 
-private:
+  private:
     Token token;
 };
 
 class JotNull : public JotType {
-public:
+  public:
     explicit JotNull(Token token) : token(token) {}
 
-    Token get_type_token() override {
-        return token;
-    }
+    Token get_type_token() override { return token; }
 
-    std::string type_literal() override {
-        return "null";
-    }
+    std::string type_literal() override { return "null"; }
 
-    TypeKind get_type_kind() override {
-        return TypeKind::Null;
-    }
+    TypeKind get_type_kind() override { return TypeKind::Null; }
 
-    TokenSpan get_type_position() override {
-        return token.get_span();
-    }
+    TokenSpan get_type_position() override { return token.get_span(); }
 
-private:
+  private:
     Token token;
 };

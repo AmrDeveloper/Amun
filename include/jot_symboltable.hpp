@@ -1,12 +1,12 @@
 #pragma once
 
 #include <any>
-#include <optional>
-#include <memory>
 #include <map>
+#include <memory>
+#include <optional>
 
 class JotSymbolTable {
-public:
+  public:
     JotSymbolTable() {}
 
     JotSymbolTable(std::optional<std::shared_ptr<JotSymbolTable>> parent)
@@ -18,7 +18,7 @@ public:
 
     std::any lookup(std::string name);
 
-private:
+  private:
     std::map<std::string, std::any> environment;
     std::optional<std::shared_ptr<JotSymbolTable>> parent_symbol_table;
 };

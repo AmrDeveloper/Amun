@@ -12,7 +12,7 @@ class ReturnStatement;
 class ExpressionStatement;
 
 class StatementVisitor {
-public:
+  public:
     virtual std::any visit(BlockStatement *node) = 0;
 
     virtual std::any visit(FieldDeclaration *node) = 0;
@@ -39,7 +39,7 @@ class BooleanExpression;
 class NullExpression;
 
 class ExpressionVisitor {
-public:
+  public:
     virtual std::any visit(GroupExpression *node) = 0;
 
     virtual std::any visit(BinaryExpression *node) = 0;
@@ -59,6 +59,4 @@ public:
     virtual std::any visit(NullExpression *node) = 0;
 };
 
-class TreeVisitor : public StatementVisitor, public ExpressionVisitor {
-
-};
+class TreeVisitor : public StatementVisitor, public ExpressionVisitor {};
