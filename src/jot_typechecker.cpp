@@ -25,9 +25,9 @@ std::any JotTypeChecker::visit(FieldDeclaration *node) {
     auto left_type = node->get_type();
     auto right_type = node_jot_type(node->get_value()->accept(this));
 
-    if (!is_same_type(left_type, right_type)) {
-        jot::loge << "Field type and value must be the same type expect "
-                  << left_type->type_literal() << " but got " << right_type->type_literal() << '\n';
+    if (!left_type->equals(right_type)) {
+        jot::loge << "Type missmatch expect " << left_type->type_literal() << " but got "
+                  << right_type->type_literal() << '\n';
         exit(1);
     }
 
@@ -230,14 +230,15 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type) {
     return std::any_cast<std::shared_ptr<JotType>>(any_type);
 }
 
-bool JotTypeChecker::is_number_type(std::shared_ptr<JotType> type) {
+bool JotTypeChecker::is_number_type(const std::shared_ptr<JotType> &type) {
     return type->get_type_kind() == TypeKind::Number;
 }
 
-bool JotTypeChecker::is_pointer_type(std::shared_ptr<JotType> type) {
+bool JotTypeChecker::is_pointer_type(const std::shared_ptr<JotType> &type) {
     return type->get_type_kind() == TypeKind::Pointer;
 }
 
-bool JotTypeChecker::is_same_type(std::shared_ptr<JotType> left, std::shared_ptr<JotType> right) {
+bool JotTypeChecker::is_same_type(const std::shared_ptr<JotType> &left,
+                                  const std::shared_ptr<JotType> &right) {
     return left->get_type_kind() == right->get_type_kind();
 }

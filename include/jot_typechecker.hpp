@@ -45,11 +45,11 @@ class JotTypeChecker : public TreeVisitor {
 
     std::shared_ptr<JotType> node_jot_type(std::any any_type);
 
-    bool is_number_type(std::shared_ptr<JotType> type);
+    bool is_number_type(const std::shared_ptr<JotType> &);
 
-    bool is_pointer_type(std::shared_ptr<JotType> type);
+    bool is_pointer_type(const std::shared_ptr<JotType> &);
 
-    bool is_same_type(std::shared_ptr<JotType> left, std::shared_ptr<JotType> right);
+    bool is_same_type(const std::shared_ptr<JotType> &, const std::shared_ptr<JotType> &);
 
   private:
     JotSymbolTable symbol_table;
