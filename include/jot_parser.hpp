@@ -1,6 +1,5 @@
 #pragma once
 
-#include "jot_ast_type.hpp"
 #include "jot_parser.hpp"
 #include "jot_token.hpp"
 #include "jot_tokenizer.hpp"
@@ -56,15 +55,15 @@ private:
 
     std::shared_ptr<Expression> parse_primary_expression();
 
-    std::shared_ptr<TypeNode> parse_type();
+    std::shared_ptr<JotType> parse_type();
 
-    std::shared_ptr<TypeNode> parse_type_with_prefix();
+    std::shared_ptr<JotType> parse_type_with_prefix();
 
-    std::shared_ptr<TypeNode> parse_type_with_postfix();
+    std::shared_ptr<JotType> parse_type_with_postfix();
 
-    std::shared_ptr<TypeNode> parse_primary_type();
+    std::shared_ptr<JotType> parse_primary_type();
 
-    std::shared_ptr<TypeNode> parse_identifier_type();
+    std::shared_ptr<JotType> parse_identifier_type();
 
     void advanced_token();
 

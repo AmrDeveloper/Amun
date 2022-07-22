@@ -1,19 +1,22 @@
 #pragma once
 
-#include "jot_ast_type.hpp"
 #include "jot_token.hpp"
 #include "jot_type.hpp"
+#include "jot_ast_visitor.hpp"
 
 #include <vector>
 #include <memory>
+#include <any>
 
 class Statement {
-
+public:
+    virtual std::any accept(StatementVisitor *visitor) = 0;
 };
 
 class Expression {
 public:
-    virtual std::shared_ptr<TypeNode> get_type_node() = 0;
+    virtual std::shared_ptr<JotType> get_type_node() = 0;
+    virtual std::any accept(ExpressionVisitor *visitor) = 0;
 };
 
 class CompilationUnit {
@@ -29,10 +32,14 @@ private:
 
 class BlockStatement : public Statement {
 public:
-    BlockStatement(std::vector<std::shared_ptr<Statement>> nodes) 
+    BlockStatement(std::vector<std::shared_ptr<Statement>> nodes)
         : nodes(nodes) {}
     
     std::vector<std::shared_ptr<Statement>> get_nodes() { return nodes; }
+
+    std::any accept(StatementVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
 
 private:
     std::vector<std::shared_ptr<Statement>> nodes;
@@ -40,49 +47,61 @@ private:
 
 class Parameter {
 public:
-    Parameter(Token name, std::shared_ptr<TypeNode> type) : name(name), type(type) {}
+    Parameter(Token name, std::shared_ptr<JotType> type) : name(name), type(type) {}
 
     Token get_name() { return name; }
 
-    std::shared_ptr<TypeNode> get_type() { return type; }
+    std::shared_ptr<JotType> get_type() { return type; }
 
 private:
     Token name;
-    std::shared_ptr<TypeNode> type;
+    std::shared_ptr<JotType> type;
 };
 
 class FieldDeclaration : public Statement {
 public:
-    FieldDeclaration(Token name, std::shared_ptr<TypeNode> type, std::shared_ptr<Expression> value)
+    FieldDeclaration(Token name, std::shared_ptr<JotType> type, std::shared_ptr<Expression> value)
         : name(name), type(type), value(value) {}
 
     Token get_name() { return name; }
 
-    std::shared_ptr<TypeNode> get_type() { return type; }
+    void set_type( std::shared_ptr<JotType> resolved_type) { 
+        type = resolved_type;
+    }
+
+    std::shared_ptr<JotType> get_type() { return type; }
 
     std::shared_ptr<Expression> get_value() { return value; }
 
+    std::any accept(StatementVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
+
 private:
     Token name;
-    std::shared_ptr<TypeNode> type;
+    std::shared_ptr<JotType> type;
     std::shared_ptr<Expression> value;
 };
 
 class FunctionPrototype : public Statement {
 public:
-    FunctionPrototype(Token name, std::vector<std::shared_ptr<Parameter>> parameters, std::shared_ptr<TypeNode> return_type)
+    FunctionPrototype(Token name, std::vector<std::shared_ptr<Parameter>> parameters, std::shared_ptr<JotType> return_type)
         : name(name), parameters(parameters), return_type(return_type) {}
 
     Token get_name() { return name; }
 
     std::vector<std::shared_ptr<Parameter>> get_parameters() { return parameters; }
 
-    std::shared_ptr<TypeNode> get_return_type() { return return_type; }
+    std::shared_ptr<JotType> get_return_type() { return return_type; }
+
+    std::any accept(StatementVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
 
 private:
     Token name;
     std::vector<std::shared_ptr<Parameter>> parameters;
-    std::shared_ptr<TypeNode> return_type;
+    std::shared_ptr<JotType> return_type;
 };
 
 class FunctionDeclaration : public Statement {
@@ -93,6 +112,10 @@ public:
     std::shared_ptr<FunctionPrototype> get_prototype() { return prototype; }
 
     std::shared_ptr<Statement> get_body() { return body; }
+
+    std::any accept(StatementVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
 
 private:
     std::shared_ptr<FunctionPrototype> prototype;
@@ -109,6 +132,11 @@ public:
     std::shared_ptr<Expression> get_condition() { return condition; }
 
     std::shared_ptr<Statement> get_body() { return body; }
+
+    std::any accept(StatementVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
+
 private:
     Token position;
     std::shared_ptr<Expression> condition;
@@ -123,6 +151,11 @@ public:
     Token get_position() { return position; }
 
     std::shared_ptr<Expression> return_value() { return value; }
+
+    std::any accept(StatementVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
+
 private:
     Token position;
     std::shared_ptr<Expression> value;
@@ -133,6 +166,10 @@ public:
     ExpressionStatement(std::shared_ptr<Expression> expression) : expression(expression) {}
 
     std::shared_ptr<Expression> get_expression() { return expression; }
+
+    std::any accept(StatementVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
 
 private:
     std::shared_ptr<Expression> expression;
@@ -147,7 +184,12 @@ public:
 
     std::shared_ptr<Expression> get_expression() { return expression; }
 
-    std::shared_ptr<TypeNode> get_type_node() override { return expression->get_type_node(); }
+    std::shared_ptr<JotType> get_type_node() override { return expression->get_type_node(); }
+
+    std::any accept(ExpressionVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
+
 private:
     Token position;
     std::shared_ptr<Expression> expression;
@@ -164,7 +206,11 @@ public:
 
     std::shared_ptr<Expression> get_left() { return left; }
 
-    std::shared_ptr<TypeNode> get_type_node() override { return right->get_type_node(); }
+    std::shared_ptr<JotType> get_type_node() override { return right->get_type_node(); }
+
+    std::any accept(ExpressionVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
 
 private:
     std::shared_ptr<Expression> left;
@@ -181,7 +227,11 @@ public:
 
     std::shared_ptr<Expression> get_right() { return right; }
 
-    std::shared_ptr<TypeNode> get_type_node() override { return right->get_type_node(); }
+    std::shared_ptr<JotType> get_type_node() override { return right->get_type_node(); }
+
+    std::any accept(ExpressionVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
 
 private:
     Token operator_token;
@@ -199,7 +249,11 @@ public:
 
     std::vector<std::shared_ptr<Expression>> get_arguments() { return arguments; }
 
-    std::shared_ptr<TypeNode> get_type_node() override { return callee->get_type_node(); }
+    std::shared_ptr<JotType> get_type_node() override { return callee->get_type_node(); }
+
+    std::any accept(ExpressionVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
 
 private:
     Token position;
@@ -209,75 +263,98 @@ private:
 
 class LiteralExpression : public Expression {
 public:
-    LiteralExpression(Token name)
-        : name(name), type(std::make_shared<AbsoluteTypeNode>(JotNull(), name.get_span())) {}
+    LiteralExpression(Token name, std::shared_ptr<JotType> type)
+        : name(name), type(type) {}
 
     Token get_name() { return name; }
 
-    std::shared_ptr<TypeNode> get_type_node() override { return type; }
+    void set_type( std::shared_ptr<JotType> resolved_type) { 
+        type = resolved_type;
+    }
+
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    std::any accept(ExpressionVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
 
 private:
     Token name;
-    std::shared_ptr<AbsoluteTypeNode> type;
+    std::shared_ptr<JotType> type;
 };
 
 class NumberExpression : public Expression {
 public:
     NumberExpression(Token value)
-        : value(value), type(std::make_shared<AbsoluteTypeNode>(
-            JotNumber(value.get_kind() == TokenKind::Integer ?
+        : value(value), type(std::make_shared<JotNumber>(value,
+            value.get_kind() == TokenKind::Integer ?
             NumberKind::Integer64
-            : NumberKind::Float64),
-            value.get_span())) {}
+            : NumberKind::Float64)) {}
 
     Token get_value() { return value; }
 
-    std::shared_ptr<TypeNode> get_type_node() override { return type; }
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    std::any accept(ExpressionVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
 
 private:
     Token value;
-    std::shared_ptr<TypeNode> type;
+    std::shared_ptr<JotType> type;
 };
 
 class CharacterExpression : public Expression {
 public:
     CharacterExpression(Token value)
-        : value(value), type(std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer8), value.get_span())) {}
+        : value(value), type(std::make_shared<JotNumber>(value, NumberKind::Integer8)) {}
 
     Token get_value() { return value; }
 
-    std::shared_ptr<TypeNode> get_type_node() override { return type; }
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    std::any accept(ExpressionVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
 
 private:
     Token value;
-    std::shared_ptr<TypeNode> type;
+    std::shared_ptr<JotType> type;
 };
 
 class BooleanExpression : public Expression {
 public:
     BooleanExpression(Token value)
-        : value(value), type(std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer1), value.get_span())) {}
+        : value(value), type(std::make_shared<JotNumber>(value, NumberKind::Integer1)) {}
 
     Token get_value() { return value; }
 
-    std::shared_ptr<TypeNode> get_type_node() override { return type; }
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    std::any accept(ExpressionVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
 
 private:
     Token value;
-    std::shared_ptr<TypeNode> type;
+    std::shared_ptr<JotType> type;
 };
 
 class NullExpression : public Expression {
 public:
     NullExpression(Token value)
-        : value(value), type(std::make_shared<AbsoluteTypeNode>(JotNull(), value.get_span())) {}
+        : value(value), type(std::make_shared<JotNull>(value)) {}
 
     Token get_value() { return value; }
 
-    std::shared_ptr<TypeNode> get_type_node() override { return type; }
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    std::any accept(ExpressionVisitor *visitor) override  {
+        return visitor->visit(this);
+    }
 
 private:
     Token value;
-    std::shared_ptr<TypeNode> type;
+    std::shared_ptr<JotType> type;
 };
 

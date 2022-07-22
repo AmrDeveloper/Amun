@@ -7,7 +7,6 @@ std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit() {
         jot::logi << "Parse statement\n";
         tree_nodes.push_back(parse_declaration_statement());
     }
-    jot::logi << "Finish parsing\n";
     return std::make_shared<CompilationUnit>(tree_nodes);
 }
 
@@ -61,10 +60,12 @@ std::shared_ptr<FieldDeclaration> JotParser::parse_field_declaration() {
         auto type = parse_type();
         assert_kind(TokenKind::Equal, "Expect = after variable name.");
         auto value = parse_expression();
+        assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after field declaration");
         return std::make_shared<FieldDeclaration>(name, type, value);
     }
     assert_kind(TokenKind::Equal, "Expect = after variable name.");
     auto value = parse_expression();
+    assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after field declaration");
     return std::make_shared<FieldDeclaration>(name, value->get_type_node(), value);
 }
 
@@ -86,9 +87,7 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype() {
         }
         assert_kind(TokenKind::CloseParen, "Expect ) after function parameters.");
     }
-
     auto return_type = parse_type();
-
     return std::make_shared<FunctionPrototype>(name, parameters, return_type);
 }
 
@@ -123,6 +122,7 @@ std::shared_ptr<BlockStatement> JotParser::parse_block_statement() {
     consume_kind(TokenKind::OpenBrace, "Expect { on the start of block.");
     std::vector<std::shared_ptr<Statement>> statements;
     while (is_source_available() && !is_current_kind(TokenKind::CloseBrace)) {
+        jot::logi << "Parse Block Statement\n";
         statements.push_back(parse_statement());
     }
     consume_kind(TokenKind::CloseBrace, "Expect } on the end of block.");
@@ -133,6 +133,7 @@ std::shared_ptr<ReturnStatement> JotParser::parse_return_statement() {
     jot::logi << "Parse Return Statement\n";
     auto keyword = consume_kind(TokenKind::ReturnKeyword, "Expect return keyword.");
     auto value = parse_expression();
+    assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after return statement");
     return std::make_shared<ReturnStatement>(keyword, value);
 }
 
@@ -146,7 +147,9 @@ std::shared_ptr<WhileStatement> JotParser::parse_while_statement() {
 
 std::shared_ptr<ExpressionStatement> JotParser::parse_expression_statement() {
     jot::logi << "Parse Expression Statement\n";
-    return std::make_shared<ExpressionStatement>(parse_expression());
+    auto expression = parse_expression();
+    assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after field declaration");
+    return std::make_shared<ExpressionStatement>(expression);
 }
 
 std::shared_ptr<Expression> JotParser::parse_expression() {
@@ -242,7 +245,8 @@ std::shared_ptr<Expression> JotParser::parse_postfix_expression() {
 }
 
 std::shared_ptr<Expression> JotParser::parse_primary_expression() {
-    switch (peek_current().get_kind()) {
+    auto current_token_kind = peek_current().get_kind();
+    switch (current_token_kind) {
     case TokenKind::Float:
     case TokenKind::Integer: {
         jot::logi << "Parse Primary Number Expression\n";
@@ -267,8 +271,9 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
     }
     case TokenKind::Symbol: {
         jot::logi << "Parse Primary Literal Expression\n";
+        Token symbol_token = peek_current();
         advanced_token();
-        return std::make_shared<LiteralExpression>(peek_previous());
+        return std::make_shared<LiteralExpression>(symbol_token, std::make_shared<JotNamedType>(symbol_token));
     }
     case TokenKind::OpenParen: {
         jot::logi << "Parse Primary Grouping Expression\n";
@@ -285,27 +290,27 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
     }
 }
 
-std::shared_ptr<TypeNode> JotParser::parse_type() {
+std::shared_ptr<JotType> JotParser::parse_type() {
     return parse_type_with_prefix();
 }
 
-std::shared_ptr<TypeNode> JotParser::parse_type_with_prefix() {
+std::shared_ptr<JotType> JotParser::parse_type_with_prefix() {
     if (is_current_kind(TokenKind::Star) || is_current_kind(TokenKind::Address)) {
         Token unary_operator = peek_current();
         advanced_token();
         auto operand = parse_type_with_prefix();
-        return std::make_shared<UnaryTypeNode>(unary_operator, operand);
+        return std::make_shared<JotUnaryType>(unary_operator, operand);
     }
     return parse_type_with_postfix();
 }
 
-std::shared_ptr<TypeNode> JotParser::parse_type_with_postfix() {
+std::shared_ptr<JotType> JotParser::parse_type_with_postfix() {
     auto primary_type = parse_primary_type();
     // TODO: will used later to support [] and maybe ?
     return primary_type;
 }
 
-std::shared_ptr<TypeNode> JotParser::parse_primary_type() {
+std::shared_ptr<JotType> JotParser::parse_primary_type() {
     if (is_current_kind(TokenKind::Symbol)) {
         return parse_identifier_type();
     }
@@ -313,36 +318,40 @@ std::shared_ptr<TypeNode> JotParser::parse_primary_type() {
     exit(EXIT_FAILURE);
 }
 
-std::shared_ptr<TypeNode> JotParser::parse_identifier_type() {
+std::shared_ptr<JotType> JotParser::parse_identifier_type() {
     Token symbol_token = consume_kind(TokenKind::Symbol, "Expect identifier as type");
     std::string type_literal = symbol_token.get_literal();
 
     if (type_literal == "int16") {
-        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer16), symbol_token.get_span());
+        return std::make_shared<JotNumber>(symbol_token, NumberKind::Integer16);
     }
 
     if (type_literal == "int32") {
-        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer32), symbol_token.get_span());
+        return std::make_shared<JotNumber>(symbol_token, NumberKind::Integer32);
     }
 
     if (type_literal == "int64") {
-        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer64), symbol_token.get_span());
+        return std::make_shared<JotNumber>(symbol_token, NumberKind::Integer64);
     }
 
     if (type_literal == "float32") {
-        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Float32), symbol_token.get_span());
+        return std::make_shared<JotNumber>(symbol_token, NumberKind::Float32);
     }
 
     if (type_literal == "float64") {
-        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Float64), symbol_token.get_span());
+        return std::make_shared<JotNumber>(symbol_token, NumberKind::Float64);
     }
 
     if (type_literal == "char" || type_literal == "int8") {
-        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer8), symbol_token.get_span());
+        return std::make_shared<JotNumber>(symbol_token, NumberKind::Integer8);
     }
 
     if (type_literal == "bool") {
-        return std::make_shared<AbsoluteTypeNode>(JotNumber(NumberKind::Integer8), symbol_token.get_span());
+        return std::make_shared<JotNumber>(symbol_token, NumberKind::Integer1);
+    }
+
+    if (type_literal == "void") {
+        return std::make_shared<JotVoid>(symbol_token);
     }
 
     jot::loge << "Unexpected identifier type " << type_literal << '\n';
