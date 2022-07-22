@@ -4,6 +4,7 @@
 #include "jot_ast_visitor.hpp"
 #include "jot_symboltable.hpp"
 
+#include <memory>
 #include <unordered_map>
 
 class JotTypeChecker : public TreeVisitor {
@@ -41,6 +42,8 @@ class JotTypeChecker : public TreeVisitor {
     std::any visit(BooleanExpression *node) override;
 
     std::any visit(NullExpression *node) override;
+
+    std::shared_ptr<JotType> node_jot_type(std::any any_type);
 
     bool is_number_type(std::shared_ptr<JotType> type);
 

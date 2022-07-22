@@ -1,6 +1,8 @@
 #include "../include/jot_typechecker.hpp"
 #include "../include/jot_logger.hpp"
 
+#include <memory>
+
 void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> compilation_unit) {
     auto statements = compilation_unit->get_tree_nodes();
     try {
@@ -21,7 +23,7 @@ std::any JotTypeChecker::visit(BlockStatement *node) {
 
 std::any JotTypeChecker::visit(FieldDeclaration *node) {
     auto left_type = node->get_type();
-    auto right_type = std::any_cast<std::shared_ptr<JotType>>(node->get_value()->accept(this));
+    auto right_type = node_jot_type(node->get_value()->accept(this));
 
     if (!is_same_type(left_type, right_type)) {
         jot::loge << "Field type and value must be the same type expect "
@@ -63,7 +65,7 @@ std::any JotTypeChecker::visit(FunctionDeclaration *node) {
 }
 
 std::any JotTypeChecker::visit(WhileStatement *node) {
-    auto left_type = std::any_cast<std::shared_ptr<JotType>>(node->get_condition()->accept(this));
+    auto left_type = node_jot_type(node->get_condition()->accept(this));
     if (!is_number_type(left_type)) {
         jot::loge << "While condition mush be a number but got " << left_type->type_literal()
                   << '\n';
@@ -87,8 +89,8 @@ std::any JotTypeChecker::visit(GroupExpression *node) {
 }
 
 std::any JotTypeChecker::visit(BinaryExpression *node) {
-    auto left_type = std::any_cast<std::shared_ptr<JotType>>(node->get_left()->accept(this));
-    auto right_type = std::any_cast<std::shared_ptr<JotType>>(node->get_right()->accept(this));
+    auto left_type = node_jot_type(node->get_left()->accept(this));
+    auto right_type = node_jot_type(node->get_right()->accept(this));
 
     bool is_left_number = is_number_type(left_type);
     bool is_right_number = is_number_type(right_type);
@@ -108,7 +110,7 @@ std::any JotTypeChecker::visit(BinaryExpression *node) {
 }
 
 std::any JotTypeChecker::visit(UnaryExpression *node) {
-    auto left_type = std::any_cast<std::shared_ptr<JotType>>(node->get_right()->accept(this));
+    auto left_type = node_jot_type(node->get_right()->accept(this));
     auto unary_operator = node->get_operator_token().get_kind();
 
     if (unary_operator == TokenKind::Star) {
@@ -132,8 +134,7 @@ std::any JotTypeChecker::visit(UnaryExpression *node) {
 }
 
 std::any JotTypeChecker::visit(CallExpression *node) {
-    if (std::shared_ptr<LiteralExpression> literal =
-            std::dynamic_pointer_cast<LiteralExpression>(node->get_callee())) {
+    if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee())) {
         auto name = literal->get_name().get_literal();
         if (symbol_table.is_defined(name)) {
             auto value = symbol_table.lookup(name);
@@ -181,7 +182,7 @@ std::any JotTypeChecker::visit(LiteralExpression *node) {
     auto name = node->get_name().get_literal();
     if (symbol_table.is_defined(name)) {
         auto value = symbol_table.lookup(name);
-        auto type = std::any_cast<std::shared_ptr<JotType>>(value);
+        auto type = node_jot_type(value);
         return type;
     } else {
         jot::loge << "Can't resolve variable with name " << node->get_name().get_literal() << '\n';
@@ -196,6 +197,38 @@ std::any JotTypeChecker::visit(CharacterExpression *node) { return node->get_typ
 std::any JotTypeChecker::visit(BooleanExpression *node) { return node->get_type_node(); }
 
 std::any JotTypeChecker::visit(NullExpression *node) { return node->get_type_node(); }
+
+std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type) {
+    if (any_type.type() == typeid(std::shared_ptr<JotNumber>)) {
+        return std::any_cast<std::shared_ptr<JotNumber>>(any_type);
+    }
+
+    if (any_type.type() == typeid(std::shared_ptr<JotPointerType>)) {
+        return std::any_cast<std::shared_ptr<JotPointerType>>(any_type);
+    }
+
+    if (any_type.type() == typeid(std::shared_ptr<JotFunctionType>)) {
+        return std::any_cast<std::shared_ptr<JotFunctionType>>(any_type);
+    }
+
+    if (any_type.type() == typeid(std::shared_ptr<JotUnaryType>)) {
+        return std::any_cast<std::shared_ptr<JotUnaryType>>(any_type);
+    }
+
+    if (any_type.type() == typeid(std::shared_ptr<JotNamedType>)) {
+        return std::any_cast<std::shared_ptr<JotNamedType>>(any_type);
+    }
+
+    if (any_type.type() == typeid(std::shared_ptr<JotVoid>)) {
+        return std::any_cast<std::shared_ptr<JotVoid>>(any_type);
+    }
+
+    if (any_type.type() == typeid(std::shared_ptr<JotNull>)) {
+        return std::any_cast<std::shared_ptr<JotNull>>(any_type);
+    }
+
+    return std::any_cast<std::shared_ptr<JotType>>(any_type);
+}
 
 bool JotTypeChecker::is_number_type(std::shared_ptr<JotType> type) {
     return type->get_type_kind() == TypeKind::Number;
