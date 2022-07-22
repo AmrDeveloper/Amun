@@ -112,6 +112,21 @@ class FunctionDeclaration : public Statement {
     std::shared_ptr<Statement> body;
 };
 
+class EnumDeclaration : public Statement {
+  public:
+    EnumDeclaration(Token name, std::vector<Token> values) : name(name), values(values) {}
+
+    Token get_name() { return name; }
+
+    std::vector<Token> get_values() { return values; }
+
+    std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
+
+  private:
+    Token name;
+    std::vector<Token> values;
+};
+
 class WhileStatement : public Statement {
   public:
     WhileStatement(Token position, std::shared_ptr<Expression> condition,

@@ -10,6 +10,7 @@ enum TypeKind {
     Number,
     Pointer,
     Function,
+    Enumeration,
     Unary,
     Named,
     Void,
@@ -128,6 +129,25 @@ class JotFunctionType : public JotType {
     Token name;
     std::vector<std::shared_ptr<JotType>> parameters;
     std::shared_ptr<JotType> return_type;
+};
+
+class JotEnumType : public JotType {
+  public:
+    JotEnumType(Token name, std::vector<Token> values) : name(name), values(values) {}
+
+    Token get_type_token() override { return name; }
+
+    std::string type_literal() override { return "enum"; }
+
+    TypeKind get_type_kind() override { return TypeKind::Enumeration; }
+
+    TokenSpan get_type_position() override { return name.get_span(); }
+
+    bool equals(const std::shared_ptr<JotType> &other) override { return false; }
+
+  private:
+    Token name;
+    std::vector<Token> values;
 };
 
 class JotUnaryType : public JotType {

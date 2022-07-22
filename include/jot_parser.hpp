@@ -28,6 +28,8 @@ class JotParser {
 
     std::shared_ptr<FunctionDeclaration> parse_function_declaration();
 
+    std::shared_ptr<EnumDeclaration> parse_enum_declaration();
+
     std::shared_ptr<Parameter> parse_parameter();
 
     std::shared_ptr<ReturnStatement> parse_return_statement();

@@ -91,6 +91,11 @@ std::any JotLLVMBackend::visit(FunctionDeclaration *node) {
     return function;
 }
 
+std::any JotLLVMBackend::visit(EnumDeclaration *node) {
+    // TODO: Implement it later
+    return 0;
+}
+
 std::any JotLLVMBackend::visit(WhileStatement *node) { return 0; }
 
 std::any JotLLVMBackend::visit(ReturnStatement *node) {

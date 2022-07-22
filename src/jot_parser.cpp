@@ -21,6 +21,9 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
         jot::logi << "Parse global Var statement\n";
         return parse_field_declaration();
     }
+    case TokenKind::EnumKeyword: {
+        return parse_enum_declaration();
+    }
     default: {
         jot::loge << "Can't find declaration statement that start with "
                   << peek_current().get_kind_literal() << '\n';
@@ -110,6 +113,25 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration() {
 
     jot::loge << "Invalid function declaration body\n";
     exit(EXIT_FAILURE);
+}
+
+std::shared_ptr<EnumDeclaration> JotParser::parse_enum_declaration() {
+    jot::logi << "Parse enum declaration statement\n";
+    auto enum_token = consume_kind(TokenKind::EnumKeyword, "Expect enum keyword");
+    auto enum_name = consume_kind(TokenKind::Symbol, "Expect Symbol as enum name");
+    assert_kind(TokenKind::OpenBrace, "Expect { after enum name");
+    std::vector<Token> enum_values;
+    while (is_source_available() && !is_current_kind(TokenKind::CloseBrace)) {
+        auto enum_value = consume_kind(TokenKind::Symbol, "Expect Symbol as enum value");
+        enum_values.push_back(enum_value);
+
+        if (is_current_kind(TokenKind::Comma))
+            advanced_token();
+        else
+            break;
+    }
+    assert_kind(TokenKind::CloseBrace, "Expect } in the end of enum declaration");
+    return std::make_shared<EnumDeclaration>(enum_name, enum_values);
 }
 
 std::shared_ptr<Parameter> JotParser::parse_parameter() {

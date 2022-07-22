@@ -64,6 +64,17 @@ std::any JotTypeChecker::visit(FunctionDeclaration *node) {
     return prototype;
 }
 
+std::any JotTypeChecker::visit(EnumDeclaration *node) {
+    auto name = node->get_name().get_literal();
+    auto enum_type = std::make_shared<JotEnumType>(node->get_name(), node->get_values());
+    bool is_first_defined = symbol_table.define(name, enum_type);
+    if (!is_first_defined) {
+        jot::loge << "enumeration " << name << " is defined twice in the same scope\n";
+        exit(1);
+    }
+    return is_first_defined;
+}
+
 std::any JotTypeChecker::visit(WhileStatement *node) {
     auto left_type = node_jot_type(node->get_condition()->accept(this));
     if (!is_number_type(left_type)) {
@@ -222,6 +233,10 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type) {
 
     if (any_type.type() == typeid(std::shared_ptr<JotFunctionType>)) {
         return std::any_cast<std::shared_ptr<JotFunctionType>>(any_type);
+    }
+
+    if (any_type.type() == typeid(std::shared_ptr<JotEnumType>)) {
+        return std::any_cast<std::shared_ptr<JotEnumType>>(any_type);
     }
 
     if (any_type.type() == typeid(std::shared_ptr<JotUnaryType>)) {
