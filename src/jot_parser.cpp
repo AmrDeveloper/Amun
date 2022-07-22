@@ -1,5 +1,6 @@
 #include "../include/jot_parser.hpp"
 #include "../include/jot_logger.hpp"
+#include <memory>
 
 std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit() {
     std::vector<std::shared_ptr<Statement>> tree_nodes;
@@ -153,7 +154,18 @@ std::shared_ptr<ExpressionStatement> JotParser::parse_expression_statement() {
     return std::make_shared<ExpressionStatement>(expression);
 }
 
-std::shared_ptr<Expression> JotParser::parse_expression() { return parse_equality_expression(); }
+std::shared_ptr<Expression> JotParser::parse_expression() { return parse_assignment_expression(); }
+
+std::shared_ptr<Expression> JotParser::parse_assignment_expression() {
+    auto expression = parse_equality_expression();
+    if (is_current_kind(TokenKind::Equal)) {
+        auto equal_token = peek_current();
+        advanced_token();
+        auto value = parse_assignment_expression();
+        return std::make_shared<AssignExpression>(expression, equal_token, value);
+    }
+    return expression;
+}
 
 std::shared_ptr<Expression> JotParser::parse_equality_expression() {
     auto expression = parse_comparison_expression();

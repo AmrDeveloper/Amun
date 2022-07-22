@@ -121,6 +121,22 @@ std::any JotLLVMBackend::visit(GroupExpression *node) {
     return node->get_expression()->accept(this);
 }
 
+std::any JotLLVMBackend::visit(AssignExpression *node) {
+    auto current_function = Builder.GetInsertBlock()->getParent();
+    auto literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_left());
+    auto name = literal->get_name().get_literal();
+    auto value = node->get_right()->accept(this);
+    if (value.type() == typeid(llvm::AllocaInst *)) {
+        auto init_value = std::any_cast<llvm::AllocaInst *>(value);
+        return Builder.CreateLoad(init_value->getAllocatedType(), init_value, name.c_str());
+    } else {
+        llvm::Value *right_value = llvm_node_value(value);
+        auto alloc_inst = create_entry_block_alloca(current_function, name, llvm_int64_type);
+        alloca_inst_table[name] = alloc_inst;
+        return Builder.CreateStore(right_value, alloc_inst);
+    }
+}
+
 std::any JotLLVMBackend::visit(BinaryExpression *node) {
     llvm::Value *left = llvm_node_value(node->get_left()->accept(this));
     llvm::Value *right = llvm_node_value(node->get_right()->accept(this));
@@ -178,6 +194,7 @@ std::any JotLLVMBackend::visit(NumberExpression *node) {
     auto number_type = std::dynamic_pointer_cast<JotNumber>(node->get_type_node());
     return llvm_number_value(node->get_value().get_literal(), number_type->get_kind());
 }
+
 std::any JotLLVMBackend::visit(CharacterExpression *node) {
     return llvm_number_value(node->get_value().get_literal(), NumberKind::Integer8);
 }

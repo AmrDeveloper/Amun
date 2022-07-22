@@ -88,6 +88,19 @@ std::any JotTypeChecker::visit(GroupExpression *node) {
     return node->get_expression()->accept(this);
 }
 
+std::any JotTypeChecker::visit(AssignExpression *node) {
+    auto left_type = node_jot_type(node->get_left()->accept(this));
+    auto right_type = node_jot_type(node->get_right()->accept(this));
+
+    if (!left_type->equals(right_type)) {
+        jot::loge << "Type missmatch expect " << left_type->type_literal() << " but got "
+                  << right_type->type_literal() << '\n';
+        exit(1);
+    }
+
+    return 0;
+}
+
 std::any JotTypeChecker::visit(BinaryExpression *node) {
     auto left_type = node_jot_type(node->get_left()->accept(this));
     auto right_type = node_jot_type(node->get_right()->accept(this));

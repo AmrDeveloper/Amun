@@ -29,6 +29,7 @@ class StatementVisitor {
 };
 
 class GroupExpression;
+class AssignExpression;
 class BinaryExpression;
 class UnaryExpression;
 class CallExpression;
@@ -41,6 +42,8 @@ class NullExpression;
 class ExpressionVisitor {
   public:
     virtual std::any visit(GroupExpression *node) = 0;
+
+    virtual std::any visit(AssignExpression *node) = 0;
 
     virtual std::any visit(BinaryExpression *node) = 0;
 

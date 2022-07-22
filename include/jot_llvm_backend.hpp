@@ -55,6 +55,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(GroupExpression *node) override;
 
+    std::any visit(AssignExpression *node) override;
+
     std::any visit(BinaryExpression *node) override;
 
     std::any visit(UnaryExpression *node) override;
