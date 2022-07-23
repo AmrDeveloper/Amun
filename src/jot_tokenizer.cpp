@@ -200,9 +200,40 @@ void JotTokenizer::skip_whitespaces() {
             advance();
             column_current = 0;
             break;
+        case '/': {
+            if (peek_next() == '/' || peek_next() == '*')
+                advance();
+            else
+                return;
+            if (match('/'))
+                skip_single_line_comment();
+            else if (match('*'))
+                skip_multi_lines_comment();
+            break;
+        }
         default: return;
         }
     }
+}
+
+void JotTokenizer::skip_single_line_comment() {
+    while (is_source_available() && peek() != '\n') {
+        advance();
+    }
+    line_number++;
+    column_current = 0;
+}
+
+void JotTokenizer::skip_multi_lines_comment() {
+    while (is_source_available() && !(peek() == '*' && peek_next() == '/')) {
+        advance();
+        if (peek() == '\n') {
+            line_number++;
+            column_current = 0;
+        }
+    }
+    advance();
+    advance();
 }
 
 bool JotTokenizer::match(char expected) {

@@ -32,6 +32,10 @@ class JotTokenizer {
 
     void skip_whitespaces();
 
+    void skip_single_line_comment();
+
+    void skip_multi_lines_comment();
+
     bool match(char);
 
     char advance();
