@@ -23,6 +23,6 @@ fun main() int64 {
     var y : int64 = x;
     y = test() + 1;
     var result : int64 = (3 * 10);
-    putchar(98 - 1);
+    putchar('a');
     return test();
 }

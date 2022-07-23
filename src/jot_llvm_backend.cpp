@@ -205,14 +205,15 @@ std::any JotLLVMBackend::visit(NumberExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(CharacterExpression *node) {
-    return llvm_number_value(node->get_value().get_literal(), NumberKind::Integer8);
+    char char_asci_value = node->get_value().get_literal()[0];
+    return llvm_character_value(char_asci_value);
 }
 
 std::any JotLLVMBackend::visit(BooleanExpression *node) {
-    return llvm_number_value(node->get_value().get_literal(), NumberKind::Integer1);
+    return llvm_boolean_value(node->get_value().get_kind() == TokenKind::TrueKeyword);
 }
 
-std::any JotLLVMBackend::visit(NullExpression *node) {
+std::any JotLLVMBackend::visit([[maybe_unused]] NullExpression *node) {
     return llvm::PointerType::get(llvm_int64_type, 0);
 }
 
@@ -258,6 +259,14 @@ llvm::Value *JotLLVMBackend::llvm_number_value(std::string value_litearl, Number
         return llvm::ConstantFP::get(llvm_float64_type, value);
     }
     }
+}
+
+llvm::Value *JotLLVMBackend::llvm_boolean_value(bool value) {
+    return llvm::ConstantInt::get(llvm_int1_type, value);
+}
+
+llvm::Value *JotLLVMBackend::llvm_character_value(char character) {
+    return llvm::ConstantInt::get(llvm_int8_type, character);
 }
 
 llvm::AllocaInst *JotLLVMBackend::create_entry_block_alloca(llvm::Function *function,

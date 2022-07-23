@@ -81,6 +81,10 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Value *llvm_number_value(std::string value_litearl, NumberKind size);
 
+    llvm::Value *llvm_character_value(char character);
+
+    llvm::Value *llvm_boolean_value(bool value);
+
     llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function,
                                                 const std::string var_name, llvm::Type *type);
 
