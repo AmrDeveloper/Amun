@@ -159,8 +159,8 @@ Token JotTokenizer::consume_string() {
 
     advance();
 
-    size_t len = current_position - start_position + 1;
-    auto literal = source_code.substr(start_position - 1, len);
+    size_t len = current_position - start_position - 1;
+    auto literal = source_code.substr(start_position, len);
     return build_token(TokenKind::String, literal);
 }
 
