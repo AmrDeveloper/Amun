@@ -49,12 +49,7 @@ class JotNumber : public JotType {
 
     TokenSpan get_type_position() override { return token.get_span(); }
 
-    bool equals(const std::shared_ptr<JotType> &other) override {
-        if (auto other_number = std::dynamic_pointer_cast<JotNumber>(other)) {
-            return other_number->get_kind() == kind;
-        }
-        return kind == NumberKind::Integer64 && other->get_type_kind() == TypeKind::Pointer;
-    }
+    bool equals(const std::shared_ptr<JotType> &other) override;
 
   private:
     Token token;
@@ -76,15 +71,7 @@ class JotPointerType : public JotType {
 
     TokenSpan get_type_position() override { return token.get_span(); }
 
-    bool equals(const std::shared_ptr<JotType> &other) override {
-        if (auto other_number = std::dynamic_pointer_cast<JotNumber>(other)) {
-            return other_number->get_kind() == NumberKind::Integer64;
-        }
-        if (auto other_pointer = std::dynamic_pointer_cast<JotPointerType>(other)) {
-            return other_pointer->get_point_to()->equals(this->get_point_to());
-        }
-        return false;
-    }
+    bool equals(const std::shared_ptr<JotType> &other) override;
 
   private:
     Token token;
@@ -109,20 +96,7 @@ class JotFunctionType : public JotType {
 
     TokenSpan get_type_position() override { return name.get_span(); }
 
-    bool equals(const std::shared_ptr<JotType> &other) override {
-        if (auto other_function = std::dynamic_pointer_cast<JotFunctionType>(other)) {
-            size_t parameter_size = other_function->get_parameters().size();
-            if (parameter_size != parameters.size())
-                return false;
-            auto other_parameters = other_function->get_parameters();
-            for (size_t i = 0; i < parameter_size; i++) {
-                if (!parameters[i]->equals(other_parameters[1]))
-                    return false;
-            }
-            return return_type->equals(other_function->get_return_type());
-        }
-        return false;
-    }
+    bool equals(const std::shared_ptr<JotType> &other) override;
 
   private:
     Token name;
@@ -142,7 +116,7 @@ class JotEnumType : public JotType {
 
     TokenSpan get_type_position() override { return name.get_span(); }
 
-    bool equals(const std::shared_ptr<JotType> &other) override { return false; }
+    bool equals(const std::shared_ptr<JotType> &other) override;
 
   private:
     Token name;
@@ -161,7 +135,7 @@ class JotNamedType : public JotType {
 
     TokenSpan get_type_position() override { return name.get_span(); }
 
-    bool equals(const std::shared_ptr<JotType> &other) override { return false; }
+    bool equals(const std::shared_ptr<JotType> &other) override;
 
   private:
     Token name;
@@ -179,9 +153,7 @@ class JotVoid : public JotType {
 
     TokenSpan get_type_position() override { return token.get_span(); }
 
-    bool equals(const std::shared_ptr<JotType> &other) override {
-        return other->get_type_kind() == TypeKind::Void;
-    }
+    bool equals(const std::shared_ptr<JotType> &other) override;
 
   private:
     Token token;
@@ -199,10 +171,7 @@ class JotNull : public JotType {
 
     TokenSpan get_type_position() override { return token.get_span(); }
 
-    bool equals(const std::shared_ptr<JotType> &other) override {
-        return other->get_type_kind() == TypeKind::Pointer ||
-               other->get_type_kind() == TypeKind::Void;
-    }
+    bool equals(const std::shared_ptr<JotType> &other) override;
 
   private:
     Token token;
