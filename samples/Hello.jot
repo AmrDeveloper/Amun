@@ -1,0 +1,6 @@
+extern fun puts(s *char) int64;
+
+fun main() int64 {
+    puts("Hello, world!");
+    return 0;
+}
