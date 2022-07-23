@@ -11,7 +11,6 @@ enum TypeKind {
     Pointer,
     Function,
     Enumeration,
-    Unary,
     Named,
     Void,
     Null,
@@ -148,42 +147,6 @@ class JotEnumType : public JotType {
   private:
     Token name;
     std::vector<Token> values;
-};
-
-class JotUnaryType : public JotType {
-  public:
-    JotUnaryType(Token unary_operator, std::shared_ptr<JotType> type)
-        : unary_operator(unary_operator), type(type) {}
-
-    Token get_operator_token() { return unary_operator; }
-
-    std::shared_ptr<JotType> get_type() { return type; }
-
-    Token get_type_token() override { return type->get_type_token(); }
-
-    std::string type_literal() override {
-        return unary_operator.get_kind_literal() + type->type_literal();
-    }
-
-    TypeKind get_type_kind() override { return TypeKind::Unary; }
-
-    TokenSpan get_type_position() override { return unary_operator.get_span(); }
-
-    bool equals(const std::shared_ptr<JotType> &other) override {
-        if (auto other_unary = std::dynamic_pointer_cast<JotUnaryType>(other)) {
-            if (other_unary->get_operator_token().get_kind() != unary_operator.get_kind())
-                return false;
-            return other_unary->get_type()->equals(type);
-        }
-        if (auto other_unary = std::dynamic_pointer_cast<JotPointerType>(other)) {
-            return unary_operator.get_kind() == TokenKind::Address;
-        }
-        return other->get_type_kind() == TypeKind::Number;
-    }
-
-  private:
-    Token unary_operator;
-    std::shared_ptr<JotType> type;
 };
 
 class JotNamedType : public JotType {

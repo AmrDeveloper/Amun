@@ -244,10 +244,6 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type) {
         return std::any_cast<std::shared_ptr<JotEnumType>>(any_type);
     }
 
-    if (any_type.type() == typeid(std::shared_ptr<JotUnaryType>)) {
-        return std::any_cast<std::shared_ptr<JotUnaryType>>(any_type);
-    }
-
     if (any_type.type() == typeid(std::shared_ptr<JotNamedType>)) {
         return std::any_cast<std::shared_ptr<JotNamedType>>(any_type);
     }

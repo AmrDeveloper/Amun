@@ -336,12 +336,18 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
 std::shared_ptr<JotType> JotParser::parse_type() { return parse_type_with_prefix(); }
 
 std::shared_ptr<JotType> JotParser::parse_type_with_prefix() {
-    if (is_current_kind(TokenKind::Star) || is_current_kind(TokenKind::Address)) {
-        Token unary_operator = peek_current();
+    if (is_current_kind(TokenKind::Star)) {
         advanced_token();
         auto operand = parse_type_with_prefix();
-        return std::make_shared<JotUnaryType>(unary_operator, operand);
+        return std::make_shared<JotPointerType>(operand->get_type_token(), operand);
     }
+
+    if (is_current_kind(TokenKind::Address)) {
+        advanced_token();
+        auto operand = parse_type_with_prefix();
+        return std::make_shared<JotNumber>(operand->get_type_token(), NumberKind::Integer64);
+    }
+
     return parse_type_with_postfix();
 }
 
