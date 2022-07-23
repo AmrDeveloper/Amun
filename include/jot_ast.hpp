@@ -293,6 +293,25 @@ class CallExpression : public Expression {
     std::vector<std::shared_ptr<Expression>> arguments;
 };
 
+class StringExpression : public Expression {
+  public:
+    StringExpression(Token value) : value(value) {
+        auto element_type = std::make_shared<JotNumber>(value, NumberKind::Integer8);
+        auto literal = value.get_literal().size();
+        type = std::make_shared<JotArrayType>(element_type, literal);
+    }
+
+    Token get_value() { return value; }
+
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+  private:
+    Token value;
+    std::shared_ptr<JotType> type;
+};
+
 class LiteralExpression : public Expression {
   public:
     LiteralExpression(Token name, std::shared_ptr<JotType> type) : name(name), type(type) {}

@@ -1,6 +1,7 @@
 #include "../include/jot_typechecker.hpp"
 #include "../include/jot_logger.hpp"
 #include "jot_ast_visitor.hpp"
+#include "jot_type.hpp"
 
 #include <memory>
 
@@ -184,7 +185,7 @@ std::any JotTypeChecker::visit(CallExpression *node) {
 
                 size_t arguments_size = arguments_types.size();
                 for (size_t i = 0; i < arguments_size; i++) {
-                    if (!is_same_type(parameters[i], arguments_types[i])) {
+                    if (!parameters[i]->equals(arguments_types[i])) {
                         jot::loge << "Argument type didn't match parameter type expect "
                                   << parameters[i]->type_literal() << " got "
                                   << arguments_types[i]->type_literal() << '\n';
@@ -221,6 +222,8 @@ std::any JotTypeChecker::visit(LiteralExpression *node) {
 
 std::any JotTypeChecker::visit(NumberExpression *node) { return node->get_type_node(); }
 
+std::any JotTypeChecker::visit(StringExpression *node) { return node->get_type_node(); }
+
 std::any JotTypeChecker::visit(CharacterExpression *node) { return node->get_type_node(); }
 
 std::any JotTypeChecker::visit(BooleanExpression *node) { return node->get_type_node(); }
@@ -234,6 +237,10 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type) {
 
     if (any_type.type() == typeid(std::shared_ptr<JotPointerType>)) {
         return std::any_cast<std::shared_ptr<JotPointerType>>(any_type);
+    }
+
+    if (any_type.type() == typeid(std::shared_ptr<JotArrayType>)) {
+        return std::any_cast<std::shared_ptr<JotArrayType>>(any_type);
     }
 
     if (any_type.type() == typeid(std::shared_ptr<JotFunctionType>)) {

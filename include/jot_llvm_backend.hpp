@@ -2,8 +2,10 @@
 
 #include "jot_ast.hpp"
 #include "jot_ast_visitor.hpp"
+#include "jot_type.hpp"
 
 #include <llvm-14/llvm/IR/Constants.h>
+#include <llvm-14/llvm/IR/Type.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 
@@ -71,6 +73,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(NumberExpression *node) override;
 
+    std::any visit(StringExpression *node) override;
+
     std::any visit(CharacterExpression *node) override;
 
     std::any visit(BooleanExpression *node) override;
@@ -81,9 +85,13 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Value *llvm_number_value(std::string value_litearl, NumberKind size);
 
+    llvm::Value *llvm_boolean_value(bool value);
+
+    llvm::Value *llvm_characters_array_value(const std::string &str);
+
     llvm::Value *llvm_character_value(char character);
 
-    llvm::Value *llvm_boolean_value(bool value);
+    llvm::Type *llvm_type_from_jot_type(std::shared_ptr<JotType> type);
 
     llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function,
                                                 const std::string var_name, llvm::Type *type);

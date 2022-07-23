@@ -299,6 +299,11 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
         advanced_token();
         return std::make_shared<CharacterExpression>(peek_previous());
     }
+    case TokenKind::String: {
+        jot::logi << "Parse Primary String Expression\n";
+        advanced_token();
+        return std::make_shared<StringExpression>(peek_previous());
+    }
     case TokenKind::TrueKeyword:
     case TokenKind::FalseKeyword: {
         jot::logi << "ParsePrimary  Boolean Expression\n";

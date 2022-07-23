@@ -14,6 +14,22 @@ bool JotPointerType::equals(const std::shared_ptr<JotType> &other) {
     if (auto other_pointer = std::dynamic_pointer_cast<JotPointerType>(other)) {
         return other_pointer->get_point_to()->equals(this->get_point_to());
     }
+    if (auto other_array = std::dynamic_pointer_cast<JotArrayType>(other)) {
+        return get_point_to()->equals(other_array->get_element_type());
+    }
+    return false;
+}
+
+bool JotArrayType::equals(const std::shared_ptr<JotType> &other) {
+    if (other->get_type_kind() == TypeKind::Array) {
+        auto other_array = std::dynamic_pointer_cast<JotArrayType>(other);
+        return other_array->get_size() == size &&
+               other_array->get_element_type()->equals(element_type);
+    }
+    if (other->get_type_kind() == TypeKind::Pointer) {
+        auto other_pointer = std::dynamic_pointer_cast<JotPointerType>(other);
+        return other_pointer->get_point_to()->equals(get_element_type());
+    }
     return false;
 }
 
