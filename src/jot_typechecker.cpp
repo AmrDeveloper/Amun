@@ -1,7 +1,7 @@
 #include "../include/jot_typechecker.hpp"
+#include "../include/jot_ast_visitor.hpp"
 #include "../include/jot_logger.hpp"
-#include "jot_ast_visitor.hpp"
-#include "jot_type.hpp"
+#include "../include/jot_type.hpp"
 
 #include <memory>
 
@@ -34,7 +34,7 @@ std::any JotTypeChecker::visit(FieldDeclaration *node) {
     }
 
     auto name = node->get_name().get_literal();
-    bool is_first_defined = symbol_table.define(name, left_type);
+    bool is_first_defined = symbol_table->define(name, left_type);
     if (!is_first_defined) {
         jot::loge << "Field " << name << " is defined twice in the same scope\n";
         exit(1);
@@ -55,25 +55,30 @@ std::any JotTypeChecker::visit(FunctionPrototype *node) {
     }
     auto return_type = node->get_return_type();
     auto function_type = std::make_shared<JotFunctionType>(name, parameters, return_type);
-    bool is_first_defined = symbol_table.define(name.get_literal(), function_type);
+    bool is_first_defined = symbol_table->define(name.get_literal(), function_type);
     if (!is_first_defined) {
         jot::loge << "function " << name.get_literal() << " is defined twice in the same scope\n";
         exit(1);
     }
-
     return function_type;
 }
 
 std::any JotTypeChecker::visit(FunctionDeclaration *node) {
-    auto prototype = node->get_prototype()->accept(this);
+    auto prototype = node->get_prototype();
+    auto function_type = node->get_prototype()->accept(this);
+    push_new_scope();
+    for (auto &parameter : prototype->get_parameters()) {
+        symbol_table->define(parameter->get_name().get_literal(), parameter->get_type());
+    }
     node->get_body()->accept(this);
-    return prototype;
+    pop_current_scope();
+    return function_type;
 }
 
 std::any JotTypeChecker::visit(EnumDeclaration *node) {
     auto name = node->get_name().get_literal();
     auto enum_type = std::make_shared<JotEnumType>(node->get_name(), node->get_values());
-    bool is_first_defined = symbol_table.define(name, enum_type);
+    bool is_first_defined = symbol_table->define(name, enum_type);
     if (!is_first_defined) {
         jot::loge << "enumeration " << name << " is defined twice in the same scope\n";
         exit(1);
@@ -92,10 +97,7 @@ std::any JotTypeChecker::visit(WhileStatement *node) {
     return 0;
 }
 
-std::any JotTypeChecker::visit(ReturnStatement *node) {
-    // TODO: should improved and use accept once finish symbol table implementation
-    return node->return_value()->get_type_node();
-}
+std::any JotTypeChecker::visit(ReturnStatement *node) { return node->return_value()->accept(this); }
 
 std::any JotTypeChecker::visit(ExpressionStatement *node) {
     return node->get_expression()->accept(this);
@@ -166,8 +168,8 @@ std::any JotTypeChecker::visit(UnaryExpression *node) {
 std::any JotTypeChecker::visit(CallExpression *node) {
     if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee())) {
         auto name = literal->get_name().get_literal();
-        if (symbol_table.is_defined(name)) {
-            auto value = symbol_table.lookup(name);
+        if (symbol_table->is_defined(name)) {
+            auto value = symbol_table->lookup(name);
             if (auto type = std::any_cast<std::shared_ptr<JotFunctionType>>(&value)) {
                 auto parameters = type->get()->get_parameters();
                 auto arguments = node->get_arguments();
@@ -210,8 +212,8 @@ std::any JotTypeChecker::visit(CallExpression *node) {
 
 std::any JotTypeChecker::visit(LiteralExpression *node) {
     auto name = node->get_name().get_literal();
-    if (symbol_table.is_defined(name)) {
-        auto value = symbol_table.lookup(name);
+    if (symbol_table->is_defined(name)) {
+        auto value = symbol_table->lookup(name);
         auto type = node_jot_type(value);
         return type;
     } else {
@@ -278,3 +280,9 @@ bool JotTypeChecker::is_same_type(const std::shared_ptr<JotType> &left,
                                   const std::shared_ptr<JotType> &right) {
     return left->get_type_kind() == right->get_type_kind();
 }
+
+void JotTypeChecker::push_new_scope() {
+    symbol_table = std::make_shared<JotSymbolTable>(symbol_table);
+}
+
+void JotTypeChecker::pop_current_scope() { symbol_table = symbol_table->get_parent_symbol_table(); }

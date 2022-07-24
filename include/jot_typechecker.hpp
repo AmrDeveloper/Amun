@@ -9,6 +9,11 @@
 
 class JotTypeChecker : public TreeVisitor {
   public:
+    JotTypeChecker() {
+        global_scope = std::make_shared<JotSymbolTable>();
+        symbol_table = global_scope;
+    }
+
     void check_compilation_unit(std::shared_ptr<CompilationUnit> compilation_unit);
 
     std::any visit(BlockStatement *node) override;
@@ -59,6 +64,11 @@ class JotTypeChecker : public TreeVisitor {
 
     bool is_same_type(const std::shared_ptr<JotType> &, const std::shared_ptr<JotType> &);
 
+    void push_new_scope();
+
+    void pop_current_scope();
+
   private:
-    JotSymbolTable symbol_table;
+    std::shared_ptr<JotSymbolTable> global_scope;
+    std::shared_ptr<JotSymbolTable> symbol_table;
 };

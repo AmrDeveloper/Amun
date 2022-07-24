@@ -3,22 +3,22 @@
 #include <any>
 #include <map>
 #include <memory>
-#include <optional>
 
 class JotSymbolTable {
   public:
-    JotSymbolTable() {}
+    JotSymbolTable() = default;
 
-    JotSymbolTable(std::optional<std::shared_ptr<JotSymbolTable>> parent)
-        : parent_symbol_table(parent) {}
+    JotSymbolTable(std::shared_ptr<JotSymbolTable> parent) : parent_symbol_table(parent) {}
 
-    bool define(std::string name, std::any value);
+    bool define(const std::string &name, std::any value);
 
-    bool is_defined(std::string name);
+    bool is_defined(const std::string &name);
 
-    std::any lookup(std::string name);
+    std::any lookup(const std::string &name);
+
+    std::shared_ptr<JotSymbolTable> get_parent_symbol_table() { return parent_symbol_table; }
 
   private:
     std::map<std::string, std::any> environment;
-    std::optional<std::shared_ptr<JotSymbolTable>> parent_symbol_table;
+    std::shared_ptr<JotSymbolTable> parent_symbol_table;
 };

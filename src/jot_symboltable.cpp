@@ -1,21 +1,25 @@
 #include "../include/jot_symboltable.hpp"
 
-bool JotSymbolTable::define(std::string name, std::any value) {
-    if (environment.contains(name))
+bool JotSymbolTable::define(const std::string &name, std::any value) {
+    if (is_defined(name))
         return false;
-    environment[name] = value;
+    environment[name] = std::move(value);
     return true;
 }
 
-bool JotSymbolTable::is_defined(std::string name) { return environment.contains(name); }
+bool JotSymbolTable::is_defined(const std::string &name) {
+    if (environment.contains(name))
+        return true;
+    return parent_symbol_table && parent_symbol_table->is_defined(name);
+}
 
-std::any JotSymbolTable::lookup(std::string name) {
+std::any JotSymbolTable::lookup(const std::string &name) {
     if (environment.contains(name)) {
         return environment[name];
     }
 
-    if (parent_symbol_table.has_value()) {
-        return parent_symbol_table->get()->lookup(name);
+    if (parent_symbol_table) {
+        return parent_symbol_table->lookup(name);
     }
 
     return nullptr;
