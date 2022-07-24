@@ -18,6 +18,8 @@ class JotParser {
     std::shared_ptr<CompilationUnit> parse_compilation_unit();
 
   private:
+    std::vector<std::shared_ptr<Statement>> parse_import_declaration();
+
     std::shared_ptr<Statement> parse_declaration_statement();
 
     std::shared_ptr<Statement> parse_statement();

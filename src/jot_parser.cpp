@@ -1,14 +1,39 @@
 #include "../include/jot_parser.hpp"
+#include "../include/jot_files.hpp"
 #include "../include/jot_logger.hpp"
+
 #include <memory>
 
 std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit() {
     std::vector<std::shared_ptr<Statement>> tree_nodes;
     while (is_source_available()) {
-        jot::logi << "Parse statement\n";
-        tree_nodes.push_back(parse_declaration_statement());
+        auto current_token = peek_current().get_kind();
+        switch (current_token) {
+        case TokenKind::ImportKeyword: {
+            auto module_tree_node = parse_import_declaration();
+            tree_nodes.insert(std::end(tree_nodes), std::begin(module_tree_node),
+                              std::end(module_tree_node));
+            break;
+        }
+        default: {
+            tree_nodes.push_back(parse_declaration_statement());
+        }
+        }
     }
     return std::make_shared<CompilationUnit>(tree_nodes);
+}
+
+std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration() {
+    advanced_token();
+    auto library_name =
+        consume_kind(TokenKind::String, "Expect string as library name after import statement");
+    std::string library_path = "../lib/" + library_name.get_literal() + ".jot";
+    const char *file_name = library_path.c_str();
+    std::string source_content = read_file_content(file_name);
+    auto tokenizer = std::make_unique<JotTokenizer>(file_name, source_content);
+    JotParser parser(std::move(tokenizer));
+    auto compilation_unit = parser.parse_compilation_unit();
+    return compilation_unit->get_tree_nodes();
 }
 
 std::shared_ptr<Statement> JotParser::parse_declaration_statement() {

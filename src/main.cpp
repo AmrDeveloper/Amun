@@ -8,14 +8,18 @@
 #include <chrono>
 #include <memory>
 
-int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
-    const char *file_name = "first.jot";
-    const char *source = "../samples/first.jot";
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        printf("Usage: %s <filename>\n", argv[0]);
+        return 1;
+    }
+
+    const char *source = argv[1];
 
     auto parsing_start_time = std::chrono::high_resolution_clock::now();
 
     auto source_content = read_file_content(source);
-    auto tokenizer = std::make_unique<JotTokenizer>(file_name, source_content);
+    auto tokenizer = std::make_unique<JotTokenizer>(source, source_content);
     JotParser parser(std::move(tokenizer));
     auto compilation_unit = parser.parse_compilation_unit();
 
