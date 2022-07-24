@@ -12,6 +12,8 @@ class JotSymbolTable {
 
     bool define(const std::string &name, std::any value);
 
+    bool update(const std::string &name, std::any value);
+
     bool is_defined(const std::string &name);
 
     std::any lookup(const std::string &name);

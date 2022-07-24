@@ -2,6 +2,7 @@
 
 #include "jot_ast.hpp"
 #include "jot_ast_visitor.hpp"
+#include "jot_symboltable.hpp"
 #include "jot_type.hpp"
 
 #include <llvm-14/llvm/IR/Constants.h>
@@ -17,7 +18,6 @@
 static llvm::LLVMContext llvm_context;
 static llvm::IRBuilder<> Builder(llvm_context);
 static std::unique_ptr<llvm::Module> llvm_module;
-static std::map<std::string, llvm::AllocaInst *> alloca_inst_table;
 static std::map<std::string, std::shared_ptr<FunctionPrototype>> functions_table;
 
 // LLVM Integer types
@@ -38,6 +38,11 @@ static auto llvm_void_type = llvm::Type::getVoidTy(llvm_context);
 
 class JotLLVMBackend : public TreeVisitor {
   public:
+    JotLLVMBackend() {
+        alloca_inst_global_scope = std::make_shared<JotSymbolTable>();
+        alloca_inst_scope = alloca_inst_global_scope;
+    }
+
     std::unique_ptr<llvm::Module> compile(std::string module_name,
                                           std::shared_ptr<CompilationUnit> compilation_unit);
 
@@ -81,6 +86,7 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(NullExpression *node) override;
 
+  private:
     llvm::Value *llvm_node_value(std::any any_value);
 
     llvm::Value *llvm_number_value(std::string value_litearl, NumberKind size);
@@ -95,4 +101,11 @@ class JotLLVMBackend : public TreeVisitor {
                                                 const std::string var_name, llvm::Type *type);
 
     llvm::Function *lookup_function(std::string name);
+
+    void push_alloca_inst_scope();
+
+    void pop_alloca_inst_scope();
+
+    std::shared_ptr<JotSymbolTable> alloca_inst_global_scope;
+    std::shared_ptr<JotSymbolTable> alloca_inst_scope;
 };

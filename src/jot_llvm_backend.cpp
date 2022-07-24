@@ -45,21 +45,21 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
         auto init_value = std::any_cast<llvm::Value *>(value);
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
         Builder.CreateStore(init_value, alloc_inst);
-        alloca_inst_table[var_name] = alloc_inst;
+        alloca_inst_scope->define(var_name, alloc_inst);
     } else if (value.type() == typeid(llvm::CallInst *)) {
         auto init_value = std::any_cast<llvm::CallInst *>(value);
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
         Builder.CreateStore(init_value, alloc_inst);
-        alloca_inst_table[var_name] = alloc_inst;
+        alloca_inst_scope->define(var_name, alloc_inst);
     } else if (value.type() == typeid(llvm::AllocaInst *)) {
         auto init_value = std::any_cast<llvm::AllocaInst *>(value);
         Builder.CreateLoad(init_value->getAllocatedType(), init_value, var_name);
-        alloca_inst_table[var_name] = init_value;
+        alloca_inst_scope->define(var_name, init_value);
     } else if (value.type() == typeid(llvm::Constant *)) {
         auto constants_string = std::any_cast<llvm::Constant *>(value);
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
         Builder.CreateStore(constants_string, alloc_inst);
-        alloca_inst_table[var_name] = alloc_inst;
+        alloca_inst_scope->define(var_name, alloc_inst);
     }
     return 0;
 }
@@ -98,13 +98,18 @@ std::any JotLLVMBackend::visit(FunctionDeclaration *node) {
     auto entry_block = llvm::BasicBlock::Create(llvm_context, "entry", function);
     Builder.SetInsertPoint(entry_block);
 
+    push_alloca_inst_scope();
     for (auto &arg : function->args()) {
         const std::string arg_name_str = std::string(arg.getName());
         auto *alloca_inst = create_entry_block_alloca(function, arg_name_str, llvm_int64_type);
+        alloca_inst_scope->define(arg_name_str, alloca_inst);
         Builder.CreateStore(&arg, alloca_inst);
     }
 
     node->get_body()->accept(this);
+
+    pop_alloca_inst_scope();
+
     verifyFunction(*function);
     return function;
 }
@@ -129,7 +134,7 @@ std::any JotLLVMBackend::visit(ReturnStatement *node) {
         return Builder.CreateRet(init_value);
     } else if (value.type() == typeid(llvm::AllocaInst *)) {
         auto init_value = std::any_cast<llvm::AllocaInst *>(value);
-        auto value_litearl = Builder.CreateLoad(init_value->getAllocatedType(), init_value, "x");
+        auto value_litearl = Builder.CreateLoad(init_value->getAllocatedType(), init_value);
         return Builder.CreateRet(value_litearl);
     }
     return 0;
@@ -151,11 +156,12 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
     auto value = node->get_right()->accept(this);
     if (value.type() == typeid(llvm::AllocaInst *)) {
         auto init_value = std::any_cast<llvm::AllocaInst *>(value);
+        alloca_inst_scope->update(name, init_value);
         return Builder.CreateLoad(init_value->getAllocatedType(), init_value, name.c_str());
     } else {
         llvm::Value *right_value = llvm_node_value(value);
         auto alloc_inst = create_entry_block_alloca(current_function, name, llvm_int64_type);
-        alloca_inst_table[name] = alloc_inst;
+        alloca_inst_scope->update(name, alloc_inst);
         return Builder.CreateStore(right_value, alloc_inst);
     }
 }
@@ -166,6 +172,7 @@ std::any JotLLVMBackend::visit(BinaryExpression *node) {
     if (!left || !right) {
         return nullptr;
     }
+
     switch (node->get_operator_token().get_kind()) {
     case TokenKind::Plus: {
         return Builder.CreateAdd(left, right, "addtemp");
@@ -216,8 +223,9 @@ std::any JotLLVMBackend::visit(CallExpression *node) {
 
 std::any JotLLVMBackend::visit(LiteralExpression *node) {
     auto name = node->get_name().get_literal();
-    llvm::AllocaInst *variable = alloca_inst_table[name];
-    return variable;
+    auto alloca_inst = alloca_inst_scope->lookup(name);
+    llvm::AllocaInst *variable = std::any_cast<llvm::AllocaInst *>(alloca_inst);
+    return Builder.CreateLoad(variable->getAllocatedType(), variable);
 }
 
 std::any JotLLVMBackend::visit(NumberExpression *node) {
@@ -252,6 +260,8 @@ llvm::Value *JotLLVMBackend::llvm_node_value(std::any any_value) {
         return std::any_cast<llvm::AllocaInst *>(any_value);
     } else if (any_value.type() == typeid(llvm::Constant *)) {
         return std::any_cast<llvm::Constant *>(any_value);
+    } else if (any_value.type() == typeid(llvm::LoadInst *)) {
+        return std::any_cast<llvm::LoadInst *>(any_value);
     }
     return nullptr;
 }
@@ -341,4 +351,12 @@ llvm::Function *JotLLVMBackend::lookup_function(std::string name) {
     }
 
     return nullptr;
+}
+
+void JotLLVMBackend::push_alloca_inst_scope() {
+    alloca_inst_scope = std::make_shared<JotSymbolTable>(alloca_inst_scope);
+}
+
+void JotLLVMBackend::pop_alloca_inst_scope() {
+    alloca_inst_scope = alloca_inst_scope->get_parent_symbol_table();
 }
