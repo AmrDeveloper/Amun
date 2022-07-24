@@ -87,8 +87,6 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Value *llvm_boolean_value(bool value);
 
-    llvm::Value *llvm_characters_array_value(const std::string &str);
-
     llvm::Value *llvm_character_value(char character);
 
     llvm::Type *llvm_type_from_jot_type(std::shared_ptr<JotType> type);

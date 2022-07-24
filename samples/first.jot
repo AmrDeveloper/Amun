@@ -5,6 +5,8 @@ fun sum(x int64, y int64) int64 {
 // External function
 extern fun putchar(c int64) int64;
 
+extern fun puts(s *char) int64;
+
 /*
  * Multi line comment
  */
@@ -23,6 +25,6 @@ fun main() int64 {
     var y : int64 = x;
     y = test() + 1;
     var result : int64 = (3 * 10);
-    putchar('a');
+    putchar(97);
     return test();
 }

@@ -293,17 +293,6 @@ llvm::Value *JotLLVMBackend::llvm_boolean_value(bool value) {
     return llvm::ConstantInt::get(llvm_int1_type, value);
 }
 
-llvm::Value *JotLLVMBackend::llvm_characters_array_value(const std::string &str) {
-    size_t length = str.length();
-    std::vector<llvm::Constant *> characters(length);
-    for (unsigned int i = 0; i < length; i++) {
-        characters[i] = llvm::ConstantInt::get(llvm_int8_type, str[i]);
-    };
-    characters.push_back(llvm::ConstantInt::get(llvm_int8_type, 0));
-    auto characters_array_type = llvm::ArrayType::get(llvm_int8_type, length);
-    return llvm::ConstantArray::get(characters_array_type, characters);
-}
-
 llvm::Value *JotLLVMBackend::llvm_character_value(char character) {
     return llvm::ConstantInt::get(llvm_int8_type, character);
 }
