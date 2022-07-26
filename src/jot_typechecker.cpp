@@ -93,7 +93,9 @@ std::any JotTypeChecker::visit(WhileStatement *node) {
                   << '\n';
         exit(1);
     }
+    push_new_scope();
     node->get_body()->accept(this);
+    pop_current_scope();
     return 0;
 }
 
