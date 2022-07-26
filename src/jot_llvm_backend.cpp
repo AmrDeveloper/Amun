@@ -61,6 +61,11 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
         Builder.CreateStore(constants_string, alloc_inst);
         alloca_inst_scope->define(var_name, alloc_inst);
+    } else if (value.type() == typeid(llvm::LoadInst *)) {
+        auto constants_string = std::any_cast<llvm::LoadInst *>(value);
+        auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
+        Builder.CreateStore(constants_string, alloc_inst);
+        alloca_inst_scope->define(var_name, alloc_inst);
     }
     return 0;
 }
