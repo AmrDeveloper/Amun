@@ -2,6 +2,7 @@
 #include "../include/jot_logger.hpp"
 #include "../include/jot_type.hpp"
 
+#include <llvm-14/llvm/IR/BasicBlock.h>
 #include <llvm-14/llvm/IR/Constant.h>
 #include <llvm-14/llvm/IR/Constants.h>
 #include <llvm-14/llvm/IR/DerivedTypes.h>
@@ -119,7 +120,31 @@ std::any JotLLVMBackend::visit(EnumDeclaration *node) {
     return 0;
 }
 
-std::any JotLLVMBackend::visit(WhileStatement *node) { return 0; }
+std::any JotLLVMBackend::visit(WhileStatement *node) {
+    auto current_function = Builder.GetInsertBlock()->getParent();
+    auto condition_branch = llvm::BasicBlock::Create(llvm_context, "while.condition");
+    auto loop_branch = llvm::BasicBlock::Create(llvm_context, "while.loop");
+    auto end_branch = llvm::BasicBlock::Create(llvm_context, "while.end");
+
+    Builder.CreateBr(condition_branch);
+    current_function->getBasicBlockList().push_back(condition_branch);
+    Builder.SetInsertPoint(condition_branch);
+
+    auto condition = llvm_node_value(node->get_condition()->accept(this));
+    Builder.CreateCondBr(condition, loop_branch, end_branch);
+
+    current_function->getBasicBlockList().push_back(loop_branch);
+    Builder.SetInsertPoint(loop_branch);
+    push_alloca_inst_scope();
+    node->get_body()->accept(this);
+    pop_alloca_inst_scope();
+    Builder.CreateBr(condition_branch);
+
+    current_function->getBasicBlockList().push_back(end_branch);
+    Builder.SetInsertPoint(end_branch);
+
+    return 0;
+}
 
 std::any JotLLVMBackend::visit(ReturnStatement *node) {
     if (node->return_value()->get_type_node()->get_type_kind() == TypeKind::Void) {
