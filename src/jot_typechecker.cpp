@@ -165,26 +165,29 @@ std::any JotTypeChecker::visit(ComparisonExpression *node) {
 }
 
 std::any JotTypeChecker::visit(UnaryExpression *node) {
-    auto left_type = node_jot_type(node->get_right()->accept(this));
+    auto right_type = node_jot_type(node->get_right()->accept(this));
     auto unary_operator = node->get_operator_token().get_kind();
 
     if (unary_operator == TokenKind::Star) {
-        if (is_pointer_type(left_type)) {
-            return std::make_shared<JotPointerType>(left_type->get_type_token(), left_type);
-            ;
+        if (is_pointer_type(right_type)) {
+            return std::make_shared<JotPointerType>(right_type->get_type_token(), right_type);
         } else {
             jot::loge << "expect unary operator `*` right node to be pointer but got "
-                      << left_type->type_literal() << '\n';
+                      << right_type->type_literal() << '\n';
+            exit(1);
+        }
+    }
+    if (unary_operator == TokenKind::Minus) {
+        if (is_number_type(right_type)) {
+            return right_type;
+        } else {
+            jot::loge << "expect unary expression to be number but got "
+                      << right_type->type_literal() << '\n';
             exit(1);
         }
     } else {
-        if (is_number_type(left_type)) {
-            return left_type;
-        } else {
-            jot::loge << "expect unary expression to be number but got "
-                      << left_type->type_literal() << '\n';
-            exit(1);
-        }
+        jot::loge << "Unsupported unary expression" << right_type->type_literal() << '\n';
+        exit(1);
     }
 }
 

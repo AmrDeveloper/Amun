@@ -261,7 +261,22 @@ std::any JotLLVMBackend::visit(ComparisonExpression *node) {
     }
 }
 
-std::any JotLLVMBackend::visit(UnaryExpression *node) { return 0; }
+std::any JotLLVMBackend::visit(UnaryExpression *node) {
+    auto right = llvm_node_value(node->get_right()->accept(this));
+    switch (node->get_operator_token().get_kind()) {
+    case TokenKind::Minus: {
+        return Builder.CreateNeg(right);
+    }
+    case TokenKind::Star: {
+        // TODO: Un supported derefernce operator
+        return right;
+    }
+    default: {
+        jot::loge << "Invalid Unary operator\n";
+        exit(1);
+    }
+    }
+}
 
 std::any JotLLVMBackend::visit(CallExpression *node) {
     auto callee = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee());

@@ -1,0 +1,10 @@
+extern fun printf(format *char, value int64) int64;
+
+fun main() int64 {
+    var neg = -1;
+    printf("%i", neg);
+
+    var pos = -1 * -1;
+    printf("%i", pos);
+    return 0;
+}
