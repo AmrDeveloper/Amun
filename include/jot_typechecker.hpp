@@ -40,6 +40,8 @@ class JotTypeChecker : public TreeVisitor {
 
     std::any visit(BinaryExpression *node) override;
 
+    std::any visit(ComparisonExpression *node) override;
+
     std::any visit(UnaryExpression *node) override;
 
     std::any visit(CallExpression *node) override;

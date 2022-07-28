@@ -1,0 +1,23 @@
+extern fun printf(format *char, value bool) int64;
+
+fun main() int64 {
+    var v1 : bool = 1 > 1;
+    printf("%i", v1);
+
+    var v2 : bool = 1 >= 1;
+    printf("%i", v2);
+
+    var v3 : bool = 1 < 1;
+    printf("%i", v3);
+
+    var v4 : bool = 1 <= 1;
+    printf("%i", v4);
+
+    var v5 : bool = 1 == 1;
+    printf("%i", v5);
+
+    var v6 : bool = 1 != 1;
+    printf("%i", v6);
+    
+    return 0;
+}

@@ -232,7 +232,7 @@ std::shared_ptr<Expression> JotParser::parse_equality_expression() {
         Token operator_token = peek_current();
         advanced_token();
         auto right = parse_comparison_expression();
-        expression = std::make_shared<BinaryExpression>(expression, operator_token, right);
+        expression = std::make_shared<ComparisonExpression>(expression, operator_token, right);
     }
     return expression;
 }
@@ -245,7 +245,7 @@ std::shared_ptr<Expression> JotParser::parse_comparison_expression() {
         Token operator_token = peek_current();
         advanced_token();
         auto right = parse_term_expression();
-        expression = std::make_shared<BinaryExpression>(expression, operator_token, right);
+        expression = std::make_shared<ComparisonExpression>(expression, operator_token, right);
     }
     return expression;
 }

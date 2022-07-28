@@ -253,6 +253,30 @@ class BinaryExpression : public Expression {
     std::shared_ptr<Expression> right;
 };
 
+class ComparisonExpression : public Expression {
+  public:
+    ComparisonExpression(std::shared_ptr<Expression> left, Token token,
+                         std::shared_ptr<Expression> right)
+        : left(left), operator_token(token), right(right) {}
+
+    Token get_operator_token() { return operator_token; }
+
+    std::shared_ptr<Expression> get_right() { return right; }
+
+    std::shared_ptr<Expression> get_left() { return left; }
+
+    std::shared_ptr<JotType> get_type_node() override {
+        return std::make_shared<JotNumber>(operator_token, NumberKind::Integer1);
+    }
+
+    std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+  private:
+    std::shared_ptr<Expression> left;
+    Token operator_token;
+    std::shared_ptr<Expression> right;
+};
+
 class UnaryExpression : public Expression {
   public:
     UnaryExpression(Token token, std::shared_ptr<Expression> right)

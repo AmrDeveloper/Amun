@@ -1,6 +1,7 @@
 #include "../include/jot_llvm_backend.hpp"
 #include "../include/jot_logger.hpp"
 #include "../include/jot_type.hpp"
+#include "jot_ast_visitor.hpp"
 
 #include <llvm-14/llvm/IR/BasicBlock.h>
 #include <llvm-14/llvm/IR/Constant.h>
@@ -127,7 +128,8 @@ std::any JotLLVMBackend::visit(EnumDeclaration *node) {
 
 std::any JotLLVMBackend::visit(WhileStatement *node) {
     auto current_function = Builder.GetInsertBlock()->getParent();
-    auto condition_branch = llvm::BasicBlock::Create(llvm_context, "while.condition");
+    auto condition_branch =
+        llvm::BasicBlock::Create(llvm_context, "while.condition", current_function);
     auto loop_branch = llvm::BasicBlock::Create(llvm_context, "while.loop");
     auto end_branch = llvm::BasicBlock::Create(llvm_context, "while.end");
 
@@ -197,9 +199,9 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(BinaryExpression *node) {
-    llvm::Value *left = llvm_node_value(node->get_left()->accept(this));
-    llvm::Value *right = llvm_node_value(node->get_right()->accept(this));
-    if (!left || !right) {
+    auto left = llvm_node_value(node->get_left()->accept(this));
+    auto right = llvm_node_value(node->get_right()->accept(this));
+    if (not left || not right) {
         return nullptr;
     }
 
@@ -221,6 +223,39 @@ std::any JotLLVMBackend::visit(BinaryExpression *node) {
     }
     default: {
         jot::loge << "Invalid binary operator\n";
+        exit(1);
+    }
+    }
+}
+
+std::any JotLLVMBackend::visit(ComparisonExpression *node) {
+    auto left = llvm_node_value(node->get_left()->accept(this));
+    auto right = llvm_node_value(node->get_right()->accept(this));
+    if (not left || not right) {
+        return nullptr;
+    }
+
+    switch (node->get_operator_token().get_kind()) {
+    case TokenKind::EqualEqual: {
+        return Builder.CreateICmpEQ(left, right);
+    }
+    case TokenKind::BangEqual: {
+        return Builder.CreateICmpNE(left, right);
+    }
+    case TokenKind::Greater: {
+        return Builder.CreateICmpUGT(left, right);
+    }
+    case TokenKind::GreaterEqual: {
+        return Builder.CreateICmpUGE(left, right);
+    }
+    case TokenKind::Smaller: {
+        return Builder.CreateICmpSLT(left, right);
+    }
+    case TokenKind::SmallerEqual: {
+        return Builder.CreateICmpSLE(left, right);
+    }
+    default: {
+        jot::loge << "Invalid Comparison operator\n";
         exit(1);
     }
     }

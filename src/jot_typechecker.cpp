@@ -128,12 +128,12 @@ std::any JotTypeChecker::visit(BinaryExpression *node) {
 
     bool is_left_number = is_number_type(left_type);
     bool is_right_number = is_number_type(right_type);
-    if (!is_left_number || !is_right_number) {
-        if (!is_left_number) {
+    if (not is_left_number || not is_right_number) {
+        if (not is_left_number) {
             jot::loge << "Expected binary left to be number but got " << left_type->type_literal()
                       << '\n';
         }
-        if (!is_right_number) {
+        if (not is_right_number) {
             jot::loge << "Expected binary right to be number but got " << right_type->type_literal()
                       << '\n';
         }
@@ -141,6 +141,27 @@ std::any JotTypeChecker::visit(BinaryExpression *node) {
     }
 
     return left_type;
+}
+
+std::any JotTypeChecker::visit(ComparisonExpression *node) {
+    auto left_type = node_jot_type(node->get_left()->accept(this));
+    auto right_type = node_jot_type(node->get_right()->accept(this));
+
+    bool is_left_number = is_number_type(left_type);
+    bool is_right_number = is_number_type(right_type);
+    if (not is_left_number || not is_right_number) {
+        if (not is_left_number) {
+            jot::loge << "Expected Comparison left to be number but got "
+                      << left_type->type_literal() << '\n';
+        }
+        if (not is_right_number) {
+            jot::loge << "Expected Comparison right to be number but got "
+                      << right_type->type_literal() << '\n';
+        }
+        exit(1);
+    }
+
+    return node_jot_type(node->get_type_node());
 }
 
 std::any JotTypeChecker::visit(UnaryExpression *node) {
