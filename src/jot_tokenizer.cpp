@@ -37,6 +37,7 @@ Token JotTokenizer::scan_next_token() {
     case ',': return build_token(TokenKind::Comma);
     case ':': return build_token(TokenKind::Colon);
     case ';': return build_token(TokenKind::Semicolon);
+    case '~': return build_token(TokenKind::Not);
 
     // Two character token
     case '|': return build_token(match('|') ? TokenKind::LogicalOr : TokenKind::Or);

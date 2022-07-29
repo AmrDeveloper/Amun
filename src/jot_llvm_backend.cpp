@@ -288,9 +288,20 @@ std::any JotLLVMBackend::visit(UnaryExpression *node) {
     case TokenKind::Minus: {
         return Builder.CreateNeg(right);
     }
+    case TokenKind::Bang: {
+        jot::loge << "Unary ! operator not implemented yet\n";
+        exit(1);
+    }
     case TokenKind::Star: {
-        // TODO: Un supported derefernce operator
-        return right;
+        jot::loge << "Unary * operator not implemented yet\n";
+        exit(1);
+    }
+    case TokenKind::And: {
+        jot::loge << "Unary & operator not implemented yet\n";
+        exit(1);
+    }
+    case TokenKind::Not: {
+        return Builder.CreateNot(right);
     }
     default: {
         jot::loge << "Invalid Unary operator\n";

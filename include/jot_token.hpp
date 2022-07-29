@@ -39,6 +39,8 @@ enum TokenKind {
     And,
     LogicalAnd,
 
+    Not,
+
     Equal,
     EqualEqual,
     Bang,
@@ -104,6 +106,8 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
     {TokenKind::Or, "|"},
     {TokenKind::LogicalOr, "||"},
 
+    {TokenKind::Not, "~"},
+
     {TokenKind::Equal, "="},
     {TokenKind::EqualEqual, "=="},
     {TokenKind::Bang, "!"},
@@ -149,10 +153,7 @@ static std::unordered_map<std::string, TokenKind> language_keywords = {
 };
 
 static std::unordered_set<TokenKind> unary_operators{
-    TokenKind::Minus,
-    TokenKind::Bang,
-    TokenKind::Star,
-    TokenKind::And,
+    TokenKind::Minus, TokenKind::Bang, TokenKind::Star, TokenKind::And, TokenKind::Not,
 };
 
 class TokenSpan {

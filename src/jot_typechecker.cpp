@@ -191,23 +191,18 @@ std::any JotTypeChecker::visit(UnaryExpression *node) {
     auto right_type = node_jot_type(node->get_right()->accept(this));
     auto unary_operator = node->get_operator_token().get_kind();
 
-    if (unary_operator == TokenKind::Star) {
-        if (is_pointer_type(right_type)) {
-            return std::make_shared<JotPointerType>(right_type->get_type_token(), right_type);
-        } else {
-            jot::loge << "expect unary operator `*` right node to be pointer but got "
-                      << right_type->type_literal() << '\n';
-            exit(1);
-        }
-    }
-    if (unary_operator == TokenKind::Minus) {
-        if (is_number_type(right_type)) {
-            return right_type;
-        } else {
-            jot::loge << "expect unary expression to be number but got "
-                      << right_type->type_literal() << '\n';
-            exit(1);
-        }
+    if (unary_operator == TokenKind::Minus && is_number_type(right_type)) {
+        return right_type;
+    } else if (unary_operator == TokenKind::Bang && is_number_type(right_type)) {
+        // TODO: assert it int1 (bool)
+        return right_type;
+    } else if (unary_operator == TokenKind::Star && is_pointer_type(right_type)) {
+        return std::make_shared<JotPointerType>(right_type->get_type_token(), right_type);
+    } else if (unary_operator == TokenKind::And && is_number_type(right_type)) {
+        return right_type;
+    } else if (unary_operator == TokenKind::Not && is_number_type(right_type)) {
+        // TODO: assert it int1 (bool)
+        return right_type;
     } else {
         jot::loge << "Unsupported unary expression" << right_type->type_literal() << '\n';
         exit(1);

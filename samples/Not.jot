@@ -1,0 +1,7 @@
+extern fun printf(format *char, value int64) int64;
+
+fun main() int64 {
+    var not = 5;
+    printf("%i", ~not);
+    return 0;
+}
