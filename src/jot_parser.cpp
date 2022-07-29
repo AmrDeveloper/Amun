@@ -215,12 +215,34 @@ std::shared_ptr<ExpressionStatement> JotParser::parse_expression_statement() {
 std::shared_ptr<Expression> JotParser::parse_expression() { return parse_assignment_expression(); }
 
 std::shared_ptr<Expression> JotParser::parse_assignment_expression() {
-    auto expression = parse_equality_expression();
+    auto expression = parse_logical_or_expression();
     if (is_current_kind(TokenKind::Equal)) {
         auto equal_token = peek_current();
         advanced_token();
         auto value = parse_assignment_expression();
         return std::make_shared<AssignExpression>(expression, equal_token, value);
+    }
+    return expression;
+}
+
+std::shared_ptr<Expression> JotParser::parse_logical_or_expression() {
+    auto expression = parse_logical_and_expression();
+    while (is_current_kind(TokenKind::LogicalOr)) {
+        auto or_token = peek_current();
+        advanced_token();
+        auto right = parse_equality_expression();
+        expression = std::make_shared<LogicalExpression>(expression, or_token, right);
+    }
+    return expression;
+}
+
+std::shared_ptr<Expression> JotParser::parse_logical_and_expression() {
+    auto expression = parse_equality_expression();
+    while (is_current_kind(TokenKind::LogicalAnd)) {
+        auto and_token = peek_current();
+        advanced_token();
+        auto right = parse_equality_expression();
+        expression = std::make_shared<LogicalExpression>(expression, and_token, right);
     }
     return expression;
 }
@@ -372,7 +394,7 @@ std::shared_ptr<JotType> JotParser::parse_type_with_prefix() {
         return std::make_shared<JotPointerType>(operand->get_type_token(), operand);
     }
 
-    if (is_current_kind(TokenKind::Address)) {
+    if (is_current_kind(TokenKind::And)) {
         advanced_token();
         auto operand = parse_type_with_prefix();
         return std::make_shared<JotNumber>(operand->get_type_token(), NumberKind::Integer64);

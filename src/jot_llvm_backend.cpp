@@ -261,6 +261,27 @@ std::any JotLLVMBackend::visit(ComparisonExpression *node) {
     }
 }
 
+std::any JotLLVMBackend::visit(LogicalExpression *node) {
+    auto left = llvm_node_value(node->get_left()->accept(this));
+    auto right = llvm_node_value(node->get_right()->accept(this));
+    if (not left || not right) {
+        return nullptr;
+    }
+
+    switch (node->get_operator_token().get_kind()) {
+    case TokenKind::LogicalAnd: {
+        return Builder.CreateLogicalAnd(left, right);
+    }
+    case TokenKind::LogicalOr: {
+        return Builder.CreateLogicalOr(left, right);
+    }
+    default: {
+        jot::loge << "Invalid Logical operator\n";
+        exit(1);
+    }
+    }
+}
+
 std::any JotLLVMBackend::visit(UnaryExpression *node) {
     auto right = llvm_node_value(node->get_right()->accept(this));
     switch (node->get_operator_token().get_kind()) {

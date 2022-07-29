@@ -1,0 +1,29 @@
+extern fun printf(format *char, value bool) int64;
+
+fun main() int64 {
+    var v : bool = true || true;
+    printf("%i", v);
+
+    var v1 : bool = true || false;
+    printf("%i", v1);
+
+    var v2 : bool = false || false;
+    printf("%i", v2);
+
+    var v3 : bool = false || true;
+    printf("%i", v3);
+
+    var v4 : bool = true && false;
+    printf("%i", v4);
+
+    var v5 : bool = false && false;
+    printf("%i", v5);
+
+    var v6 : bool = false && true;
+    printf("%i", v6);
+    
+    var v7 : bool = true && true;
+    printf("%i", v7);
+
+    return 0;
+}

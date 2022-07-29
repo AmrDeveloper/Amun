@@ -147,6 +147,7 @@ std::any JotTypeChecker::visit(ComparisonExpression *node) {
     auto left_type = node_jot_type(node->get_left()->accept(this));
     auto right_type = node_jot_type(node->get_right()->accept(this));
 
+    // TODO: Assert that they are int1 (bool)
     bool is_left_number = is_number_type(left_type);
     bool is_right_number = is_number_type(right_type);
     if (not is_left_number || not is_right_number) {
@@ -156,6 +157,28 @@ std::any JotTypeChecker::visit(ComparisonExpression *node) {
         }
         if (not is_right_number) {
             jot::loge << "Expected Comparison right to be number but got "
+                      << right_type->type_literal() << '\n';
+        }
+        exit(1);
+    }
+
+    return node_jot_type(node->get_type_node());
+}
+
+std::any JotTypeChecker::visit(LogicalExpression *node) {
+    auto left_type = node_jot_type(node->get_left()->accept(this));
+    auto right_type = node_jot_type(node->get_right()->accept(this));
+
+    // TODO: Assert that they are int1 (bool)
+    bool is_left_number = is_number_type(left_type);
+    bool is_right_number = is_number_type(right_type);
+    if (not is_left_number || not is_right_number) {
+        if (not is_left_number) {
+            jot::loge << "Expected Logical left to be number but got " << left_type->type_literal()
+                      << '\n';
+        }
+        if (not is_right_number) {
+            jot::loge << "Expected Logical right to be number but got "
                       << right_type->type_literal() << '\n';
         }
         exit(1);

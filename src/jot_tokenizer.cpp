@@ -26,6 +26,7 @@ Token JotTokenizer::scan_next_token() {
     column_current = column_start;
 
     switch (c) {
+    // One character token
     case '(': return build_token(TokenKind::OpenParen);
     case ')': return build_token(TokenKind::CloseParen);
     case '[': return build_token(TokenKind::OpenBracket);
@@ -36,8 +37,10 @@ Token JotTokenizer::scan_next_token() {
     case ',': return build_token(TokenKind::Comma);
     case ':': return build_token(TokenKind::Colon);
     case ';': return build_token(TokenKind::Semicolon);
-    case '&': return build_token(TokenKind::Address);
 
+    // Two character token
+    case '|': return build_token(match('|') ? TokenKind::LogicalOr : TokenKind::Or);
+    case '&': return build_token(match('&') ? TokenKind::LogicalAnd : TokenKind::And);
     case '=': return build_token(match('=') ? TokenKind::EqualEqual : TokenKind::Equal);
     case '!': return build_token(match('=') ? TokenKind::BangEqual : TokenKind::Bang);
     case '>': return build_token(match('=') ? TokenKind::GreaterEqual : TokenKind::Greater);

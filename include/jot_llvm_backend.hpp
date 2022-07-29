@@ -72,6 +72,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(ComparisonExpression *node) override;
 
+    std::any visit(LogicalExpression *node) override;
+
     std::any visit(UnaryExpression *node) override;
 
     std::any visit(CallExpression *node) override;

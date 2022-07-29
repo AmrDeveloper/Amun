@@ -38,6 +38,7 @@ class GroupExpression;
 class AssignExpression;
 class BinaryExpression;
 class ComparisonExpression;
+class LogicalExpression;
 class UnaryExpression;
 class CallExpression;
 class LiteralExpression;
@@ -56,6 +57,8 @@ class ExpressionVisitor {
     virtual std::any visit(BinaryExpression *node) = 0;
 
     virtual std::any visit(ComparisonExpression *node) = 0;
+
+    virtual std::any visit(LogicalExpression *node) = 0;
 
     virtual std::any visit(UnaryExpression *node) = 0;
 

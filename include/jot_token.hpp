@@ -33,7 +33,11 @@ enum TokenKind {
     Star,
     Slash,
     Percent,
-    Address,
+
+    Or,
+    LogicalOr,
+    And,
+    LogicalAnd,
 
     Equal,
     EqualEqual,
@@ -94,7 +98,11 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
     {TokenKind::Star, "*"},
     {TokenKind::Slash, "/"},
     {TokenKind::Percent, "%"},
-    {TokenKind::Address, "&"},
+
+    {TokenKind::And, "&"},
+    {TokenKind::LogicalAnd, "&&"},
+    {TokenKind::Or, "|"},
+    {TokenKind::LogicalOr, "||"},
 
     {TokenKind::Equal, "="},
     {TokenKind::EqualEqual, "=="},
@@ -144,7 +152,7 @@ static std::unordered_set<TokenKind> unary_operators{
     TokenKind::Minus,
     TokenKind::Bang,
     TokenKind::Star,
-    TokenKind::Address,
+    TokenKind::And,
 };
 
 class TokenSpan {
