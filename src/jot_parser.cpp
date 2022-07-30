@@ -25,9 +25,28 @@ std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit() {
 
 std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration() {
     advanced_token();
+    if (is_current_kind(TokenKind::OpenBrace)) {
+        // import { <string> <string> }
+        advanced_token();
+        std::vector<std::shared_ptr<Statement>> tree_nodes;
+        while (is_source_available() && not is_current_kind(TokenKind::CloseBrace)) {
+            auto library_name = consume_kind(
+                TokenKind::String, "Expect string as library name after import statement");
+            auto nodes = parse_single_import_file(library_name);
+            tree_nodes.insert(std::end(tree_nodes), std::begin(nodes), std::end(nodes));
+        }
+        assert_kind(TokenKind::CloseBrace, "Expect Close brace `}` after import block");
+        return tree_nodes;
+    }
+
+    // import <string>
     auto library_name =
         consume_kind(TokenKind::String, "Expect string as library name after import statement");
-    std::string library_path = "../lib/" + library_name.get_literal() + ".jot";
+    return parse_single_import_file(library_name);
+}
+
+std::vector<std::shared_ptr<Statement>> JotParser::parse_single_import_file(Token token) {
+    std::string library_path = "../lib/" + token.get_literal() + ".jot";
     const char *file_name = library_path.c_str();
     std::string source_content = read_file_content(file_name);
     auto tokenizer = std::make_unique<JotTokenizer>(file_name, source_content);
