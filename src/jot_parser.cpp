@@ -235,11 +235,20 @@ std::shared_ptr<Expression> JotParser::parse_expression() { return parse_assignm
 
 std::shared_ptr<Expression> JotParser::parse_assignment_expression() {
     auto expression = parse_logical_or_expression();
-    if (is_current_kind(TokenKind::Equal)) {
-        auto equal_token = peek_current();
+    if (peek_current().is_assignments_operator()) {
+        auto assignments_token = peek_current();
         advanced_token();
-        auto value = parse_assignment_expression();
-        return std::make_shared<AssignExpression>(expression, equal_token, value);
+        std::shared_ptr<Expression> right_value;
+        auto assignments_token_kind = assignments_token.get_kind();
+        if (assignments_token_kind == TokenKind::Equal) {
+            right_value = parse_assignment_expression();
+        } else {
+            assignments_token.set_kind(assignments_binary_operators[assignments_token_kind]);
+            auto right_expression = parse_assignment_expression();
+            right_value =
+                std::make_shared<BinaryExpression>(expression, assignments_token, right_expression);
+        }
+        return std::make_shared<AssignExpression>(expression, assignments_token, right_value);
     }
     return expression;
 }

@@ -156,6 +156,17 @@ static std::unordered_set<TokenKind> unary_operators{
     TokenKind::Minus, TokenKind::Bang, TokenKind::Star, TokenKind::And, TokenKind::Not,
 };
 
+static std::unordered_set<TokenKind> assignments_operators{
+    TokenKind::Equal,     TokenKind::PlusEqual,  TokenKind::MinusEqual,
+    TokenKind::StarEqual, TokenKind::SlashEqual, TokenKind::PercentEqual,
+};
+
+static std::unordered_map<TokenKind, TokenKind> assignments_binary_operators{
+    {TokenKind::PlusEqual, TokenKind::Plus},       {TokenKind::MinusEqual, TokenKind::Minus},
+    {TokenKind::StarEqual, TokenKind::Star},       {TokenKind::SlashEqual, TokenKind::Slash},
+    {TokenKind::PercentEqual, TokenKind::Percent},
+};
+
 class TokenSpan {
   public:
     TokenSpan(std::string file, size_t l, size_t cs, size_t cd)
@@ -183,6 +194,8 @@ class Token {
 
     TokenKind get_kind() { return kind; }
 
+    void set_kind(TokenKind new_kind) { kind = new_kind; }
+
     TokenSpan get_span() { return span; }
 
     std::string get_literal() { return literal; }
@@ -194,6 +207,10 @@ class Token {
     bool is_end_of_file() { return kind == TokenKind::EndOfFile; }
 
     bool is_unary_operator() { return unary_operators.find(kind) != unary_operators.end(); }
+
+    bool is_assignments_operator() {
+        return assignments_operators.find(kind) != assignments_operators.end();
+    }
 
   private:
     TokenKind kind;
