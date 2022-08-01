@@ -405,6 +405,18 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
         assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
         return std::make_shared<GroupExpression>(position, expression);
     }
+    case TokenKind::IfKeyword: {
+        jot::logi << "Parse If Expression\n";
+        Token if_token = peek_current();
+        advanced_token();
+        auto condition = parse_expression();
+        auto then_value = parse_expression();
+        Token else_token =
+            consume_kind(TokenKind::ElseKeyword, "Expect `else` keyword after then value.");
+        auto else_value = parse_expression();
+        return std::make_shared<IfExpression>(if_token, else_token, condition, then_value,
+                                              else_value);
+    }
     default: {
         jot::loge << "Unexpected or unsupported expression :" << peek_current().get_kind_literal()
                   << '\n';

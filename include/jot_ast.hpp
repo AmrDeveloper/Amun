@@ -191,6 +191,36 @@ class ExpressionStatement : public Statement {
     std::shared_ptr<Expression> expression;
 };
 
+class IfExpression : public Expression {
+  public:
+    IfExpression(Token if_token, Token else_token, std::shared_ptr<Expression> condition,
+                 std::shared_ptr<Expression> if_expression,
+                 std::shared_ptr<Expression> else_expression)
+        : if_token(if_token), else_token(else_token), condition(condition),
+          if_expression(if_expression), else_expression(else_expression) {}
+
+    Token get_if_position() { return if_token; }
+
+    Token get_else_position() { return else_token; }
+
+    std::shared_ptr<Expression> get_condition() { return condition; }
+
+    std::shared_ptr<Expression> get_if_value() { return if_expression; }
+
+    std::shared_ptr<Expression> get_else_value() { return else_expression; }
+
+    std::shared_ptr<JotType> get_type_node() override { return if_expression->get_type_node(); }
+
+    std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+  private:
+    Token if_token;
+    Token else_token;
+    std::shared_ptr<Expression> condition;
+    std::shared_ptr<Expression> if_expression;
+    std::shared_ptr<Expression> else_expression;
+};
+
 class GroupExpression : public Expression {
   public:
     GroupExpression(Token position, std::shared_ptr<Expression> expression)

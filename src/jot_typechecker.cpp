@@ -105,6 +105,18 @@ std::any JotTypeChecker::visit(ExpressionStatement *node) {
     return node->get_expression()->accept(this);
 }
 
+std::any JotTypeChecker::visit(IfExpression *node) {
+    auto if_value = node_jot_type(node->get_if_value()->accept(this));
+    auto else_value = node_jot_type(node->get_else_value()->accept(this));
+    if (!if_value->equals(else_value)) {
+        jot::loge << "If Expression Type missmatch expect " << if_value->type_literal()
+                  << " but got " << else_value->type_literal() << '\n';
+        exit(1);
+    }
+
+    return if_value;
+}
+
 std::any JotTypeChecker::visit(GroupExpression *node) {
     return node->get_expression()->accept(this);
 }
@@ -119,7 +131,7 @@ std::any JotTypeChecker::visit(AssignExpression *node) {
         exit(1);
     }
 
-    return 0;
+    return right_type;
 }
 
 std::any JotTypeChecker::visit(BinaryExpression *node) {

@@ -67,6 +67,11 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
         Builder.CreateStore(constants_string, alloc_inst);
         alloca_inst_scope->define(var_name, alloc_inst);
+    } else if (value.type() == typeid(llvm::PHINode *)) {
+        auto node = std::any_cast<llvm::PHINode *>(value);
+        auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
+        Builder.CreateStore(node, alloc_inst);
+        alloca_inst_scope->define(var_name, alloc_inst);
     }
     return 0;
 }
@@ -175,6 +180,40 @@ std::any JotLLVMBackend::visit(ReturnStatement *node) {
 std::any JotLLVMBackend::visit(ExpressionStatement *node) {
     node->get_expression()->accept(this);
     return 0;
+}
+
+std::any JotLLVMBackend::visit(IfExpression *node) {
+    auto function = Builder.GetInsertBlock()->getParent();
+
+    auto condition = llvm_node_value(node->get_condition()->accept(this));
+
+    llvm::BasicBlock *thenBB = llvm::BasicBlock::Create(llvm_context, "then", function);
+    llvm::BasicBlock *elseBB = llvm::BasicBlock::Create(llvm_context, "else");
+    llvm::BasicBlock *mergeBB = llvm::BasicBlock::Create(llvm_context, "ifcont");
+    Builder.CreateCondBr(condition, thenBB, elseBB);
+
+    Builder.SetInsertPoint(thenBB);
+    auto then_value = llvm_node_value(node->get_if_value()->accept(this));
+
+    Builder.CreateBr(mergeBB);
+    thenBB = Builder.GetInsertBlock();
+
+    function->getBasicBlockList().push_back(elseBB);
+    Builder.SetInsertPoint(elseBB);
+
+    auto else_value = llvm_node_value(node->get_else_value()->accept(this));
+
+    Builder.CreateBr(mergeBB);
+    elseBB = Builder.GetInsertBlock();
+
+    function->getBasicBlockList().push_back(mergeBB);
+    Builder.SetInsertPoint(mergeBB);
+
+    llvm::PHINode *pn = Builder.CreatePHI(then_value->getType(), 2, "iftmp");
+    pn->addIncoming(then_value, thenBB);
+    pn->addIncoming(else_value, elseBB);
+
+    return pn;
 }
 
 std::any JotLLVMBackend::visit(GroupExpression *node) {
@@ -374,6 +413,8 @@ llvm::Value *JotLLVMBackend::llvm_node_value(std::any any_value) {
         return std::any_cast<llvm::Constant *>(any_value);
     } else if (any_value.type() == typeid(llvm::LoadInst *)) {
         return std::any_cast<llvm::LoadInst *>(any_value);
+    } else if (any_value.type() == typeid(llvm::PHINode *)) {
+        return std::any_cast<llvm::PHINode *>(any_value);
     }
     return nullptr;
 }
