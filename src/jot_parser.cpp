@@ -3,6 +3,7 @@
 #include "../include/jot_logger.hpp"
 
 #include <memory>
+#include <vector>
 
 std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit() {
     std::vector<std::shared_ptr<Statement>> tree_nodes;
@@ -84,6 +85,10 @@ std::shared_ptr<Statement> JotParser::parse_statement() {
     case TokenKind::VarKeyword: {
         jot::logi << "Parse Var statement\n";
         return parse_field_declaration();
+    }
+    case TokenKind::IfKeyword: {
+        jot::logi << "Parse If statement\n";
+        return parse_if_statement();
     }
     case TokenKind::WhileKeyword: {
         jot::logi << "Parse While statement\n";
@@ -214,6 +219,37 @@ std::shared_ptr<ReturnStatement> JotParser::parse_return_statement() {
     auto value = parse_expression();
     assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after return statement");
     return std::make_shared<ReturnStatement>(keyword, value);
+}
+
+std::shared_ptr<IfStatement> JotParser::parse_if_statement() {
+    jot::logi << "Parse If Statement\n";
+    auto if_token = consume_kind(TokenKind::IfKeyword, "Expect If keyword.");
+    auto condition = parse_expression();
+    auto then_block = parse_statement();
+    auto conditional_block = std::make_shared<ConditionalBlock>(if_token, condition, then_block);
+    std::vector<std::shared_ptr<ConditionalBlock>> conditional_blocks;
+    conditional_blocks.push_back(conditional_block);
+
+    while (is_source_available() && is_current_kind(TokenKind::ElseKeyword)) {
+        auto else_token = consume_kind(TokenKind::ElseKeyword, "Expect else keyword.");
+        if (is_current_kind(TokenKind::IfKeyword)) {
+            advanced_token();
+            auto elif_condition = parse_expression();
+            auto elif_block = parse_statement();
+            auto elif_condition_block =
+                std::make_shared<ConditionalBlock>(else_token, elif_condition, elif_block);
+            conditional_blocks.push_back(elif_condition_block);
+        } else {
+            auto true_value_token = else_token;
+            true_value_token.set_kind(TokenKind::TrueKeyword);
+            auto true_expression = std::make_shared<BooleanExpression>(true_value_token);
+            auto else_block = parse_statement();
+            auto elif_condition_block =
+                std::make_shared<ConditionalBlock>(else_token, true_expression, else_block);
+            conditional_blocks.push_back(elif_condition_block);
+        }
+    }
+    return std::make_shared<IfStatement>(conditional_blocks);
 }
 
 std::shared_ptr<WhileStatement> JotParser::parse_while_statement() {

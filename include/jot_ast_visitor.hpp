@@ -9,6 +9,7 @@ class ExternalPrototype;
 class FunctionPrototype;
 class FunctionDeclaration;
 class EnumDeclaration;
+class IfStatement;
 class WhileStatement;
 class ReturnStatement;
 class ExpressionStatement;
@@ -26,6 +27,8 @@ class StatementVisitor {
     virtual std::any visit(FunctionDeclaration *node) = 0;
 
     virtual std::any visit(EnumDeclaration *node) = 0;
+
+    virtual std::any visit(IfStatement *node) = 0;
 
     virtual std::any visit(WhileStatement *node) = 0;
 

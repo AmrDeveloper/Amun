@@ -143,6 +143,39 @@ class EnumDeclaration : public Statement {
     std::vector<Token> values;
 };
 
+class ConditionalBlock {
+  public:
+    ConditionalBlock(Token position, std::shared_ptr<Expression> condition,
+                     std::shared_ptr<Statement> body)
+        : position(position), condition(condition), body(body) {}
+
+    Token get_position() { return position; }
+
+    std::shared_ptr<Expression> get_condition() { return condition; }
+
+    std::shared_ptr<Statement> get_body() { return body; }
+
+  private:
+    Token position;
+    std::shared_ptr<Expression> condition;
+    std::shared_ptr<Statement> body;
+};
+
+class IfStatement : public Statement {
+  public:
+    IfStatement(std::vector<std::shared_ptr<ConditionalBlock>> conditional_blocks)
+        : conditional_blocks(conditional_blocks) {}
+
+    std::vector<std::shared_ptr<ConditionalBlock>> get_conditional_blocks() {
+        return conditional_blocks;
+    }
+
+    std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
+
+  private:
+    std::vector<std::shared_ptr<ConditionalBlock>> conditional_blocks;
+};
+
 class WhileStatement : public Statement {
   public:
     WhileStatement(Token position, std::shared_ptr<Expression> condition,

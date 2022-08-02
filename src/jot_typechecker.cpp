@@ -86,9 +86,25 @@ std::any JotTypeChecker::visit(EnumDeclaration *node) {
     return is_first_defined;
 }
 
+std::any JotTypeChecker::visit(IfStatement *node) {
+    for (auto &conditional_block : node->get_conditional_blocks()) {
+        auto condition = node_jot_type(conditional_block->get_condition()->accept(this));
+        if (not is_number_type(condition)) {
+            jot::loge << "if condition mush be a number but got " << condition->type_literal()
+                      << '\n';
+            exit(1);
+        }
+
+        push_new_scope();
+        conditional_block->get_body()->accept(this);
+        pop_current_scope();
+    }
+    return 0;
+}
+
 std::any JotTypeChecker::visit(WhileStatement *node) {
     auto left_type = node_jot_type(node->get_condition()->accept(this));
-    if (!is_number_type(left_type)) {
+    if (not is_number_type(left_type)) {
         jot::loge << "While condition mush be a number but got " << left_type->type_literal()
                   << '\n';
         exit(1);

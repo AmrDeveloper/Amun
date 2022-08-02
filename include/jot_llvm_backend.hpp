@@ -58,6 +58,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(EnumDeclaration *node) override;
 
+    std::any visit(IfStatement *node) override;
+
     std::any visit(WhileStatement *node) override;
 
     std::any visit(ReturnStatement *node) override;

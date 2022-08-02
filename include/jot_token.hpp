@@ -15,7 +15,6 @@ enum TokenKind {
     ReturnKeyword,
     ExternKeyword,
     IfKeyword,
-    ElifKeyword,
     ElseKeyword,
     WhileKeyword,
 
@@ -83,7 +82,6 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
     {TokenKind::ReturnKeyword, "Return"},
     {TokenKind::ExternKeyword, "Extern"},
     {TokenKind::IfKeyword, "If"},
-    {TokenKind::ElifKeyword, "Else if"},
     {TokenKind::ElseKeyword, "Else"},
     {TokenKind::WhileKeyword, "While"},
     {TokenKind::TrueKeyword, "True"},
@@ -146,10 +144,9 @@ static std::unordered_map<std::string, TokenKind> language_keywords = {
     {"var", TokenKind::VarKeyword},       {"type", TokenKind::TypeKeyword},
     {"fun", TokenKind::FunKeyword},       {"enum", TokenKind::EnumKeyword},
     {"return", TokenKind::ReturnKeyword}, {"extern", TokenKind::ExternKeyword},
-    {"if", TokenKind::IfKeyword},         {"elif", TokenKind::ElifKeyword},
-    {"else", TokenKind::ElseKeyword},     {"while", TokenKind::WhileKeyword},
-    {"true", TokenKind::TrueKeyword},     {"false", TokenKind::FalseKeyword},
-    {"null", TokenKind::NullKeyword},
+    {"if", TokenKind::IfKeyword},         {"else", TokenKind::ElseKeyword},
+    {"while", TokenKind::WhileKeyword},   {"true", TokenKind::TrueKeyword},
+    {"false", TokenKind::FalseKeyword},   {"null", TokenKind::NullKeyword},
 };
 
 static std::unordered_set<TokenKind> unary_operators{
@@ -199,6 +196,8 @@ class Token {
     TokenSpan get_span() { return span; }
 
     std::string get_literal() { return literal; }
+
+    std::string set_literal(std::string new_literal) { literal = std::move(new_literal); }
 
     std::string get_kind_literal() { return token_kind_literal[kind]; }
 

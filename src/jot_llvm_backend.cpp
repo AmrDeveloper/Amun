@@ -131,6 +131,45 @@ std::any JotLLVMBackend::visit(EnumDeclaration *node) {
     return 0;
 }
 
+std::any JotLLVMBackend::visit(IfStatement *node) {
+    auto current_function = Builder.GetInsertBlock()->getParent();
+    auto start_block = llvm::BasicBlock::Create(llvm_context, "if.start");
+    auto end_block = llvm::BasicBlock::Create(llvm_context, "if.end");
+
+    Builder.CreateBr(start_block);
+    current_function->getBasicBlockList().push_back(start_block);
+    Builder.SetInsertPoint(start_block);
+
+    auto conditional_blocks = node->get_conditional_blocks();
+    auto conditional_blocks_size = conditional_blocks.size();
+    for (unsigned long i = 0; i < conditional_blocks_size; i++) {
+        auto true_block = llvm::BasicBlock::Create(llvm_context, "if.true");
+        current_function->getBasicBlockList().push_back(true_block);
+
+        auto false_branch = end_block;
+        if (i + 1 < conditional_blocks_size) {
+            false_branch = llvm::BasicBlock::Create(llvm_context, "if.false");
+            current_function->getBasicBlockList().push_back(false_branch);
+        }
+
+        auto condition = llvm_node_value(conditional_blocks[i]->get_condition()->accept(this));
+        Builder.CreateCondBr(condition, true_block, false_branch);
+        Builder.SetInsertPoint(true_block);
+
+        push_alloca_inst_scope();
+        conditional_blocks[i]->get_body()->accept(this);
+        pop_alloca_inst_scope();
+
+        Builder.CreateBr(end_block);
+        Builder.SetInsertPoint(false_branch);
+    }
+
+    current_function->getBasicBlockList().push_back(end_block);
+    Builder.SetInsertPoint(end_block);
+
+    return 0;
+}
+
 std::any JotLLVMBackend::visit(WhileStatement *node) {
     auto current_function = Builder.GetInsertBlock()->getParent();
     auto condition_branch =
