@@ -40,7 +40,7 @@ bool JotFunctionType::equals(const std::shared_ptr<JotType> &other) {
             return false;
         auto other_parameters = other_function->get_parameters();
         for (size_t i = 0; i < parameter_size; i++) {
-            if (!parameters[i]->equals(other_parameters[1]))
+            if (not parameters[i]->equals(other_parameters[i]))
                 return false;
         }
         return return_type->equals(other_function->get_return_type());
