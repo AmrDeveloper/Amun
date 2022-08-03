@@ -242,8 +242,8 @@ std::any JotTypeChecker::visit(CallExpression *node) {
         auto name = literal->get_name().get_literal();
         if (symbol_table->is_defined(name)) {
             auto value = symbol_table->lookup(name);
-            if (auto type = std::any_cast<std::shared_ptr<JotFunctionType>>(&value)) {
-                auto parameters = type->get()->get_parameters();
+            if (auto type = std::any_cast<std::shared_ptr<JotFunctionType>>(value)) {
+                auto parameters = type->get_parameters();
                 auto arguments = node->get_arguments();
                 if (parameters.size() != arguments.size()) {
                     jot::loge << "Invalid number of arguments " << name << " expect "
@@ -267,7 +267,7 @@ std::any JotTypeChecker::visit(CallExpression *node) {
                     }
                 }
 
-                return type->get()->get_return_type();
+                return type->get_return_type();
             } else {
                 jot::loge << "Call expression work only with function\n";
                 exit(1);

@@ -160,7 +160,18 @@ std::any JotLLVMBackend::visit(IfStatement *node) {
         conditional_blocks[i]->get_body()->accept(this);
         pop_alloca_inst_scope();
 
-        Builder.CreateBr(end_block);
+        bool has_return_statement = false;
+        auto body = conditional_blocks[i]->get_body();
+        if (std::dynamic_pointer_cast<ReturnStatement>(body)) {
+            has_return_statement = true;
+        } else if (auto block = std::dynamic_pointer_cast<BlockStatement>(body)) {
+            if (std::dynamic_pointer_cast<ReturnStatement>(block->get_nodes().back())) {
+                has_return_statement = true;
+            }
+        }
+
+        if (not has_return_statement)
+            Builder.CreateBr(end_block);
         Builder.SetInsertPoint(false_branch);
     }
 
