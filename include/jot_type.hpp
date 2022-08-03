@@ -3,6 +3,7 @@
 #include "jot_token.hpp"
 
 #include <memory>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -44,7 +45,18 @@ class JotNumber : public JotType {
 
     Token get_type_token() override { return token; }
 
-    std::string type_literal() override { return token.get_literal(); }
+    std::string type_literal() override {
+        switch (kind) {
+        case Integer1: return "Int1";
+        case Integer8: return "Int8";
+        case Integer16: return "Int16";
+        case Integer32: return "Int32";
+        case Integer64: return "Int64";
+        case Float32: return "Float32";
+        case Float64: return "Float64";
+        default: return "Number";
+        }
+    }
 
     TypeKind get_type_kind() override { return TypeKind::Number; }
 
@@ -66,7 +78,7 @@ class JotPointerType : public JotType {
 
     Token get_type_token() override { return token; }
 
-    std::string type_literal() override { return "*" + token.get_literal(); }
+    std::string type_literal() override { return "*" + point_to->type_literal(); }
 
     TypeKind get_type_kind() override { return TypeKind::Pointer; }
 
@@ -90,9 +102,7 @@ class JotArrayType : public JotType {
 
     Token get_type_token() override { return element_type->get_type_token(); }
 
-    std::string type_literal() override {
-        return "[" + element_type->get_type_token().get_literal() + "]";
-    }
+    std::string type_literal() override { return "[" + element_type->type_literal() + "]"; }
 
     TypeKind get_type_kind() override { return TypeKind::Array; }
 
@@ -117,7 +127,19 @@ class JotFunctionType : public JotType {
 
     Token get_type_token() override { return name; }
 
-    std::string type_literal() override { return name.get_literal(); }
+    std::string type_literal() override {
+        std::stringstream function_type_literal;
+        function_type_literal << "(";
+        for (auto &parameter : parameters) {
+            function_type_literal << " ";
+            function_type_literal << parameter->type_literal();
+            function_type_literal << " ";
+        }
+        function_type_literal << ")";
+        function_type_literal << " -> ";
+        function_type_literal << return_type->type_literal();
+        return name.get_literal();
+    }
 
     TypeKind get_type_kind() override { return TypeKind::Function; }
 
@@ -156,7 +178,7 @@ class JotNamedType : public JotType {
 
     Token get_type_token() override { return name; }
 
-    std::string type_literal() override { return name.get_literal(); }
+    std::string type_literal() override { return "Named " + name.get_literal(); }
 
     TypeKind get_type_kind() override { return TypeKind::Named; }
 
