@@ -197,7 +197,7 @@ class Token {
 
     std::string get_literal() { return literal; }
 
-    std::string set_literal(std::string new_literal) { literal = std::move(new_literal); }
+    void set_literal(std::string new_literal) { literal = std::move(new_literal); }
 
     std::string get_kind_literal() { return token_kind_literal[kind]; }
 
