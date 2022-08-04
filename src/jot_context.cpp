@@ -1,4 +1,5 @@
 #include "../include/jot_context.hpp"
+#include <cstdlib>
 
 int JotContext::compile_source_code(const char *source_file) {
     auto compilation_unit = parse_source_code(source_file);
@@ -9,7 +10,14 @@ int JotContext::compile_source_code(const char *source_file) {
     JotLLVMBackend llvm_backend;
     auto llvm_ir_module = llvm_backend.compile(source_file, compilation_unit);
 
-    llvm_ir_module->print(llvm::errs(), nullptr);
+    const char *ouputFileName = "output.ll";
+    std::error_code error_code;
+    llvm::raw_fd_ostream output_stream(ouputFileName, error_code);
+    if (error_code.message() != "Success") {
+        return EXIT_FAILURE;
+    }
+
+    llvm_ir_module->print(output_stream, nullptr);
 
     return EXIT_SUCCESS;
 }

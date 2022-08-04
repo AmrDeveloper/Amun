@@ -42,5 +42,5 @@ file(GLOB source_files CONFIGURE_DEPENDS
 
 add_executable(jot ${source_files})
 
-llvm_map_components_to_libnames(llvm_libs core bitwriter executionengine native mcjit)
+llvm_map_components_to_libnames(llvm_libs core)
 target_link_libraries(jot ${llvm_libs})
