@@ -1,5 +1,6 @@
 #include "../include/jot_files.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 
@@ -20,3 +21,13 @@ std::string read_file_line(const char *file_path, int line_number) {
     }
     return "";
 }
+
+void create_file_with_content(const std::string &path, const std::string &content) {
+    std::ofstream of_stream(path);
+    of_stream << content;
+    of_stream.close();
+}
+
+void create_new_directory(const std::string &path) { std::filesystem::create_directory(path); }
+
+bool is_file_exists(const std::string &path) { return std::filesystem::exists(path); }
