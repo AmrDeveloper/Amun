@@ -464,16 +464,33 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
 std::shared_ptr<JotType> JotParser::parse_type() { return parse_type_with_prefix(); }
 
 std::shared_ptr<JotType> JotParser::parse_type_with_prefix() {
+    // Parse pointer type
     if (is_current_kind(TokenKind::Star)) {
         advanced_token();
         auto operand = parse_type_with_prefix();
         return std::make_shared<JotPointerType>(operand->get_type_token(), operand);
     }
 
+    // Parse refernse type
     if (is_current_kind(TokenKind::And)) {
         advanced_token();
         auto operand = parse_type_with_prefix();
         return std::make_shared<JotNumber>(operand->get_type_token(), NumberKind::Integer64);
+    }
+
+    // Parse function pointer type
+    if (is_current_kind(TokenKind::OpenParen)) {
+        auto paren_token = peek_current();
+        advanced_token();
+        std::vector<std::shared_ptr<JotType>> parameters_types;
+        while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
+            parameters_types.push_back(parse_type());
+            if (is_current_kind(TokenKind::Comma))
+                advanced_token();
+        }
+        assert_kind(TokenKind::CloseParen, "Expect ) after function type parameters");
+        auto return_type = parse_type();
+        return std::make_shared<JotFunctionType>(paren_token, parameters_types, return_type);
     }
 
     return parse_type_with_postfix();

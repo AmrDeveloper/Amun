@@ -367,26 +367,29 @@ class LogicalExpression : public Expression {
 class UnaryExpression : public Expression {
   public:
     UnaryExpression(Token token, std::shared_ptr<Expression> right)
-        : operator_token(token), right(right) {}
+        : operator_token(token), right(right), type(right->get_type_node()) {}
 
     Token get_operator_token() { return operator_token; }
 
     std::shared_ptr<Expression> get_right() { return right; }
 
-    std::shared_ptr<JotType> get_type_node() override { return right->get_type_node(); }
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
   private:
     Token operator_token;
     std::shared_ptr<Expression> right;
+    std::shared_ptr<JotType> type;
 };
 
 class CallExpression : public Expression {
   public:
     CallExpression(Token position, std::shared_ptr<Expression> callee,
                    std::vector<std::shared_ptr<Expression>> arguments)
-        : position(position), callee(callee), arguments(arguments) {}
+        : position(position), callee(callee), arguments(arguments), type(callee->get_type_node()) {}
 
     Token get_position() { return position; }
 
@@ -394,7 +397,9 @@ class CallExpression : public Expression {
 
     std::vector<std::shared_ptr<Expression>> get_arguments() { return arguments; }
 
-    std::shared_ptr<JotType> get_type_node() override { return callee->get_type_node(); }
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -402,6 +407,7 @@ class CallExpression : public Expression {
     Token position;
     std::shared_ptr<Expression> callee;
     std::vector<std::shared_ptr<Expression>> arguments;
+    std::shared_ptr<JotType> type;
 };
 
 class StringExpression : public Expression {

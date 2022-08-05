@@ -138,7 +138,7 @@ class JotFunctionType : public JotType {
         function_type_literal << ")";
         function_type_literal << " -> ";
         function_type_literal << return_type->type_literal();
-        return name.get_literal();
+        return function_type_literal.str();
     }
 
     TypeKind get_type_kind() override { return TypeKind::Function; }

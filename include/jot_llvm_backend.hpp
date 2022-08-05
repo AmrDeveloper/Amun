@@ -6,6 +6,7 @@
 #include "jot_type.hpp"
 
 #include <llvm-14/llvm/IR/Constants.h>
+#include <llvm-14/llvm/IR/Function.h>
 #include <llvm-14/llvm/IR/Type.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
@@ -19,6 +20,7 @@ static llvm::LLVMContext llvm_context;
 static llvm::IRBuilder<> Builder(llvm_context);
 static std::unique_ptr<llvm::Module> llvm_module;
 static std::map<std::string, std::shared_ptr<FunctionPrototype>> functions_table;
+static std::map<std::string, llvm::Function *> llvm_functions;
 
 // LLVM Integer types
 static auto llvm_int1_type = llvm::Type::getInt1Ty(llvm_context);
