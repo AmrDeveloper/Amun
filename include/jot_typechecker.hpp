@@ -20,8 +20,6 @@ class JotTypeChecker : public TreeVisitor {
 
     std::any visit(FieldDeclaration *node) override;
 
-    std::any visit(ExternalPrototype *node) override;
-
     std::any visit(FunctionPrototype *node) override;
 
     std::any visit(FunctionDeclaration *node) override;

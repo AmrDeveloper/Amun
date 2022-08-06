@@ -75,27 +75,11 @@ class FieldDeclaration : public Statement {
     std::shared_ptr<Expression> value;
 };
 
-class ExternalPrototype : public Statement {
-  public:
-    ExternalPrototype(Token token, std::shared_ptr<FunctionPrototype> prototype)
-        : extern_token(token), prototype(prototype) {}
-
-    Token get_external_token() { return extern_token; }
-
-    std::shared_ptr<FunctionPrototype> get_prototype() { return prototype; }
-
-    std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
-
-  private:
-    Token extern_token;
-    std::shared_ptr<FunctionPrototype> prototype;
-};
-
 class FunctionPrototype : public Statement {
   public:
     FunctionPrototype(Token name, std::vector<std::shared_ptr<Parameter>> parameters,
-                      std::shared_ptr<JotType> return_type)
-        : name(name), parameters(parameters), return_type(return_type) {}
+                      std::shared_ptr<JotType> return_type, bool external)
+        : name(name), parameters(parameters), return_type(return_type), external(external) {}
 
     Token get_name() { return name; }
 
@@ -105,10 +89,13 @@ class FunctionPrototype : public Statement {
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
+    bool is_external() { return external; }
+
   private:
     Token name;
     std::vector<std::shared_ptr<Parameter>> parameters;
     std::shared_ptr<JotType> return_type;
+    bool external;
 };
 
 class FunctionDeclaration : public Statement {

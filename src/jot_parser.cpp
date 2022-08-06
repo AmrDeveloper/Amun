@@ -60,7 +60,7 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
     jot::logi << "Parse Declaration statement Current " << peek_current().get_literal() << "\n";
     switch (peek_current().get_kind()) {
     case TokenKind::ExternKeyword: {
-        return parse_external_prototype();
+        return parse_function_prototype(true);
     }
     case TokenKind::FunKeyword: {
         return parse_function_declaration();
@@ -126,15 +126,9 @@ std::shared_ptr<FieldDeclaration> JotParser::parse_field_declaration() {
     return std::make_shared<FieldDeclaration>(name, value->get_type_node(), value);
 }
 
-std::shared_ptr<ExternalPrototype> JotParser::parse_external_prototype() {
-    auto external_token = peek_current();
-    advanced_token();
-    auto prototype = parse_function_prototype();
-    assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after external declaration");
-    return std::make_shared<ExternalPrototype>(external_token, prototype);
-}
-
-std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype() {
+std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(bool is_external) {
+    if (is_external)
+        assert_kind(TokenKind::ExternKeyword, "Expect external keyword");
     jot::logi << "Parse Function Prototype\n";
     assert_kind(TokenKind::FunKeyword, "Expect function keyword.");
     Token name = consume_kind(TokenKind::Symbol, "Expect identifier as function name.");
@@ -142,23 +136,22 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype() {
     std::vector<std::shared_ptr<Parameter>> parameters;
     if (is_current_kind(TokenKind::OpenParen)) {
         advanced_token();
-        while (is_source_available() && !is_current_kind(TokenKind::CloseParen)) {
+        while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
             parameters.push_back(parse_parameter());
-            if (is_current_kind(TokenKind::Comma)) {
+            if (is_current_kind(TokenKind::Comma))
                 advanced_token();
-            } else {
-                break;
-            }
         }
         assert_kind(TokenKind::CloseParen, "Expect ) after function parameters.");
     }
     auto return_type = parse_type();
-    return std::make_shared<FunctionPrototype>(name, parameters, return_type);
+    if (is_external)
+        assert_kind(TokenKind::Semicolon, "Expect ; after external function declaration");
+    return std::make_shared<FunctionPrototype>(name, parameters, return_type, is_external);
 }
 
 std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration() {
     jot::logi << "Parse Function Declaration\n";
-    auto prototype = parse_function_prototype();
+    auto prototype = parse_function_prototype(false);
 
     if (is_current_kind(TokenKind::Equal)) {
         advanced_token();

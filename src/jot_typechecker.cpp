@@ -44,10 +44,6 @@ std::any JotTypeChecker::visit(FieldDeclaration *node) {
     return 0;
 }
 
-std::any JotTypeChecker::visit(ExternalPrototype *node) {
-    return node->get_prototype()->accept(this);
-}
-
 std::any JotTypeChecker::visit(FunctionPrototype *node) {
     auto name = node->get_name();
     std::vector<std::shared_ptr<JotType>> parameters;

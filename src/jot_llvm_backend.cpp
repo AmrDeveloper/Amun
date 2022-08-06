@@ -1,7 +1,7 @@
 #include "../include/jot_llvm_backend.hpp"
+#include "../include/jot_ast_visitor.hpp"
 #include "../include/jot_logger.hpp"
 #include "../include/jot_type.hpp"
-#include "jot_ast_visitor.hpp"
 
 #include <llvm-14/llvm/IR/BasicBlock.h>
 #include <llvm-14/llvm/IR/Constant.h>
@@ -87,10 +87,6 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
     return 0;
 }
 
-std::any JotLLVMBackend::visit(ExternalPrototype *node) {
-    return node->get_prototype()->accept(this);
-}
-
 std::any JotLLVMBackend::visit(FunctionPrototype *node) {
     auto parameters = node->get_parameters();
     int parameters_size = parameters.size();
@@ -101,8 +97,11 @@ std::any JotLLVMBackend::visit(FunctionPrototype *node) {
 
     auto return_type = llvm_type_from_jot_type(node->get_return_type());
     auto function_type = llvm::FunctionType::get(return_type, arguments, false);
-    auto function = llvm::Function::Create(function_type, llvm::Function::ExternalLinkage,
-                                           node->get_name().get_literal(), llvm_module.get());
+    auto function_name = node->get_name().get_literal();
+    auto linkage = node->is_external() || function_name == "main" ? llvm::Function::ExternalLinkage
+                                                                  : llvm::Function::InternalLinkage;
+    auto function =
+        llvm::Function::Create(function_type, linkage, function_name, llvm_module.get());
 
     unsigned index = 0;
     for (auto &argument : function->args()) {

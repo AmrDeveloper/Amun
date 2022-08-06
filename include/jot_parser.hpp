@@ -28,9 +28,7 @@ class JotParser {
 
     std::shared_ptr<FieldDeclaration> parse_field_declaration();
 
-    std::shared_ptr<ExternalPrototype> parse_external_prototype();
-
-    std::shared_ptr<FunctionPrototype> parse_function_prototype();
+    std::shared_ptr<FunctionPrototype> parse_function_prototype(bool is_external);
 
     std::shared_ptr<FunctionDeclaration> parse_function_declaration();
 
