@@ -1,6 +1,7 @@
 #pragma once
 
 #include "jot_ast.hpp"
+#include "jot_context.hpp"
 #include "jot_parser.hpp"
 #include "jot_token.hpp"
 #include "jot_tokenizer.hpp"
@@ -10,7 +11,8 @@
 
 class JotParser {
   public:
-    explicit JotParser(std::unique_ptr<JotTokenizer> tokenizer) : tokenizer(std::move(tokenizer)) {
+    JotParser(std::shared_ptr<JotContext> context, std::unique_ptr<JotTokenizer> tokenizer)
+        : context(context), tokenizer(std::move(tokenizer)) {
         advanced_token();
         advanced_token();
     }
@@ -20,7 +22,7 @@ class JotParser {
   private:
     std::vector<std::shared_ptr<Statement>> parse_import_declaration();
 
-    std::vector<std::shared_ptr<Statement>> parse_single_import_file(Token token);
+    std::vector<std::shared_ptr<Statement>> parse_single_source_file(std::string &path);
 
     std::shared_ptr<Statement> parse_declaration_statement();
 
@@ -98,6 +100,7 @@ class JotParser {
 
     bool is_source_available();
 
+    std::shared_ptr<JotContext> context;
     std::unique_ptr<JotTokenizer> tokenizer;
     std::optional<Token> previous_token;
     std::optional<Token> current_token;

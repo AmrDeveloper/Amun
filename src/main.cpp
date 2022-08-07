@@ -1,6 +1,9 @@
 #include "../include/jot_command.hpp"
+#include "../include/jot_compiler.hpp"
 #include "../include/jot_context.hpp"
 #include "../include/jot_files.hpp"
+
+#include <memory>
 
 #define unused [[maybe_unused]]
 #define JOT_VERSION "0.0.1"
@@ -37,14 +40,16 @@ int execute_create_command(unused int argc, char **argv) {
 
 int execute_compile_command(unused int argc, char **argv) {
     const char *source = argv[2];
-    JotContext jot_context;
-    return jot_context.compile_source_code(source);
+    auto jot_context = std::make_shared<JotContext>();
+    JotCompiler jot_compiler(jot_context);
+    return jot_compiler.compile_source_code(source);
 }
 
 int execute_check_command(unused int argc, char **argv) {
     const char *source = argv[2];
-    JotContext jot_context;
-    return jot_context.check_source_code(source);
+    auto jot_context = std::make_shared<JotContext>();
+    JotCompiler jot_compiler(jot_context);
+    return jot_compiler.check_source_code(source);
 }
 
 int execute_version_command(unused int argc, unused char **argv) {

@@ -33,25 +33,45 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration() {
         while (is_source_available() && not is_current_kind(TokenKind::CloseBrace)) {
             auto library_name = consume_kind(
                 TokenKind::String, "Expect string as library name after import statement");
-            auto nodes = parse_single_import_file(library_name);
+            std::string library_path = "../lib/" + library_name.get_literal() + ".jot";
+
+            if (context->is_path_visited(library_path))
+                continue;
+
+            if (not is_file_exists(library_path)) {
+                jot::loge << "Path " << library_path << " not exists\n";
+                exit(EXIT_FAILURE);
+            }
+
+            auto nodes = parse_single_source_file(library_path);
+            context->set_path_visited(library_path);
             tree_nodes.insert(std::end(tree_nodes), std::begin(nodes), std::end(nodes));
         }
         assert_kind(TokenKind::CloseBrace, "Expect Close brace `}` after import block");
         return tree_nodes;
     }
 
-    // import <string>
     auto library_name =
         consume_kind(TokenKind::String, "Expect string as library name after import statement");
-    return parse_single_import_file(library_name);
+    std::string library_path = "../lib/" + library_name.get_literal() + ".jot";
+
+    if (context->is_path_visited(library_path)) {
+        return std::vector<std::shared_ptr<Statement>>();
+    }
+
+    if (not is_file_exists(library_path)) {
+        jot::loge << "Path " << library_path << " not exists\n";
+        exit(EXIT_FAILURE);
+    }
+
+    return parse_single_source_file(library_path);
 }
 
-std::vector<std::shared_ptr<Statement>> JotParser::parse_single_import_file(Token token) {
-    std::string library_path = "../lib/" + token.get_literal() + ".jot";
-    const char *file_name = library_path.c_str();
+std::vector<std::shared_ptr<Statement>> JotParser::parse_single_source_file(std::string &path) {
+    const char *file_name = path.c_str();
     std::string source_content = read_file_content(file_name);
     auto tokenizer = std::make_unique<JotTokenizer>(file_name, source_content);
-    JotParser parser(std::move(tokenizer));
+    JotParser parser(context, std::move(tokenizer));
     auto compilation_unit = parser.parse_compilation_unit();
     return compilation_unit->get_tree_nodes();
 }
