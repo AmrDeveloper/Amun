@@ -1,0 +1,11 @@
+extern fun printf(format *char, value int64) int64;
+
+fun sum(x int64, y int64) int64 = x + y;
+
+fun main() int64 {
+    var x = 10;
+    var y = 20;
+    var result : int64 = sum(10, 20);
+    printf("Sum %i", result);
+    return 0;
+}

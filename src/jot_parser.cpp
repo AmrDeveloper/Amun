@@ -174,9 +174,12 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration() {
     auto prototype = parse_function_prototype(false);
 
     if (is_current_kind(TokenKind::Equal)) {
+        auto equal_token = peek_current();
         advanced_token();
-        auto value = parse_expression_statement();
-        return std::make_shared<FunctionDeclaration>(prototype, value);
+        auto value = parse_expression();
+        auto return_statement = std::make_shared<ReturnStatement>(equal_token, value);
+        assert_kind(TokenKind::Semicolon, "Expect ; after function value");
+        return std::make_shared<FunctionDeclaration>(prototype, return_statement);
     }
 
     if (is_current_kind(TokenKind::OpenBrace)) {
