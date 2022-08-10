@@ -80,11 +80,13 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
     jot::logi << "Parse Declaration statement Current " << peek_current().get_literal() << "\n";
     switch (peek_current().get_kind()) {
     case TokenKind::PrefixKeyword:
-    case TokenKind::InfixKeyword: {
+    case TokenKind::InfixKeyword:
+    case TokenKind::PostfixKeyword: {
         auto call_kind = FunctionCallKind::Prefix;
         if (peek_current().get_kind() == TokenKind::InfixKeyword)
             call_kind = FunctionCallKind::Infix;
-
+        else if (peek_current().get_kind() == TokenKind::PostfixKeyword)
+            call_kind = FunctionCallKind::Postfix;
         advanced_token();
 
         if (is_current_kind(TokenKind::ExternKeyword))
@@ -189,6 +191,11 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
 
     if (kind == FunctionCallKind::Infix && parameters_size != 2) {
         jot::loge << "Infix function must have exactly Two parameter\n";
+        exit(EXIT_FAILURE);
+    }
+
+    if (kind == FunctionCallKind::Postfix && parameters_size != 1) {
+        jot::loge << "Postfix function must have exactly one parameter\n";
         exit(EXIT_FAILURE);
     }
 
@@ -448,7 +455,7 @@ std::shared_ptr<Expression> JotParser::parse_prefix_call_expression() {
 }
 
 std::shared_ptr<Expression> JotParser::parse_postfix_expression() {
-    auto expression = parse_primary_expression();
+    auto expression = parse_postfix_call_expression();
 
     while (true) {
         if (is_current_kind(TokenKind::OpenParen)) {
@@ -456,7 +463,7 @@ std::shared_ptr<Expression> JotParser::parse_postfix_expression() {
             advanced_token();
             Token position = peek_previous();
             std::vector<std::shared_ptr<Expression>> arguments;
-            while (is_source_available() && !is_current_kind(TokenKind::CloseParen)) {
+            while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
                 arguments.push_back(parse_expression());
                 if (is_current_kind(TokenKind::Comma))
                     advanced_token();
@@ -468,6 +475,20 @@ std::shared_ptr<Expression> JotParser::parse_postfix_expression() {
         }
     }
 
+    return expression;
+}
+
+std::shared_ptr<Expression> JotParser::parse_postfix_call_expression() {
+    auto expression = parse_primary_expression();
+    auto current_token_literal = peek_current().get_literal();
+    if (is_current_kind(TokenKind::Symbol) and
+        context->is_postfix_function(current_token_literal)) {
+        Token symbol_token = peek_current();
+        auto literal = parse_literal_expression();
+        std::vector<std::shared_ptr<Expression>> arguments;
+        arguments.push_back(expression);
+        return std::make_shared<CallExpression>(symbol_token, literal, arguments);
+    }
     return expression;
 }
 
@@ -643,8 +664,18 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type() {
 
 void JotParser::register_function_call(FunctionCallKind kind, std::string &name) {
     switch (kind) {
-    case FunctionCallKind::Prefix: context->set_prefix_function(name);
-    case FunctionCallKind::Infix: context->set_infix_function(name);
+    case FunctionCallKind::Prefix: {
+        context->set_prefix_function(name);
+        break;
+    }
+    case FunctionCallKind::Infix: {
+        context->set_infix_function(name);
+        break;
+    }
+    case FunctionCallKind::Postfix: {
+        context->set_postfix_function(name);
+        break;
+    }
     default: return;
     }
 }

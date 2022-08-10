@@ -16,8 +16,13 @@ class JotContext {
 
     void set_infix_function(std::string &name);
 
+    bool is_postfix_function(std::string &name);
+
+    void set_postfix_function(std::string &name);
+
   private:
     std::unordered_set<std::string> visited_files;
     std::unordered_set<std::string> prefix_functions;
     std::unordered_set<std::string> infix_functions;
+    std::unordered_set<std::string> postfix_functions;
 };
