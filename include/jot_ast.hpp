@@ -75,11 +75,20 @@ class FieldDeclaration : public Statement {
     std::shared_ptr<Expression> value;
 };
 
+enum FunctionCallKind {
+    Normal,
+    Prefix,
+    Infix,
+    Postfix,
+};
+
 class FunctionPrototype : public Statement {
   public:
     FunctionPrototype(Token name, std::vector<std::shared_ptr<Parameter>> parameters,
-                      std::shared_ptr<JotType> return_type, bool external)
-        : name(name), parameters(parameters), return_type(return_type), external(external) {}
+                      std::shared_ptr<JotType> return_type, FunctionCallKind call_kind,
+                      bool external)
+        : name(name), parameters(parameters), return_type(return_type), call_kind(call_kind),
+          external(external) {}
 
     Token get_name() { return name; }
 
@@ -89,12 +98,15 @@ class FunctionPrototype : public Statement {
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
+    FunctionCallKind get_call_kind() { return call_kind; }
+
     bool is_external() { return external; }
 
   private:
     Token name;
     std::vector<std::shared_ptr<Parameter>> parameters;
     std::shared_ptr<JotType> return_type;
+    FunctionCallKind call_kind;
     bool external;
 };
 

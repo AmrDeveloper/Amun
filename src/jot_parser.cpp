@@ -79,11 +79,21 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_single_source_file(std:
 std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
     jot::logi << "Parse Declaration statement Current " << peek_current().get_literal() << "\n";
     switch (peek_current().get_kind()) {
+    case TokenKind::InfixKeyword: {
+        auto call_kind = FunctionCallKind::Infix;
+        advanced_token();
+        if (is_current_kind(TokenKind::ExternKeyword))
+            return parse_function_prototype(call_kind, true);
+        else if (is_current_kind(TokenKind::FunKeyword))
+            return parse_function_declaration(call_kind);
+
+        jot::loge << "Prefix, Infix, postfix keyword used only with functions\n";
+    }
     case TokenKind::ExternKeyword: {
-        return parse_function_prototype(true);
+        return parse_function_prototype(FunctionCallKind::Normal, true);
     }
     case TokenKind::FunKeyword: {
-        return parse_function_declaration();
+        return parse_function_declaration(FunctionCallKind::Normal);
     }
     case TokenKind::VarKeyword: {
         jot::logi << "Parse global Var statement\n";
@@ -146,7 +156,8 @@ std::shared_ptr<FieldDeclaration> JotParser::parse_field_declaration() {
     return std::make_shared<FieldDeclaration>(name, value->get_type_node(), value);
 }
 
-std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(bool is_external) {
+std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionCallKind kind,
+                                                                       bool is_external) {
     if (is_external)
         assert_kind(TokenKind::ExternKeyword, "Expect external keyword");
     jot::logi << "Parse Function Prototype\n";
@@ -163,15 +174,27 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(bool is_e
         }
         assert_kind(TokenKind::CloseParen, "Expect ) after function parameters.");
     }
+
+    auto parameters_size = parameters.size();
+
+    if (kind == FunctionCallKind::Infix && parameters_size != 2) {
+        jot::loge << "Infix function must have exactly one parameter\n";
+        exit(EXIT_FAILURE);
+    }
+
+    auto name_literal = name.get_literal();
+    register_function_call(kind, name_literal);
+
     auto return_type = parse_type();
     if (is_external)
         assert_kind(TokenKind::Semicolon, "Expect ; after external function declaration");
-    return std::make_shared<FunctionPrototype>(name, parameters, return_type, is_external);
+    return std::make_shared<FunctionPrototype>(name, parameters, return_type,
+                                               FunctionCallKind::Normal, is_external);
 }
 
-std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration() {
+std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(FunctionCallKind kind) {
     jot::logi << "Parse Function Declaration\n";
-    auto prototype = parse_function_prototype(false);
+    auto prototype = parse_function_prototype(kind, false);
 
     if (is_current_kind(TokenKind::Equal)) {
         auto equal_token = peek_current();
@@ -365,14 +388,28 @@ std::shared_ptr<Expression> JotParser::parse_term_expression() {
 }
 
 std::shared_ptr<Expression> JotParser::parse_factor_expression() {
-    auto expression = parse_prefix_expression();
+    auto expression = parse_infix_call_expression();
     while (is_current_kind(TokenKind::Star) || is_current_kind(TokenKind::Slash) ||
            is_current_kind(TokenKind::Percent)) {
         jot::logi << "Parse Factor Expression\n";
         Token operator_token = peek_current();
         advanced_token();
-        auto right = parse_prefix_expression();
+        auto right = parse_infix_call_expression();
         expression = std::make_shared<BinaryExpression>(expression, operator_token, right);
+    }
+    return expression;
+}
+
+std::shared_ptr<Expression> JotParser::parse_infix_call_expression() {
+    auto expression = parse_prefix_expression();
+    auto current_token_literal = peek_current().get_literal();
+    if (is_current_kind(TokenKind::Symbol) and context->is_infix_function(current_token_literal)) {
+        Token symbol_token = peek_current();
+        auto literal = parse_literal_expression();
+        std::vector<std::shared_ptr<Expression>> arguments;
+        arguments.push_back(expression);
+        arguments.push_back(parse_infix_call_expression());
+        return std::make_shared<CallExpression>(symbol_token, literal, arguments);
     }
     return expression;
 }
@@ -443,31 +480,13 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
         return std::make_shared<NullExpression>(peek_previous());
     }
     case TokenKind::Symbol: {
-        jot::logi << "Parse Primary Literal Expression\n";
-        Token symbol_token = peek_current();
-        advanced_token();
-        return std::make_shared<LiteralExpression>(symbol_token,
-                                                   std::make_shared<JotNamedType>(symbol_token));
+        return parse_literal_expression();
     }
     case TokenKind::OpenParen: {
-        jot::logi << "Parse Primary Grouping Expression\n";
-        Token position = peek_current();
-        advanced_token();
-        auto expression = parse_expression();
-        assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
-        return std::make_shared<GroupExpression>(position, expression);
+        return parse_group_expression();
     }
     case TokenKind::IfKeyword: {
-        jot::logi << "Parse If Expression\n";
-        Token if_token = peek_current();
-        advanced_token();
-        auto condition = parse_expression();
-        auto then_value = parse_expression();
-        Token else_token =
-            consume_kind(TokenKind::ElseKeyword, "Expect `else` keyword after then value.");
-        auto else_value = parse_expression();
-        return std::make_shared<IfExpression>(if_token, else_token, condition, then_value,
-                                              else_value);
+        return parse_if_expression();
     }
     default: {
         jot::loge << "Unexpected or unsupported expression :" << peek_current().get_kind_literal()
@@ -475,6 +494,35 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
         exit(EXIT_FAILURE);
     }
     }
+}
+
+std::shared_ptr<LiteralExpression> JotParser::parse_literal_expression() {
+    jot::logi << "Parse Primary Literal Expression\n";
+    Token symbol_token = peek_current();
+    advanced_token();
+    auto type = std::make_shared<JotNamedType>(symbol_token);
+    return std::make_shared<LiteralExpression>(symbol_token, type);
+}
+
+std::shared_ptr<IfExpression> JotParser::parse_if_expression() {
+    jot::logi << "Parse If Expression\n";
+    Token if_token = peek_current();
+    advanced_token();
+    auto condition = parse_expression();
+    auto then_value = parse_expression();
+    Token else_token =
+        consume_kind(TokenKind::ElseKeyword, "Expect `else` keyword after then value.");
+    auto else_value = parse_expression();
+    return std::make_shared<IfExpression>(if_token, else_token, condition, then_value, else_value);
+}
+
+std::shared_ptr<GroupExpression> JotParser::parse_group_expression() {
+    jot::logi << "Parse Primary Grouping Expression\n";
+    Token position = peek_current();
+    advanced_token();
+    auto expression = parse_expression();
+    assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
+    return std::make_shared<GroupExpression>(position, expression);
 }
 
 std::shared_ptr<JotType> JotParser::parse_type() { return parse_type_with_prefix(); }
@@ -569,6 +617,13 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type() {
      *  TODO: should return a named type node but for now just allow primitive types
      *  return std::make_shared<NamedTypeNode>(symbol_token);
      */
+}
+
+void JotParser::register_function_call(FunctionCallKind kind, std::string &name) {
+    switch (kind) {
+    case FunctionCallKind::Infix: context->set_infix_function(name);
+    default: return;
+    }
 }
 
 void JotParser::advanced_token() {

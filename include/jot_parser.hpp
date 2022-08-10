@@ -30,9 +30,10 @@ class JotParser {
 
     std::shared_ptr<FieldDeclaration> parse_field_declaration();
 
-    std::shared_ptr<FunctionPrototype> parse_function_prototype(bool is_external);
+    std::shared_ptr<FunctionPrototype> parse_function_prototype(FunctionCallKind kind,
+                                                                bool is_external);
 
-    std::shared_ptr<FunctionDeclaration> parse_function_declaration();
+    std::shared_ptr<FunctionDeclaration> parse_function_declaration(FunctionCallKind kind);
 
     std::shared_ptr<EnumDeclaration> parse_enum_declaration();
 
@@ -64,11 +65,19 @@ class JotParser {
 
     std::shared_ptr<Expression> parse_factor_expression();
 
+    std::shared_ptr<Expression> parse_infix_call_expression();
+
     std::shared_ptr<Expression> parse_prefix_expression();
 
     std::shared_ptr<Expression> parse_postfix_expression();
 
     std::shared_ptr<Expression> parse_primary_expression();
+
+    std::shared_ptr<LiteralExpression> parse_literal_expression();
+
+    std::shared_ptr<IfExpression> parse_if_expression();
+
+    std::shared_ptr<GroupExpression> parse_group_expression();
 
     std::shared_ptr<JotType> parse_type();
 
@@ -79,6 +88,8 @@ class JotParser {
     std::shared_ptr<JotType> parse_primary_type();
 
     std::shared_ptr<JotType> parse_identifier_type();
+
+    void register_function_call(FunctionCallKind kind, std::string &name);
 
     void advanced_token();
 
