@@ -1,0 +1,11 @@
+extern fun printf(format *char, value int64) int64;
+
+prefix fun minus(x int64) int64 {
+    return -x;
+}
+
+fun main() int64 {
+    var result : int64 = minus 10;
+    printf("Result = %i", result);
+    return 0;
+}

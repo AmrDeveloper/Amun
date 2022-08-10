@@ -79,9 +79,14 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_single_source_file(std:
 std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
     jot::logi << "Parse Declaration statement Current " << peek_current().get_literal() << "\n";
     switch (peek_current().get_kind()) {
+    case TokenKind::PrefixKeyword:
     case TokenKind::InfixKeyword: {
-        auto call_kind = FunctionCallKind::Infix;
+        auto call_kind = FunctionCallKind::Prefix;
+        if (peek_current().get_kind() == TokenKind::InfixKeyword)
+            call_kind = FunctionCallKind::Infix;
+
         advanced_token();
+
         if (is_current_kind(TokenKind::ExternKeyword))
             return parse_function_prototype(call_kind, true);
         else if (is_current_kind(TokenKind::FunKeyword))
@@ -177,8 +182,13 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
 
     auto parameters_size = parameters.size();
 
+    if (kind == FunctionCallKind::Prefix && parameters_size != 1) {
+        jot::loge << "Prefix function must have exactly one parameter\n";
+        exit(EXIT_FAILURE);
+    }
+
     if (kind == FunctionCallKind::Infix && parameters_size != 2) {
-        jot::loge << "Infix function must have exactly one parameter\n";
+        jot::loge << "Infix function must have exactly Two parameter\n";
         exit(EXIT_FAILURE);
     }
 
@@ -422,6 +432,18 @@ std::shared_ptr<Expression> JotParser::parse_prefix_expression() {
         auto right = parse_prefix_expression();
         return std::make_shared<UnaryExpression>(token, right);
     }
+    return parse_prefix_call_expression();
+}
+
+std::shared_ptr<Expression> JotParser::parse_prefix_call_expression() {
+    auto current_token_literal = peek_current().get_literal();
+    if (is_current_kind(TokenKind::Symbol) and context->is_prefix_function(current_token_literal)) {
+        Token symbol_token = peek_current();
+        auto literal = parse_literal_expression();
+        std::vector<std::shared_ptr<Expression>> arguments;
+        arguments.push_back(parse_prefix_expression());
+        return std::make_shared<CallExpression>(symbol_token, literal, arguments);
+    }
     return parse_postfix_expression();
 }
 
@@ -621,6 +643,7 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type() {
 
 void JotParser::register_function_call(FunctionCallKind kind, std::string &name) {
     switch (kind) {
+    case FunctionCallKind::Prefix: context->set_prefix_function(name);
     case FunctionCallKind::Infix: context->set_infix_function(name);
     default: return;
     }

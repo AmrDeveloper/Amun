@@ -18,6 +18,7 @@ enum TokenKind {
     ElseKeyword,
     WhileKeyword,
 
+    PrefixKeyword,
     InfixKeyword,
 
     TrueKeyword,
@@ -90,6 +91,7 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
     {TokenKind::FalseKeyword, "False"},
     {TokenKind::NullKeyword, "Null"},
 
+    {TokenKind::PrefixKeyword, "Prefix"},
     {TokenKind::InfixKeyword, "Infix"},
 
     {TokenKind::Dot, "Dot ."},
@@ -151,8 +153,7 @@ static std::unordered_map<std::string, TokenKind> language_keywords = {
     {"if", TokenKind::IfKeyword},         {"else", TokenKind::ElseKeyword},
     {"while", TokenKind::WhileKeyword},   {"true", TokenKind::TrueKeyword},
     {"false", TokenKind::FalseKeyword},   {"null", TokenKind::NullKeyword},
-    {"infix", TokenKind::InfixKeyword},
-};
+    {"prefix", TokenKind::PrefixKeyword}, {"infix", TokenKind::InfixKeyword}};
 
 static std::unordered_set<TokenKind> unary_operators{
     TokenKind::Minus, TokenKind::Bang, TokenKind::Star, TokenKind::And, TokenKind::Not,
