@@ -447,11 +447,7 @@ class LiteralExpression : public Expression {
 
 class NumberExpression : public Expression {
   public:
-    NumberExpression(Token value)
-        : value(value),
-          type(std::make_shared<JotNumber>(value, value.get_kind() == TokenKind::Integer
-                                                      ? NumberKind::Integer64
-                                                      : NumberKind::Float64)) {}
+    NumberExpression(Token value, std::shared_ptr<JotType> type) : value(value), type(type) {}
 
     Token get_value() { return value; }
 

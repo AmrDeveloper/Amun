@@ -5,6 +5,7 @@
 #include "jot_parser.hpp"
 #include "jot_token.hpp"
 #include "jot_tokenizer.hpp"
+#include "jot_type.hpp"
 
 #include <memory>
 #include <optional>
@@ -77,6 +78,8 @@ class JotParser {
 
     std::shared_ptr<Expression> parse_primary_expression();
 
+    std::shared_ptr<NumberExpression> parse_number_expression();
+
     std::shared_ptr<LiteralExpression> parse_literal_expression();
 
     std::shared_ptr<IfExpression> parse_if_expression();
@@ -93,9 +96,13 @@ class JotParser {
 
     std::shared_ptr<JotType> parse_identifier_type();
 
+    NumberKind get_number_kind(TokenKind token);
+
     void register_function_call(FunctionCallKind kind, std::string &name);
 
     void advanced_token();
+
+    Token peek_and_advance_token();
 
     Token peek_previous();
 

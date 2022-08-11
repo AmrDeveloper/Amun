@@ -1,0 +1,15 @@
+fun main() int64 {
+
+    // Integers
+    var bit : bool = 1i1;
+    var byte : int8 = 1i8;
+    var short : int16 = 1i16;
+    var integer : int32 = 1i32;
+    var long : int64 = 1i64;
+
+    // Floating pointers
+    var float : float32 = 10.0f32;
+    var double : float64 = 10.0f64;
+
+    return 0;
+}

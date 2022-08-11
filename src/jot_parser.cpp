@@ -2,6 +2,7 @@
 #include "../include/jot_files.hpp"
 #include "../include/jot_logger.hpp"
 
+#include <cstdlib>
 #include <memory>
 #include <vector>
 
@@ -495,11 +496,16 @@ std::shared_ptr<Expression> JotParser::parse_postfix_call_expression() {
 std::shared_ptr<Expression> JotParser::parse_primary_expression() {
     auto current_token_kind = peek_current().get_kind();
     switch (current_token_kind) {
+    case TokenKind::Integer:
+    case TokenKind::Integer1Type:
+    case TokenKind::Integer8Type:
+    case TokenKind::Integer16Type:
+    case TokenKind::Integer32Type:
+    case TokenKind::Integer64Type:
     case TokenKind::Float:
-    case TokenKind::Integer: {
-        jot::logi << "Parse Primary Number Expression\n";
-        advanced_token();
-        return std::make_shared<NumberExpression>(peek_previous());
+    case TokenKind::Float32Type:
+    case TokenKind::Float64Type: {
+        return parse_number_expression();
     }
     case TokenKind::Character: {
         jot::logi << "Parse Primary Character Expression\n";
@@ -537,6 +543,13 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
         exit(EXIT_FAILURE);
     }
     }
+}
+
+std::shared_ptr<NumberExpression> JotParser::parse_number_expression() {
+    auto number_token = peek_and_advance_token();
+    auto number_kind = get_number_kind(number_token.get_kind());
+    auto number_type = std::make_shared<JotNumber>(number_token, number_kind);
+    return std::make_shared<NumberExpression>(number_token, number_type);
 }
 
 std::shared_ptr<LiteralExpression> JotParser::parse_literal_expression() {
@@ -662,6 +675,24 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type() {
      */
 }
 
+NumberKind JotParser::get_number_kind(TokenKind token) {
+    switch (token) {
+    case TokenKind::Integer: return NumberKind::Integer64;
+    case TokenKind::Integer1Type: return NumberKind::Integer1;
+    case TokenKind::Integer8Type: return NumberKind::Integer8;
+    case TokenKind::Integer16Type: return NumberKind::Integer16;
+    case TokenKind::Integer32Type: return NumberKind::Integer32;
+    case TokenKind::Integer64Type: return NumberKind::Integer64;
+    case TokenKind::Float: return NumberKind::Float64;
+    case TokenKind::Float32Type: return NumberKind::Float32;
+    case TokenKind::Float64Type: return NumberKind::Float64;
+    default: {
+        jot::loge << "Token kind is not a number\n";
+        exit(EXIT_FAILURE);
+    }
+    }
+}
+
 void JotParser::register_function_call(FunctionCallKind kind, std::string &name) {
     switch (kind) {
     case FunctionCallKind::Prefix: {
@@ -684,6 +715,12 @@ void JotParser::advanced_token() {
     previous_token = current_token;
     current_token = next_token;
     next_token = tokenizer->scan_next_token();
+}
+
+Token JotParser::peek_and_advance_token() {
+    auto current = peek_current();
+    advanced_token();
+    return current;
 }
 
 Token JotParser::peek_previous() { return previous_token.value(); }

@@ -145,6 +145,33 @@ Token JotTokenizer::consume_number() {
         advance();
     }
 
+    if (peek() == '.' && is_digit(peek_next())) {
+        kind = TokenKind::Float;
+        advance();
+        while (is_digit(peek()))
+            advance();
+    }
+
+    if (match('i')) {
+        if (match('1'))
+            kind = match('6') ? Integer16Type : Integer1Type;
+        else if (match('8'))
+            kind = Integer8Type;
+        else if (match('3') && match('2'))
+            kind = Integer32Type;
+        else if (match('6') && match('4'))
+            kind = Integer64Type;
+        else
+            return build_token(TokenKind::Invalid, "Invalid integer type");
+    } else if (match('f')) {
+        if (match('3') && match('2'))
+            kind = Float32Type;
+        else if (match('6') && match('4'))
+            kind = Float64Type;
+        else
+            return build_token(TokenKind::Invalid, "Invalid Float type");
+    }
+
     size_t len = current_position - start_position + 1;
     auto literal = source_code.substr(start_position - 1, len);
     return build_token(kind, literal);
