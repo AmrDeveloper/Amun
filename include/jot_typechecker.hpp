@@ -2,6 +2,7 @@
 
 #include "jot_ast.hpp"
 #include "jot_ast_visitor.hpp"
+#include "jot_context.hpp"
 #include "jot_symboltable.hpp"
 
 #include <memory>
@@ -9,7 +10,7 @@
 
 class JotTypeChecker : public TreeVisitor {
   public:
-    JotTypeChecker() {
+    JotTypeChecker(std::shared_ptr<JotContext> context) : context(context) {
         global_scope = std::make_shared<JotSymbolTable>();
         symbol_table = global_scope;
     }
@@ -75,6 +76,7 @@ class JotTypeChecker : public TreeVisitor {
     void pop_current_scope();
 
   private:
+    std::shared_ptr<JotContext> context;
     std::shared_ptr<JotSymbolTable> global_scope;
     std::shared_ptr<JotSymbolTable> symbol_table;
 };

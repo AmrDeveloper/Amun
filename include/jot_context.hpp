@@ -1,5 +1,7 @@
 #pragma once
 
+#include "jot_diagnostics.hpp"
+
 #include <unordered_set>
 
 class JotContext {
@@ -19,6 +21,8 @@ class JotContext {
     bool is_postfix_function(std::string &name);
 
     void set_postfix_function(std::string &name);
+
+    JotDiagnosticEngine diagnostics;
 
   private:
     std::unordered_set<std::string> visited_files;

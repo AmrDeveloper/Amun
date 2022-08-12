@@ -3,8 +3,8 @@
 #include "../include/jot_logger.hpp"
 #include "../include/jot_type.hpp"
 
-#include <cstdlib>
 #include <memory>
+#include <string>
 
 void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> compilation_unit) {
     auto statements = compilation_unit->get_tree_nodes();
@@ -29,16 +29,18 @@ std::any JotTypeChecker::visit(FieldDeclaration *node) {
     auto right_type = node_jot_type(node->get_value()->accept(this));
 
     if (not left_type->equals(right_type)) {
-        jot::loge << "Type missmatch expect " << left_type->type_literal() << " but got "
-                  << right_type->type_literal() << '\n';
-        exit(1);
+        context->diagnostics.add_diagnostic(node->get_name().get_span(),
+                                            "Type missmatch expect " + left_type->type_literal() +
+                                                " but got " + right_type->type_literal());
+        throw "Stop";
     }
 
     auto name = node->get_name().get_literal();
     bool is_first_defined = symbol_table->define(name, left_type);
     if (not is_first_defined) {
-        jot::loge << "Field " << name << " is defined twice in the same scope\n";
-        exit(1);
+        context->diagnostics.add_diagnostic(
+            node->get_name().get_span(), "Field " + name + " is defined twice in the same scope");
+        throw "Stop";
     }
 
     return 0;
@@ -53,9 +55,11 @@ std::any JotTypeChecker::visit(FunctionPrototype *node) {
     auto return_type = node->get_return_type();
     auto function_type = std::make_shared<JotFunctionType>(name, parameters, return_type);
     bool is_first_defined = symbol_table->define(name.get_literal(), function_type);
-    if (!is_first_defined) {
-        jot::loge << "function " << name.get_literal() << " is defined twice in the same scope\n";
-        exit(1);
+    if (not is_first_defined) {
+        context->diagnostics.add_diagnostic(node->get_name().get_span(),
+                                            "function " + name.get_literal() +
+                                                " is defined twice in the same scope");
+        throw "Stop";
     }
     return function_type;
 }
@@ -76,9 +80,11 @@ std::any JotTypeChecker::visit(EnumDeclaration *node) {
     auto name = node->get_name().get_literal();
     auto enum_type = std::make_shared<JotEnumType>(node->get_name(), node->get_values());
     bool is_first_defined = symbol_table->define(name, enum_type);
-    if (!is_first_defined) {
-        jot::loge << "enumeration " << name << " is defined twice in the same scope\n";
-        exit(1);
+    if (not is_first_defined) {
+        context->diagnostics.add_diagnostic(node->get_name().get_span(),
+                                            "enumeration " + name +
+                                                " is defined twice in the same scope");
+        throw "Stop";
     }
     return is_first_defined;
 }
@@ -87,11 +93,11 @@ std::any JotTypeChecker::visit(IfStatement *node) {
     for (auto &conditional_block : node->get_conditional_blocks()) {
         auto condition = node_jot_type(conditional_block->get_condition()->accept(this));
         if (not is_number_type(condition)) {
-            jot::loge << "if condition mush be a number but got " << condition->type_literal()
-                      << '\n';
-            exit(1);
+            context->diagnostics.add_diagnostic(conditional_block->get_position().get_span(),
+                                                "if condition mush be a number but got " +
+                                                    condition->type_literal());
+            throw "Stop";
         }
-
         push_new_scope();
         conditional_block->get_body()->accept(this);
         pop_current_scope();
@@ -102,9 +108,10 @@ std::any JotTypeChecker::visit(IfStatement *node) {
 std::any JotTypeChecker::visit(WhileStatement *node) {
     auto left_type = node_jot_type(node->get_condition()->accept(this));
     if (not is_number_type(left_type)) {
-        jot::loge << "While condition mush be a number but got " << left_type->type_literal()
-                  << '\n';
-        exit(1);
+        context->diagnostics.add_diagnostic(node->get_position().get_span(),
+                                            "While condition mush be a number but got " +
+                                                left_type->type_literal());
+        throw "Stop";
     }
     push_new_scope();
     node->get_body()->accept(this);
@@ -121,10 +128,12 @@ std::any JotTypeChecker::visit(ExpressionStatement *node) {
 std::any JotTypeChecker::visit(IfExpression *node) {
     auto if_value = node_jot_type(node->get_if_value()->accept(this));
     auto else_value = node_jot_type(node->get_else_value()->accept(this));
-    if (!if_value->equals(else_value)) {
-        jot::loge << "If Expression Type missmatch expect " << if_value->type_literal()
-                  << " but got " << else_value->type_literal() << '\n';
-        exit(1);
+    if (not if_value->equals(else_value)) {
+        context->diagnostics.add_diagnostic(node->get_if_position().get_span(),
+                                            "If Expression Type missmatch expect " +
+                                                if_value->type_literal() + " but got " +
+                                                else_value->type_literal());
+        throw "Stop";
     }
 
     return if_value;
@@ -138,10 +147,11 @@ std::any JotTypeChecker::visit(AssignExpression *node) {
     auto left_type = node_jot_type(node->get_left()->accept(this));
     auto right_type = node_jot_type(node->get_right()->accept(this));
 
-    if (!left_type->equals(right_type)) {
-        jot::loge << "Type missmatch expect " << left_type->type_literal() << " but got "
-                  << right_type->type_literal() << '\n';
-        exit(1);
+    if (not left_type->equals(right_type)) {
+        context->diagnostics.add_diagnostic(node->get_operator_token().get_span(),
+                                            "Type missmatch expect " + left_type->type_literal() +
+                                                " but got " + right_type->type_literal());
+        throw "Stop";
     }
 
     return right_type;
@@ -155,14 +165,16 @@ std::any JotTypeChecker::visit(BinaryExpression *node) {
     bool is_right_number = is_number_type(right_type);
     if (not is_left_number || not is_right_number) {
         if (not is_left_number) {
-            jot::loge << "Expected binary left to be number but got " << left_type->type_literal()
-                      << '\n';
+            context->diagnostics.add_diagnostic(node->get_operator_token().get_span(),
+                                                "Expected binary left to be number but got " +
+                                                    left_type->type_literal());
         }
         if (not is_right_number) {
-            jot::loge << "Expected binary right to be number but got " << right_type->type_literal()
-                      << '\n';
+            context->diagnostics.add_diagnostic(node->get_operator_token().get_span(),
+                                                "Expected binary right to be number but got " +
+                                                    left_type->type_literal());
         }
-        exit(1);
+        throw "Stop";
     }
 
     return left_type;
@@ -177,14 +189,16 @@ std::any JotTypeChecker::visit(ComparisonExpression *node) {
     bool is_right_number = is_number_type(right_type);
     if (not is_left_number || not is_right_number) {
         if (not is_left_number) {
-            jot::loge << "Expected Comparison left to be number but got "
-                      << left_type->type_literal() << '\n';
+            context->diagnostics.add_diagnostic(node->get_operator_token().get_span(),
+                                                "Expected Comparison left to be number but got " +
+                                                    left_type->type_literal());
         }
         if (not is_right_number) {
-            jot::loge << "Expected Comparison right to be number but got "
-                      << right_type->type_literal() << '\n';
+            context->diagnostics.add_diagnostic(node->get_operator_token().get_span(),
+                                                "Expected Comparison right to be number but got " +
+                                                    left_type->type_literal());
         }
-        exit(1);
+        throw "Stop";
     }
 
     return node_jot_type(node->get_type_node());
@@ -199,14 +213,16 @@ std::any JotTypeChecker::visit(LogicalExpression *node) {
     bool is_right_number = is_number_type(right_type);
     if (not is_left_number || not is_right_number) {
         if (not is_left_number) {
-            jot::loge << "Expected Logical left to be number but got " << left_type->type_literal()
-                      << '\n';
+            context->diagnostics.add_diagnostic(node->get_operator_token().get_span(),
+                                                "Expected Logical left to be number but got " +
+                                                    left_type->type_literal());
         }
         if (not is_right_number) {
-            jot::loge << "Expected Logical right to be number but got "
-                      << right_type->type_literal() << '\n';
+            context->diagnostics.add_diagnostic(node->get_operator_token().get_span(),
+                                                "Expected Logical right to be number but got " +
+                                                    left_type->type_literal());
         }
-        exit(1);
+        throw "Stop";
     }
 
     return node_jot_type(node->get_type_node());
@@ -219,22 +235,31 @@ std::any JotTypeChecker::visit(UnaryExpression *node) {
     if (unary_operator == TokenKind::Minus) {
         if (is_number_type(operand_type))
             return operand_type;
-        jot::loge << "Unary - operator require number as an right operand\n";
-        exit(EXIT_FAILURE);
+        context->diagnostics.add_diagnostic(
+            node->get_operator_token().get_span(),
+            "Unary - operator require number as an right operand but got " +
+                operand_type->type_literal());
+        throw "Stop";
     }
 
     if (unary_operator == TokenKind::Bang) {
         if (is_number_type(operand_type))
             return operand_type;
-        jot::loge << "Unary - operator require boolean as an right operand\n";
-        exit(EXIT_FAILURE);
+        context->diagnostics.add_diagnostic(
+            node->get_operator_token().get_span(),
+            "Unary - operator require boolean as an right operand but got " +
+                operand_type->type_literal());
+        throw "Stop";
     }
 
     if (unary_operator == TokenKind::Not) {
         if (is_number_type(operand_type))
             return operand_type;
-        jot::loge << "Unary ~ operator require number as an right operand\n";
-        exit(EXIT_FAILURE);
+        context->diagnostics.add_diagnostic(
+            node->get_operator_token().get_span(),
+            "Unary ~ operator require number as an right operand but got " +
+                operand_type->type_literal());
+        throw "Stop";
     }
 
     if (unary_operator == TokenKind::Star) {
@@ -245,8 +270,11 @@ std::any JotTypeChecker::visit(UnaryExpression *node) {
             return type;
         }
 
-        jot::loge << "Derefernse operator require pointer as an right operand\n";
-        exit(EXIT_FAILURE);
+        context->diagnostics.add_diagnostic(
+            node->get_operator_token().get_span(),
+            "Derefernse operator require pointer as an right operand but got " +
+                operand_type->type_literal());
+        throw "Stop";
     }
 
     if (unary_operator == TokenKind::And) {
@@ -256,8 +284,10 @@ std::any JotTypeChecker::visit(UnaryExpression *node) {
         return pointer_type;
     }
 
-    jot::loge << "Unsupported unary expression" << operand_type->type_literal() << '\n';
-    exit(EXIT_FAILURE);
+    context->diagnostics.add_diagnostic(node->get_operator_token().get_span(),
+                                        "Unsupported unary expression " +
+                                            operand_type->type_literal());
+    throw "Stop";
 }
 
 std::any JotTypeChecker::visit(CallExpression *node) {
@@ -276,9 +306,12 @@ std::any JotTypeChecker::visit(CallExpression *node) {
                 auto parameters = type->get_parameters();
                 auto arguments = node->get_arguments();
                 if (parameters.size() != arguments.size()) {
-                    jot::loge << "Invalid number of arguments " << name << " expect "
-                              << parameters.size() << " got " << arguments.size() << '\n';
-                    exit(1);
+                    context->diagnostics.add_diagnostic(
+                        node->get_position().get_span(),
+                        "Invalid number of arguments " + name + " expect " +
+                            std::to_string(parameters.size()) + " but got " +
+                            std::to_string(arguments.size()));
+                    throw "Stop";
                 }
 
                 std::vector<std::shared_ptr<JotType>> arguments_types;
@@ -289,25 +322,30 @@ std::any JotTypeChecker::visit(CallExpression *node) {
                 size_t arguments_size = arguments_types.size();
                 for (size_t i = 0; i < arguments_size; i++) {
                     if (not parameters[i]->equals(arguments_types[i])) {
-                        jot::loge << "Argument type didn't match parameter type expect "
-                                  << parameters[i]->type_literal() << " got "
-                                  << arguments_types[i]->type_literal() << '\n';
-                        exit(1);
+                        context->diagnostics.add_diagnostic(
+                            node->get_position().get_span(),
+                            "Argument type didn't match parameter type expect " +
+                                parameters[i]->type_literal() + " got " +
+                                arguments_types[i]->type_literal());
+                        throw "Stop";
                     }
                 }
 
                 return type->get_return_type();
             } else {
-                jot::loge << "Call expression work only with function\n";
-                exit(1);
+                context->diagnostics.add_diagnostic(node->get_position().get_span(),
+                                                    "Call expression work only with function");
+                throw "Stop";
             }
         } else {
-            jot::loge << "Can't resolve function call with name " << name << '\n';
-            exit(1);
+            context->diagnostics.add_diagnostic(node->get_position().get_span(),
+                                                "Can't resolve function call with name " + name);
+            throw "Stop";
         }
     } else {
-        jot::loge << "Call expression must be a literal \n";
-        exit(1);
+        context->diagnostics.add_diagnostic(node->get_position().get_span(),
+                                            "Call expression must be a literal");
+        throw "Stop";
     }
 }
 
@@ -318,8 +356,10 @@ std::any JotTypeChecker::visit(LiteralExpression *node) {
         auto type = node_jot_type(value);
         return type;
     } else {
-        jot::loge << "Can't resolve variable with name " << node->get_name().get_literal() << '\n';
-        exit(1);
+        context->diagnostics.add_diagnostic(node->get_name().get_span(),
+                                            "Can't resolve variable with name " +
+                                                node->get_name().get_literal());
+        throw "Stop";
     }
 }
 
