@@ -96,6 +96,7 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
             return parse_function_declaration(call_kind);
 
         jot::loge << "Prefix, Infix, postfix keyword used only with functions\n";
+        exit(EXIT_FAILURE);
     }
     case TokenKind::ExternKeyword: {
         return parse_function_prototype(FunctionCallKind::Normal, true);
@@ -215,8 +216,7 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(Funct
     auto prototype = parse_function_prototype(kind, false);
 
     if (is_current_kind(TokenKind::Equal)) {
-        auto equal_token = peek_current();
-        advanced_token();
+        auto equal_token = peek_and_advance_token();
         auto value = parse_expression();
         auto return_statement = std::make_shared<ReturnStatement>(equal_token, value);
         assert_kind(TokenKind::Semicolon, "Expect ; after function value");
@@ -329,8 +329,7 @@ std::shared_ptr<Expression> JotParser::parse_expression() { return parse_assignm
 std::shared_ptr<Expression> JotParser::parse_assignment_expression() {
     auto expression = parse_logical_or_expression();
     if (peek_current().is_assignments_operator()) {
-        auto assignments_token = peek_current();
-        advanced_token();
+        auto assignments_token = peek_and_advance_token();
         std::shared_ptr<Expression> right_value;
         auto assignments_token_kind = assignments_token.get_kind();
         if (assignments_token_kind == TokenKind::Equal) {
@@ -349,8 +348,7 @@ std::shared_ptr<Expression> JotParser::parse_assignment_expression() {
 std::shared_ptr<Expression> JotParser::parse_logical_or_expression() {
     auto expression = parse_logical_and_expression();
     while (is_current_kind(TokenKind::LogicalOr)) {
-        auto or_token = peek_current();
-        advanced_token();
+        auto or_token = peek_and_advance_token();
         auto right = parse_equality_expression();
         expression = std::make_shared<LogicalExpression>(expression, or_token, right);
     }
@@ -360,8 +358,7 @@ std::shared_ptr<Expression> JotParser::parse_logical_or_expression() {
 std::shared_ptr<Expression> JotParser::parse_logical_and_expression() {
     auto expression = parse_equality_expression();
     while (is_current_kind(TokenKind::LogicalAnd)) {
-        auto and_token = peek_current();
-        advanced_token();
+        auto and_token = peek_and_advance_token();
         auto right = parse_equality_expression();
         expression = std::make_shared<LogicalExpression>(expression, and_token, right);
     }
@@ -372,8 +369,7 @@ std::shared_ptr<Expression> JotParser::parse_equality_expression() {
     auto expression = parse_comparison_expression();
     while (is_current_kind(TokenKind::EqualEqual) || is_current_kind(TokenKind::BangEqual)) {
         jot::logi << "Parse Equality Expression\n";
-        Token operator_token = peek_current();
-        advanced_token();
+        Token operator_token = peek_and_advance_token();
         auto right = parse_comparison_expression();
         expression = std::make_shared<ComparisonExpression>(expression, operator_token, right);
     }
@@ -385,8 +381,7 @@ std::shared_ptr<Expression> JotParser::parse_comparison_expression() {
     while (is_current_kind(TokenKind::Greater) || is_current_kind(TokenKind::GreaterEqual) ||
            is_current_kind(TokenKind::Smaller) || is_current_kind(TokenKind::SmallerEqual)) {
         jot::logi << "Parse Comparison Expression\n";
-        Token operator_token = peek_current();
-        advanced_token();
+        Token operator_token = peek_and_advance_token();
         auto right = parse_term_expression();
         expression = std::make_shared<ComparisonExpression>(expression, operator_token, right);
     }
@@ -397,8 +392,7 @@ std::shared_ptr<Expression> JotParser::parse_term_expression() {
     auto expression = parse_factor_expression();
     while (is_current_kind(TokenKind::Plus) || is_current_kind(TokenKind::Minus)) {
         jot::logi << "Parse Term Expression\n";
-        Token operator_token = peek_current();
-        advanced_token();
+        Token operator_token = peek_and_advance_token();
         auto right = parse_factor_expression();
         expression = std::make_shared<BinaryExpression>(expression, operator_token, right);
     }
@@ -410,8 +404,7 @@ std::shared_ptr<Expression> JotParser::parse_factor_expression() {
     while (is_current_kind(TokenKind::Star) || is_current_kind(TokenKind::Slash) ||
            is_current_kind(TokenKind::Percent)) {
         jot::logi << "Parse Factor Expression\n";
-        Token operator_token = peek_current();
-        advanced_token();
+        Token operator_token = peek_and_advance_token();
         auto right = parse_infix_call_expression();
         expression = std::make_shared<BinaryExpression>(expression, operator_token, right);
     }
@@ -435,8 +428,7 @@ std::shared_ptr<Expression> JotParser::parse_infix_call_expression() {
 std::shared_ptr<Expression> JotParser::parse_prefix_expression() {
     if (peek_current().is_unary_operator()) {
         jot::logi << "Parse Unary Expression\n";
-        Token token = peek_current();
-        advanced_token();
+        Token token = peek_and_advance_token();
         auto right = parse_prefix_expression();
         return std::make_shared<UnaryExpression>(token, right);
     }
@@ -461,8 +453,7 @@ std::shared_ptr<Expression> JotParser::parse_postfix_expression() {
     while (true) {
         if (is_current_kind(TokenKind::OpenParen)) {
             jot::logi << "Parse Call Expression\n";
-            advanced_token();
-            Token position = peek_previous();
+            Token position = peek_and_advance_token();
             std::vector<std::shared_ptr<Expression>> arguments;
             while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
                 arguments.push_back(parse_expression());
@@ -753,4 +744,4 @@ void JotParser::assert_kind(TokenKind kind, const char *message) {
     exit(EXIT_FAILURE);
 }
 
-bool JotParser::is_source_available() { return !peek_current().is_end_of_file(); }
+bool JotParser::is_source_available() { return not peek_current().is_end_of_file(); }
