@@ -21,7 +21,7 @@ std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit() {
             }
             }
         }
-    } catch (const char *msg) {
+    } catch (const char *message) {
     }
     return std::make_shared<CompilationUnit>(tree_nodes);
 }

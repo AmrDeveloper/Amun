@@ -14,6 +14,8 @@ void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> com
         }
     } catch (const std::bad_any_cast &e) {
         jot::loge << "TypeChecker: " << e.what() << '\n';
+    } catch (const char *message) {
+
     }
 }
 
