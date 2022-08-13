@@ -1,0 +1,9 @@
+extern fun printf(format *char, value int64) int64;
+
+fun main() int64 {
+    var x = [2, 3, 3, 4, 5];
+    var i = 0;
+    x[0] = x[1] + x[2];
+    printf("%i", x[0]);
+    return 0;
+}

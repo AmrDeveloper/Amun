@@ -446,6 +446,11 @@ std::shared_ptr<Expression> JotParser::parse_postfix_expression() {
             }
             assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
             expression = std::make_shared<CallExpression>(position, expression, arguments);
+        } else if (is_current_kind(TokenKind::OpenBracket)) {
+            Token position = peek_and_advance_token();
+            auto index = parse_expression();
+            assert_kind(TokenKind::CloseBracket, "Expect ] after index value");
+            expression = std::make_shared<IndexExpression>(position, expression, index);
         } else {
             break;
         }
@@ -504,6 +509,9 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
     case TokenKind::OpenParen: {
         return parse_group_expression();
     }
+    case TokenKind::OpenBracket: {
+        return parse_array_expression();
+    }
     case TokenKind::IfKeyword: {
         return parse_if_expression();
     }
@@ -543,6 +551,18 @@ std::shared_ptr<GroupExpression> JotParser::parse_group_expression() {
     auto expression = parse_expression();
     assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
     return std::make_shared<GroupExpression>(position, expression);
+}
+
+std::shared_ptr<ArrayExpression> JotParser::parse_array_expression() {
+    Token position = peek_and_advance_token();
+    std::vector<std::shared_ptr<Expression>> values;
+    while (is_source_available() && not is_current_kind(CloseBracket)) {
+        values.push_back(parse_expression());
+        if (is_current_kind(TokenKind::Comma))
+            advanced_token();
+    }
+    assert_kind(TokenKind::CloseBracket, "Expect ] at the end of array values");
+    return std::make_shared<ArrayExpression>(position, values);
 }
 
 std::shared_ptr<JotType> JotParser::parse_type() { return parse_type_with_prefix(); }

@@ -409,6 +409,57 @@ class CallExpression : public Expression {
     std::shared_ptr<JotType> type;
 };
 
+class IndexExpression : public Expression {
+  public:
+    IndexExpression(Token position, std::shared_ptr<Expression> value,
+                    std::shared_ptr<Expression> index)
+        : position(position), value(value), index(index) {
+        // Must replaced later
+        type = value->get_type_node();
+    }
+
+    Token get_position() { return position; }
+
+    std::shared_ptr<Expression> get_value() { return value; }
+
+    std::shared_ptr<Expression> get_index() { return index; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) { type = new_type; }
+
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+  private:
+    Token position;
+    std::shared_ptr<Expression> value;
+    std::shared_ptr<Expression> index;
+    std::shared_ptr<JotType> type;
+};
+
+class ArrayExpression : public Expression {
+  public:
+    ArrayExpression(Token position, std::vector<std::shared_ptr<Expression>> values)
+        : position(position), values(values) {
+        auto element_type = values[0]->get_type_node();
+        auto size = values.size();
+        type = std::make_shared<JotArrayType>(element_type, size);
+    }
+
+    Token get_position() { return position; }
+
+    std::vector<std::shared_ptr<Expression>> get_values() { return values; }
+
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+  private:
+    Token position;
+    std::vector<std::shared_ptr<Expression>> values;
+    std::shared_ptr<JotType> type;
+};
+
 class StringExpression : public Expression {
   public:
     StringExpression(Token value) : value(value) {

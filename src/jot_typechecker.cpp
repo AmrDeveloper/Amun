@@ -15,7 +15,6 @@ void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> com
     } catch (const std::bad_any_cast &e) {
         jot::loge << "TypeChecker: " << e.what() << '\n';
     } catch (const char *message) {
-
     }
 }
 
@@ -351,6 +350,28 @@ std::any JotTypeChecker::visit(CallExpression *node) {
     }
 }
 
+std::any JotTypeChecker::visit(IndexExpression *node) {
+    auto callee_type = node_jot_type(node->get_value()->accept(this));
+    if (callee_type->get_type_kind() != TypeKind::Array) {
+        context->diagnostics.add_diagnostic(node->get_position().get_span(),
+                                            "Index expression require array but got " +
+                                                callee_type->type_literal());
+        throw "Stop";
+    }
+    auto array_type = std::dynamic_pointer_cast<JotArrayType>(callee_type);
+    node->set_type_node(array_type->get_element_type());
+
+    auto index_type = node_jot_type(node->get_index()->accept(this));
+    if (index_type->get_type_kind() != TypeKind::Number) {
+        context->diagnostics.add_diagnostic(node->get_position().get_span(),
+                                            "Index must be a number but got " +
+                                                index_type->type_literal());
+        throw "Stop";
+    }
+
+    return node->get_type_node();
+}
+
 std::any JotTypeChecker::visit(LiteralExpression *node) {
     auto name = node->get_name().get_literal();
     if (symbol_table->is_defined(name)) {
@@ -366,6 +387,20 @@ std::any JotTypeChecker::visit(LiteralExpression *node) {
 }
 
 std::any JotTypeChecker::visit(NumberExpression *node) { return node->get_type_node(); }
+
+std::any JotTypeChecker::visit(ArrayExpression *node) {
+    auto values = node->get_values();
+    for (int i = 1; i < values.size(); i++) {
+        if (not values[i]->get_type_node()->equals(values[i - 1]->get_type_node())) {
+            context->diagnostics.add_diagnostic(node->get_position().get_span(),
+                                                "Array elements with index " +
+                                                    std::to_string(i - 1) + " and " +
+                                                    std::to_string(i) + " are not the same types");
+            throw "Stop";
+        }
+    }
+    return node->get_type_node();
+}
 
 std::any JotTypeChecker::visit(StringExpression *node) { return node->get_type_node(); }
 

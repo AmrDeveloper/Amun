@@ -42,8 +42,10 @@ class ComparisonExpression;
 class LogicalExpression;
 class UnaryExpression;
 class CallExpression;
+class IndexExpression;
 class LiteralExpression;
 class NumberExpression;
+class ArrayExpression;
 class StringExpression;
 class CharacterExpression;
 class BooleanExpression;
@@ -67,11 +69,15 @@ class ExpressionVisitor {
 
     virtual std::any visit(CallExpression *node) = 0;
 
+    virtual std::any visit(IndexExpression *node) = 0;
+
     virtual std::any visit(LiteralExpression *node) = 0;
 
     virtual std::any visit(NumberExpression *node) = 0;
 
     virtual std::any visit(StringExpression *node) = 0;
+
+    virtual std::any visit(ArrayExpression *node) = 0;
 
     virtual std::any visit(CharacterExpression *node) = 0;
 

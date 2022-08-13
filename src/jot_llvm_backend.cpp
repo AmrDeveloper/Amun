@@ -196,8 +196,7 @@ std::any JotLLVMBackend::visit(IfStatement *node) {
 
 std::any JotLLVMBackend::visit(WhileStatement *node) {
     auto current_function = Builder.GetInsertBlock()->getParent();
-    auto condition_branch =
-        llvm::BasicBlock::Create(llvm_context, "while.condition", current_function);
+    auto condition_branch = llvm::BasicBlock::Create(llvm_context, "while.condition");
     auto loop_branch = llvm::BasicBlock::Create(llvm_context, "while.loop");
     auto end_branch = llvm::BasicBlock::Create(llvm_context, "while.end");
 
@@ -287,18 +286,36 @@ std::any JotLLVMBackend::visit(GroupExpression *node) {
 
 std::any JotLLVMBackend::visit(AssignExpression *node) {
     auto current_function = Builder.GetInsertBlock()->getParent();
-    auto literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_left());
-    auto name = literal->get_name().get_literal();
-    auto value = node->get_right()->accept(this);
-    if (value.type() == typeid(llvm::AllocaInst *)) {
-        auto init_value = std::any_cast<llvm::AllocaInst *>(value);
-        alloca_inst_scope->update(name, init_value);
-        return Builder.CreateLoad(init_value->getAllocatedType(), init_value, name.c_str());
-    } else {
-        llvm::Value *right_value = llvm_node_value(value);
-        auto alloc_inst = create_entry_block_alloca(current_function, name, llvm_int64_type);
-        alloca_inst_scope->update(name, alloc_inst);
-        return Builder.CreateStore(right_value, alloc_inst);
+    if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_left())) {
+        auto name = literal->get_name().get_literal();
+        auto value = node->get_right()->accept(this);
+        if (value.type() == typeid(llvm::AllocaInst *)) {
+            auto init_value = std::any_cast<llvm::AllocaInst *>(value);
+            alloca_inst_scope->update(name, init_value);
+            return Builder.CreateLoad(init_value->getAllocatedType(), init_value, name.c_str());
+        } else {
+            llvm::Value *right_value = llvm_node_value(value);
+            auto alloc_inst = create_entry_block_alloca(current_function, name, llvm_int64_type);
+            alloca_inst_scope->update(name, alloc_inst);
+            return Builder.CreateStore(right_value, alloc_inst);
+        }
+    }
+
+    if (auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node->get_left())) {
+        auto array_literal =
+            std::dynamic_pointer_cast<LiteralExpression>(index_expression->get_value());
+        auto index = llvm_node_value(index_expression->get_index()->accept(this));
+        auto value = llvm_node_value(node->get_right()->accept(this));
+        auto alloca = llvm::dyn_cast<llvm::AllocaInst>(
+            llvm_node_value(alloca_inst_scope->lookup(array_literal->get_name().get_literal())));
+        auto zero = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, 0, true));
+        auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero, index});
+        return Builder.CreateStore(value, ptr);
+    }
+
+    else {
+        jot::loge << "Invalid assignments expression\n";
+        return 0;
     }
 }
 
@@ -459,6 +476,22 @@ std::any JotLLVMBackend::visit(CallExpression *node) {
     return Builder.CreateCall(function, arguments_values, "calltmp");
 }
 
+std::any JotLLVMBackend::visit(IndexExpression *node) {
+    auto index = llvm_node_value(node->get_index()->accept(this));
+
+    if (auto constants = llvm::dyn_cast<llvm::ConstantInt>(index)) {
+        auto value = llvm_node_value(node->get_value()->accept(this));
+        return Builder.CreateExtractValue(value, constants->getSExtValue());
+    }
+
+    auto array_literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_value());
+    auto alloca = llvm::dyn_cast<llvm::AllocaInst>(
+        llvm_node_value(alloca_inst_scope->lookup(array_literal->get_name().get_literal())));
+    auto zero = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, 0, true));
+    auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero, index});
+    return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
+}
+
 std::any JotLLVMBackend::visit(LiteralExpression *node) {
     auto name = node->get_name().get_literal();
     auto alloca_inst = alloca_inst_scope->lookup(name);
@@ -474,6 +507,22 @@ std::any JotLLVMBackend::visit(LiteralExpression *node) {
 std::any JotLLVMBackend::visit(NumberExpression *node) {
     auto number_type = std::dynamic_pointer_cast<JotNumber>(node->get_type_node());
     return llvm_number_value(node->get_value().get_literal(), number_type->get_kind());
+}
+
+std::any JotLLVMBackend::visit(ArrayExpression *node) {
+    auto arrayType = llvm_type_from_jot_type(node->get_type_node());
+    std::vector<llvm::Value *> values;
+    for (auto &value : node->get_values()) {
+        values.push_back(llvm_node_value(value->accept(this)));
+    }
+    auto alloca = Builder.CreateAlloca(arrayType);
+    auto zero = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, 0, true));
+    for (size_t i = 0; i < values.size(); i++) {
+        auto index = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, i, true));
+        auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero, index});
+        Builder.CreateStore(values[i], ptr);
+    }
+    return alloca;
 }
 
 std::any JotLLVMBackend::visit(StringExpression *node) {
@@ -573,7 +622,8 @@ llvm::Type *JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
     } else if (type_kind == TypeKind::Array) {
         auto jot_array_type = std::dynamic_pointer_cast<JotArrayType>(type);
         auto element_type = llvm_type_from_jot_type(jot_array_type->get_element_type());
-        return llvm::PointerType::get(element_type, 0);
+        auto size = jot_array_type->get_size();
+        return llvm::ArrayType::get(element_type, size);
     } else if (type_kind == TypeKind::Pointer) {
         auto jot_pointer_type = std::dynamic_pointer_cast<JotPointerType>(type);
         auto point_to_type = llvm_type_from_jot_type(jot_pointer_type->get_point_to());
