@@ -352,14 +352,18 @@ std::any JotTypeChecker::visit(CallExpression *node) {
 
 std::any JotTypeChecker::visit(IndexExpression *node) {
     auto callee_type = node_jot_type(node->get_value()->accept(this));
-    if (callee_type->get_type_kind() != TypeKind::Array) {
+    if (callee_type->get_type_kind() == TypeKind::Array) {
+        auto array_type = std::dynamic_pointer_cast<JotArrayType>(callee_type);
+        node->set_type_node(array_type->get_element_type());
+    } else if (callee_type->get_type_kind() == TypeKind::Pointer) {
+        auto pointer_type = std::dynamic_pointer_cast<JotPointerType>(callee_type);
+        node->set_type_node(pointer_type->get_point_to());
+    } else {
         context->diagnostics.add_diagnostic(node->get_position().get_span(),
                                             "Index expression require array but got " +
                                                 callee_type->type_literal());
         throw "Stop";
     }
-    auto array_type = std::dynamic_pointer_cast<JotArrayType>(callee_type);
-    node->set_type_node(array_type->get_element_type());
 
     auto index_type = node_jot_type(node->get_index()->accept(this));
     if (index_type->get_type_kind() != TypeKind::Number) {
