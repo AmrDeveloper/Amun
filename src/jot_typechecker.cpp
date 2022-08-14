@@ -381,6 +381,7 @@ std::any JotTypeChecker::visit(LiteralExpression *node) {
     if (symbol_table->is_defined(name)) {
         auto value = symbol_table->lookup(name);
         auto type = node_jot_type(value);
+        node->set_type(type);
         return type;
     } else {
         context->diagnostics.add_diagnostic(node->get_name().get_span(),

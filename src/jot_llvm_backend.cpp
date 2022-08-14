@@ -478,6 +478,14 @@ std::any JotLLVMBackend::visit(CallExpression *node) {
 
 std::any JotLLVMBackend::visit(IndexExpression *node) {
     auto index = llvm_node_value(node->get_index()->accept(this));
+    auto values = node->get_value()->get_type_node();
+
+    if (values->get_type_kind() == TypeKind::Pointer) {
+        auto element_type = llvm_type_from_jot_type(node->get_type_node());
+        auto value = llvm_node_value(node->get_value()->accept(this));
+        auto ptr = Builder.CreateGEP(element_type, value, index);
+        return Builder.CreateLoad(element_type, ptr);
+    }
 
     if (auto constants = llvm::dyn_cast<llvm::ConstantInt>(index)) {
         auto value = llvm_node_value(node->get_value()->accept(this));

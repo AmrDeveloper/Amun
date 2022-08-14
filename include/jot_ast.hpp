@@ -464,8 +464,7 @@ class StringExpression : public Expression {
   public:
     StringExpression(Token value) : value(value) {
         auto element_type = std::make_shared<JotNumber>(value, NumberKind::Integer8);
-        auto literal = value.get_literal().size();
-        type = std::make_shared<JotArrayType>(element_type, literal);
+        type = std::make_shared<JotPointerType>(value, element_type);
     }
 
     Token get_value() { return value; }

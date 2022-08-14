@@ -4,6 +4,6 @@ fun main() int64 {
     var x = [2, 3, 3, 4, 5];
     var i = 0;
     x[0] = x[1] + x[2];
-    printf("%i", x[0]);
+    printf("%i", x[i]);
     return 0;
 }
