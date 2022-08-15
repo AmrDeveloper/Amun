@@ -1,0 +1,11 @@
+extern fun puts(s *char) int64;
+
+fun getHelloWorld() *char {
+    return "Hello, World!";
+}
+
+fun main() int64 {
+    var message : *char = getHelloWorld();
+    puts(message);
+    return 0;
+}
