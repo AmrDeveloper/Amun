@@ -1,0 +1,6 @@
+extern fun printf(format *char, value int32) int64;
+
+fun main(argc int32, argv **char) int64 {
+    printf("Number of arguments is %d", argc);
+    return 0;
+}
