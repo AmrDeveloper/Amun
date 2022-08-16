@@ -235,6 +235,9 @@ std::any JotLLVMBackend::visit(ReturnStatement *node) {
         auto init_value = std::any_cast<llvm::AllocaInst *>(value);
         auto value_litearl = Builder.CreateLoad(init_value->getAllocatedType(), init_value);
         return Builder.CreateRet(value_litearl);
+    } else if (value.type() == typeid(llvm::Function *)) {
+        auto node = std::any_cast<llvm::Function *>(value);
+        return Builder.CreateRet(node);
     } else if (value.type() == typeid(llvm::Constant *)) {
         auto init_value = std::any_cast<llvm::Constant *>(value);
         return Builder.CreateRet(init_value);
