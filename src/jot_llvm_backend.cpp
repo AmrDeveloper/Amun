@@ -291,7 +291,6 @@ std::any JotLLVMBackend::visit(GroupExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(AssignExpression *node) {
-    auto current_function = Builder.GetInsertBlock()->getParent();
     if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_left())) {
         auto name = literal->get_name().get_literal();
         auto value = node->get_right()->accept(this);
@@ -301,7 +300,7 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
             return Builder.CreateLoad(init_value->getAllocatedType(), init_value, name.c_str());
         } else {
             llvm::Value *right_value = llvm_node_value(value);
-            auto alloc_inst = create_entry_block_alloca(current_function, name, llvm_int64_type);
+            auto alloc_inst = std::any_cast<llvm::AllocaInst *>(alloca_inst_scope->lookup(name));
             alloca_inst_scope->update(name, alloc_inst);
             return Builder.CreateStore(right_value, alloc_inst);
         }

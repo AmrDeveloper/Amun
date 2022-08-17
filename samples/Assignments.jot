@@ -14,5 +14,8 @@ fun main() int64 {
     x /= 10;
     printf("x /= 1 %i\n expect 10", x);
 
+    var y = 10;
+    x += y;
+    printf("x += y %i\n expect 20", x);
     return 0;
 }
