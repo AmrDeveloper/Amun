@@ -1,6 +1,6 @@
 # Jot Programming Language
 
-Staticly typed Low level programming language that use LLVM infrastructure, the design inspired from many programming languages such as C/C++, Swift, Go, Kotlin, Rust.
+A Statically typed, compiled general purpose low level programming language built using C++ and LLVM Infrastructure framework, the design inspired from many programming languages such as C/C++, Swift, Go, Kotlin, Rust.
 
 ### Features
 - Static Types
