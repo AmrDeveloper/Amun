@@ -1,0 +1,10 @@
+extern fun putchar(c char) int32;
+
+fun main() int64 {
+    putchar('B');
+    putchar('\n');
+    putchar('A');
+    putchar('\t');
+    putchar('\x52');
+    return 0;
+}

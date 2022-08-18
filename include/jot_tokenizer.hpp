@@ -24,6 +24,8 @@ class JotTokenizer {
 
     Token consume_character();
 
+    char consume_one_character();
+
     Token build_token(TokenKind);
 
     Token build_token(TokenKind, std::string);
@@ -49,6 +51,8 @@ class JotTokenizer {
     bool is_alpha(char);
 
     bool is_alpha_num(char);
+
+    int8_t hex_to_int(char c);
 
     bool is_source_available();
 

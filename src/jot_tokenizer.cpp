@@ -1,6 +1,8 @@
 #include "../include/jot_tokenizer.hpp"
+#include "../include/jot_logger.hpp"
 
 #include <iostream>
+#include <sstream>
 
 std::vector<Token> JotTokenizer::scan_all_tokens() {
     std::vector<Token> tokens;
@@ -178,26 +180,21 @@ Token JotTokenizer::consume_number() {
 }
 
 Token JotTokenizer::consume_string() {
+    std::stringstream stream;
     while (is_source_available() && peek() != '"') {
-        if (peek() == '\n')
-            line_number++;
-        advance();
+        stream << consume_one_character();
     }
 
-    if (!is_source_available()) {
+    if (not is_source_available()) {
         return build_token(TokenKind::Invalid, "Unterminated string");
     }
 
     advance();
-
-    size_t len = current_position - start_position - 1;
-    auto literal = source_code.substr(start_position, len);
-    return build_token(TokenKind::String, literal);
+    return build_token(TokenKind::String, stream.str());
 }
 
 Token JotTokenizer::consume_character() {
-    char c = peek();
-    advance();
+    char c = consume_one_character();
 
     if (peek() != '\'') {
         return build_token(TokenKind::Invalid, "Unterminated character");
@@ -206,6 +203,87 @@ Token JotTokenizer::consume_character() {
     advance();
 
     return build_token(TokenKind::Character, std::string(1, c));
+}
+
+char JotTokenizer::consume_one_character() {
+    char c = advance();
+    if (c == '\\') {
+        char escape = peek();
+        switch (escape) {
+        case 'a': {
+            advance();
+            c = '\a';
+            break;
+        }
+        case 'b': {
+            advance();
+            c = '\b';
+            break;
+        }
+        case 'f': {
+            advance();
+            c = '\f';
+            break;
+        }
+        case 'n': {
+            advance();
+            c = '\n';
+            break;
+        }
+        case 'r': {
+            advance();
+            c = '\r';
+            break;
+        }
+        case 't': {
+            advance();
+            c = '\t';
+            break;
+        }
+        case 'v': {
+            advance();
+            c = '\v';
+            break;
+        }
+        case '0': {
+            advance();
+            c = '\0';
+            break;
+        }
+        case '\'': {
+            advance();
+            c = '\'';
+            break;
+        }
+        case '\\': {
+            advance();
+            c = '\\';
+            break;
+        }
+        case '"': {
+            advance();
+            c = '"';
+            break;
+        }
+        case 'x': {
+            advance();
+            char first_digit = advance();
+            char second_digit = advance();
+            if (is_digit(first_digit) && is_digit(second_digit))
+                c = (hex_to_int(first_digit) << 4) + hex_to_int(second_digit);
+            else {
+                jot::loge << "escaped hex 2 character must be integers\n";
+                return -1;
+            }
+            break;
+        }
+        default: {
+            jot::loge << "Not escaped character\n";
+            return -1;
+        }
+        }
+    }
+    return c;
 }
 
 Token JotTokenizer::build_token(TokenKind kind) { return build_token(kind, ""); }
@@ -303,5 +381,9 @@ bool JotTokenizer::is_alpha(char c) {
 }
 
 bool JotTokenizer::is_alpha_num(char c) { return is_alpha(c) || is_digit(c); }
+
+int8_t JotTokenizer::hex_to_int(char c) {
+    return c <= '9' ? c - '0' : c <= 'F' ? c - 'A' : c - 'a';
+}
 
 bool JotTokenizer::is_source_available() { return current_position < source_code_length; }
