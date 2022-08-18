@@ -127,7 +127,7 @@ Token JotTokenizer::scan_next_token() {
 }
 
 Token JotTokenizer::consume_symbol() {
-    while (is_alpha_num(peek())) {
+    while (is_alpha_num(peek()) or peek() == '_') {
         advance();
     }
     size_t len = current_position - start_position + 1;
