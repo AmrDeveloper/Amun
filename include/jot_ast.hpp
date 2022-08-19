@@ -129,17 +129,18 @@ class FunctionDeclaration : public Statement {
 
 class EnumDeclaration : public Statement {
   public:
-    EnumDeclaration(Token name, std::vector<Token> values) : name(name), values(values) {}
+    EnumDeclaration(Token name, std::shared_ptr<JotType> enum_type)
+        : name(name), enum_type(enum_type) {}
 
     Token get_name() { return name; }
 
-    std::vector<Token> get_values() { return values; }
+    std::shared_ptr<JotType> get_enum_type() { return enum_type; }
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
   private:
     Token name;
-    std::vector<Token> values;
+    std::shared_ptr<JotType> enum_type;
 };
 
 class ConditionalBlock {
@@ -435,6 +436,28 @@ class IndexExpression : public Expression {
     std::shared_ptr<Expression> value;
     std::shared_ptr<Expression> index;
     std::shared_ptr<JotType> type;
+};
+
+class EnumAccessExpression : public Expression {
+  public:
+    EnumAccessExpression(Token enum_name, Token element_name, int index,
+                         std::shared_ptr<JotType> element_type)
+        : enum_name(enum_name), element_name(element_name), index(index),
+          element_type(element_type) {}
+
+    Token get_enum_name() { return enum_name; }
+
+    int get_enum_element_index() { return index; }
+
+    std::shared_ptr<JotType> get_type_node() override { return element_type; }
+
+    std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+  private:
+    Token enum_name;
+    Token element_name;
+    int index;
+    std::shared_ptr<JotType> element_type;
 };
 
 class ArrayExpression : public Expression {

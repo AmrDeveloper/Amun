@@ -53,6 +53,8 @@ class JotTypeChecker : public TreeVisitor {
 
     std::any visit(IndexExpression *node) override;
 
+    std::any visit(EnumAccessExpression *node) override;
+
     std::any visit(LiteralExpression *node) override;
 
     std::any visit(NumberExpression *node) override;
@@ -69,11 +71,17 @@ class JotTypeChecker : public TreeVisitor {
 
     std::shared_ptr<JotType> node_jot_type(std::any any_type);
 
-    bool is_number_type(const std::shared_ptr<JotType> &);
+    bool is_number_type(const std::shared_ptr<JotType> &type);
 
-    bool is_pointer_type(const std::shared_ptr<JotType> &);
+    bool is_integer_type(std::shared_ptr<JotType> &type);
 
-    bool is_same_type(const std::shared_ptr<JotType> &, const std::shared_ptr<JotType> &);
+    bool is_enum_element_type(const std::shared_ptr<JotType> &type);
+
+    bool is_boolean_type(std::shared_ptr<JotType> &type);
+
+    bool is_pointer_type(const std::shared_ptr<JotType> &type);
+
+    bool is_same_type(const std::shared_ptr<JotType> &left, const std::shared_ptr<JotType> &right);
 
     void push_new_scope();
 

@@ -3,6 +3,7 @@
 #include "../include/jot_logger.hpp"
 #include "../include/jot_type.hpp"
 
+#include <any>
 #include <memory>
 #include <string>
 
@@ -79,7 +80,22 @@ std::any JotTypeChecker::visit(FunctionDeclaration *node) {
 
 std::any JotTypeChecker::visit(EnumDeclaration *node) {
     auto name = node->get_name().get_literal();
-    auto enum_type = std::make_shared<JotEnumType>(node->get_name(), node->get_values());
+    auto enum_type = std::dynamic_pointer_cast<JotEnumType>(node->get_enum_type());
+    auto enum_element_type = enum_type->get_element_type();
+    if (not is_integer_type(enum_element_type)) {
+        context->diagnostics.add_diagnostic(node->get_name().get_span(),
+                                            "Enum element type must be aa integer type");
+        throw "Stop";
+    }
+
+    auto element_size = enum_type->get_enum_values().size();
+    if (element_size > 2 && is_boolean_type(enum_element_type)) {
+        context->diagnostics.add_diagnostic(
+            node->get_name().get_span(),
+            "Enum with bool (int1) type can't has more than 2 elements");
+        throw "Stop";
+    }
+
     bool is_first_defined = symbol_table->define(name, enum_type);
     if (not is_first_defined) {
         context->diagnostics.add_diagnostic(node->get_name().get_span(),
@@ -185,20 +201,30 @@ std::any JotTypeChecker::visit(ComparisonExpression *node) {
     auto left_type = node_jot_type(node->get_left()->accept(this));
     auto right_type = node_jot_type(node->get_right()->accept(this));
 
-    // TODO: Assert that they are int1 (bool)
-    bool is_left_number = is_number_type(left_type);
-    bool is_right_number = is_number_type(right_type);
-    if (not is_left_number || not is_right_number) {
+    bool is_left_number = is_number_type(left_type) or is_enum_element_type(left_type);
+    bool is_right_number = is_number_type(right_type) or is_enum_element_type(right_type);
+    bool is_the_same = left_type->equals(right_type);
+    if (not is_left_number || not is_right_number || not is_the_same) {
         if (not is_left_number) {
-            context->diagnostics.add_diagnostic(node->get_operator_token().get_span(),
-                                                "Expected Comparison left to be number but got " +
-                                                    left_type->type_literal());
+            context->diagnostics.add_diagnostic(
+                node->get_operator_token().get_span(),
+                "Expected Comparison left to be number or enum element but got " +
+                    left_type->type_literal());
         }
         if (not is_right_number) {
-            context->diagnostics.add_diagnostic(node->get_operator_token().get_span(),
-                                                "Expected Comparison right to be number but got " +
-                                                    left_type->type_literal());
+            context->diagnostics.add_diagnostic(
+                node->get_operator_token().get_span(),
+                "Expected Comparison right to be number or enum element but got " +
+                    left_type->type_literal());
         }
+
+        if (not is_the_same) {
+            context->diagnostics.add_diagnostic(node->get_operator_token().get_span(),
+                                                "Expected Comparison type missmatch " +
+                                                    left_type->type_literal() + " and " +
+                                                    right_type->type_literal());
+        }
+
         throw "Stop";
     }
 
@@ -376,6 +402,8 @@ std::any JotTypeChecker::visit(IndexExpression *node) {
     return node->get_type_node();
 }
 
+std::any JotTypeChecker::visit(EnumAccessExpression *node) { return node->get_type_node(); }
+
 std::any JotTypeChecker::visit(LiteralExpression *node) {
     auto name = node->get_name().get_literal();
     if (symbol_table->is_defined(name)) {
@@ -431,6 +459,9 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type) {
     if (any_type.type() == typeid(std::shared_ptr<JotEnumType>)) {
         return std::any_cast<std::shared_ptr<JotEnumType>>(any_type);
     }
+    if (any_type.type() == typeid(std::shared_ptr<JotEnumElementType>)) {
+        return std::any_cast<std::shared_ptr<JotEnumElementType>>(any_type);
+    }
     if (any_type.type() == typeid(std::shared_ptr<JotNamedType>)) {
         return std::any_cast<std::shared_ptr<JotNamedType>>(any_type);
     }
@@ -448,6 +479,26 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type) {
 
 bool JotTypeChecker::is_number_type(const std::shared_ptr<JotType> &type) {
     return type->get_type_kind() == TypeKind::Number;
+}
+
+bool JotTypeChecker::is_integer_type(std::shared_ptr<JotType> &type) {
+    if (type->get_type_kind() == TypeKind::Number) {
+        auto number_type = std::dynamic_pointer_cast<JotNumber>(type);
+        return number_type->is_integer();
+    }
+    return false;
+}
+
+bool JotTypeChecker::is_enum_element_type(const std::shared_ptr<JotType> &type) {
+    return type->get_type_kind() == TypeKind::EnumerationElement;
+}
+
+bool JotTypeChecker::is_boolean_type(std::shared_ptr<JotType> &type) {
+    if (type->get_type_kind() == TypeKind::Number) {
+        auto number_type = std::dynamic_pointer_cast<JotNumber>(type);
+        return number_type->is_boolean();
+    }
+    return false;
 }
 
 bool JotTypeChecker::is_pointer_type(const std::shared_ptr<JotType> &type) {

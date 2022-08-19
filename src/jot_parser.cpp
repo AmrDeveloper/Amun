@@ -1,7 +1,9 @@
 #include "../include/jot_parser.hpp"
 #include "../include/jot_files.hpp"
+#include "../include/jot_logger.hpp"
 
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit() {
@@ -234,19 +236,41 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(Funct
 std::shared_ptr<EnumDeclaration> JotParser::parse_enum_declaration() {
     auto enum_token = consume_kind(TokenKind::EnumKeyword, "Expect enum keyword");
     auto enum_name = consume_kind(TokenKind::Symbol, "Expect Symbol as enum name");
+
+    std::shared_ptr<JotType> element_type = nullptr;
+
+    if (is_current_kind(TokenKind::Colon)) {
+        advanced_token();
+        element_type = parse_type();
+    } else {
+        // Default enumeration element type is integer 32
+        element_type = std::make_shared<JotNumber>(enum_token, NumberKind::Integer32);
+    }
+
     assert_kind(TokenKind::OpenBrace, "Expect { after enum name");
     std::vector<Token> enum_values;
+    std::unordered_map<std::string, int> enum_values_indexes;
+    int index = 0;
     while (is_source_available() && !is_current_kind(TokenKind::CloseBrace)) {
         auto enum_value = consume_kind(TokenKind::Symbol, "Expect Symbol as enum value");
         enum_values.push_back(enum_value);
 
+        if (enum_values_indexes.count(enum_value.get_literal())) {
+            context->diagnostics.add_diagnostic(enum_value.get_span(),
+                                                "Can't declare 2 elements with the same name");
+            throw "Stop";
+        } else {
+            enum_values_indexes[enum_value.get_literal()] = index++;
+        }
+
         if (is_current_kind(TokenKind::Comma))
             advanced_token();
-        else
-            break;
     }
     assert_kind(TokenKind::CloseBrace, "Expect } in the end of enum declaration");
-    return std::make_shared<EnumDeclaration>(enum_name, enum_values);
+    auto enumeration_type =
+        std::make_shared<JotEnumType>(enum_name, enum_values_indexes, element_type);
+    enumerations[enum_name.get_literal()] = enumeration_type;
+    return std::make_shared<EnumDeclaration>(enum_name, enumeration_type);
 }
 
 std::shared_ptr<Parameter> JotParser::parse_parameter() {
@@ -388,12 +412,52 @@ std::shared_ptr<Expression> JotParser::parse_term_expression() {
 }
 
 std::shared_ptr<Expression> JotParser::parse_factor_expression() {
-    auto expression = parse_infix_call_expression();
+    auto expression = parse_enum_access_expression();
     while (is_current_kind(TokenKind::Star) || is_current_kind(TokenKind::Slash) ||
            is_current_kind(TokenKind::Percent)) {
         Token operator_token = peek_and_advance_token();
-        auto right = parse_infix_call_expression();
+        auto right = parse_enum_access_expression();
         expression = std::make_shared<BinaryExpression>(expression, operator_token, right);
+    }
+    return expression;
+}
+
+std::shared_ptr<Expression> JotParser::parse_enum_access_expression() {
+    auto expression = parse_infix_call_expression();
+    if (is_current_kind(TokenKind::ColonColon)) {
+        auto colons_token = peek_and_advance_token();
+        if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression)) {
+            auto enum_name = literal->get_name();
+            if (enumerations.count(enum_name.get_literal())) {
+                auto enum_type = enumerations[enum_name.get_literal()];
+                auto element =
+                    consume_kind(TokenKind::Symbol, "Expect identifier as enum field name");
+
+                auto enum_values = enum_type->get_enum_values();
+                if (not enum_values.count(element.get_literal())) {
+                    context->diagnostics.add_diagnostic(element.get_span(),
+                                                        "Can't find element with name " +
+                                                            element.get_literal() + " in enum " +
+                                                            enum_name.get_literal());
+                    throw "Stop";
+                }
+
+                int index = enum_values[element.get_literal()];
+                auto enum_element_type =
+                    std::make_shared<JotEnumElementType>(enum_name, enum_type->get_element_type());
+                return std::make_shared<EnumAccessExpression>(enum_name, element, index,
+                                                              enum_element_type);
+            } else {
+                context->diagnostics.add_diagnostic(enum_name.get_span(),
+                                                    "Can't find enum declaration with name " +
+                                                        enum_name.get_literal());
+                throw "Stop";
+            }
+        } else {
+            context->diagnostics.add_diagnostic(colons_token.get_span(),
+                                                "Expect identifier as Enum name");
+            throw "Stop";
+        }
     }
     return expression;
 }
@@ -642,7 +706,7 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type() {
         return std::make_shared<JotNumber>(symbol_token, NumberKind::Integer8);
     }
 
-    if (type_literal == "bool") {
+    if (type_literal == "bool" || type_literal == "int1") {
         return std::make_shared<JotNumber>(symbol_token, NumberKind::Integer1);
     }
 
@@ -650,13 +714,19 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type() {
         return std::make_shared<JotVoid>(symbol_token);
     }
 
+    // Check if this type is enumeration type
+    if (enumerations.count(type_literal)) {
+        auto enum_type = enumerations[type_literal];
+        auto enum_name = enum_type->get_type_token();
+        auto enum_element_type =
+            std::make_shared<JotEnumElementType>(enum_name, enum_type->get_element_type());
+        return enum_element_type;
+    }
+
+    // TODO: Check if this type is Structure type
+
     context->diagnostics.add_diagnostic(peek_current().get_span(), "Unexpected identifier type");
     throw "Stop";
-
-    /**
-     *  TODO: should return a named type node but for now just allow primitive types
-     *  return std::make_shared<NamedTypeNode>(symbol_token);
-     */
 }
 
 NumberKind JotParser::get_number_kind(TokenKind token) {

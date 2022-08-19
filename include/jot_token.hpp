@@ -29,6 +29,7 @@ enum TokenKind {
     Dot,
     Comma,
     Colon,
+    ColonColon,
     Semicolon,
 
     Plus,
@@ -107,6 +108,7 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
     {TokenKind::Dot, "Dot ."},
     {TokenKind::Comma, "Comma ,"},
     {TokenKind::Colon, "Colon :"},
+    {TokenKind::ColonColon, "ColonColon ::"},
     {TokenKind::Semicolon, "Semicolon ;"},
 
     {TokenKind::Plus, "+"},

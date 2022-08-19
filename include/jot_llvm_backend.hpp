@@ -84,6 +84,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(IndexExpression *node) override;
 
+    std::any visit(EnumAccessExpression *node) override;
+
     std::any visit(LiteralExpression *node) override;
 
     std::any visit(NumberExpression *node) override;

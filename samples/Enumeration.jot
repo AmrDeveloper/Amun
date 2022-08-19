@@ -1,0 +1,30 @@
+extern fun printf(format *char, value bool) int64;
+
+enum Numbers { ONE, TWO, THREE }
+
+enum Booleans : bool { ZERO, ONE }
+
+enum Bytecode : int8 { PUSH, POP, EXIT }
+
+fun main() int64 {
+    var one = Numbers::ONE;
+    var two = Numbers::TWO;
+    var three = Numbers::THREE;
+
+    var zero_bool : Booleans = Booleans::ZERO;
+    var one_bool : Booleans = Booleans::ONE;
+
+    var push = Bytecode::PUSH;
+    var pop = Bytecode::POP;
+
+    printf("Is Numbers ONE equal Numbers ONE %d\n", (one == one));
+    printf("Is Numbers TWO equal Numbers TWO %d\n", (two == two));
+    printf("Is Numbers THREE equal Numbers THREE %d\n", (three == three));
+
+    printf("Is Booleans Zero equal Numbers One %d\n", (zero_bool == one_bool));
+
+    printf("Is Bytecode push equal Bytecode push %d\n", (push == push));
+    printf("Is Bytecode pop equal Bytecode pop %d\n", (pop == pop));
+    printf("Is Bytecode pop equal Bytecode push %d\n", (push == pop));
+    return 0;
+}

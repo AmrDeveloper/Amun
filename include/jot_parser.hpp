@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <optional>
+#include <unordered_map>
 
 class JotParser {
   public:
@@ -65,6 +66,8 @@ class JotParser {
     std::shared_ptr<Expression> parse_term_expression();
 
     std::shared_ptr<Expression> parse_factor_expression();
+
+    std::shared_ptr<Expression> parse_enum_access_expression();
 
     std::shared_ptr<Expression> parse_infix_call_expression();
 
@@ -126,6 +129,7 @@ class JotParser {
 
     std::shared_ptr<JotContext> context;
     std::unique_ptr<JotTokenizer> tokenizer;
+    std::unordered_map<std::string, std::shared_ptr<JotEnumType>> enumerations;
     std::optional<Token> previous_token;
     std::optional<Token> current_token;
     std::optional<Token> next_token;

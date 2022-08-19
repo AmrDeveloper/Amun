@@ -83,6 +83,8 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, node->getType());
         Builder.CreateStore(node, alloc_inst);
         alloca_inst_scope->define(var_name, alloc_inst);
+    } else {
+        jot::loge << "Un supported rvalue for field declaration " << value.type().name() << '\n';
     }
     return 0;
 }
@@ -505,6 +507,12 @@ std::any JotLLVMBackend::visit(IndexExpression *node) {
     return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
 }
 
+std::any JotLLVMBackend::visit(EnumAccessExpression *node) {
+    auto element_type = llvm_type_from_jot_type(node->get_type_node());
+    auto element_index = llvm::ConstantInt::get(element_type, node->get_enum_element_index());
+    return llvm::dyn_cast<llvm::Value>(element_index);
+}
+
 std::any JotLLVMBackend::visit(LiteralExpression *node) {
     auto name = node->get_name().get_literal();
     auto alloca_inst = alloca_inst_scope->lookup(name);
@@ -652,6 +660,9 @@ llvm::Type *JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
         auto return_type = llvm_type_from_jot_type(jot_function_type->get_return_type());
         auto function_type = llvm::FunctionType::get(return_type, arguments, false);
         return function_type;
+    } else if (type_kind == TypeKind::EnumerationElement) {
+        auto enum_element_type = std::dynamic_pointer_cast<JotEnumElementType>(type);
+        return llvm_type_from_jot_type(enum_element_type->get_element_type());
     }
     return llvm_int64_type;
 }

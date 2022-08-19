@@ -50,6 +50,17 @@ bool JotFunctionType::equals(const std::shared_ptr<JotType> &other) {
 
 bool JotEnumType::equals(const std::shared_ptr<JotType> &other) { return false; }
 
+bool JotEnumElementType::equals(const std::shared_ptr<JotType> &other) {
+    if (other->get_type_kind() == TypeKind::EnumerationElement) {
+        auto other_enum_type = std::dynamic_pointer_cast<JotEnumElementType>(other);
+        if (other_enum_type->get_type_token().get_literal() == get_type_token().get_literal()) {
+            return true;
+        }
+        return false;
+    }
+    return false;
+}
+
 bool JotNamedType::equals(const std::shared_ptr<JotType> &other) { return false; }
 
 bool JotVoid::equals(const std::shared_ptr<JotType> &other) {

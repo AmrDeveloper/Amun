@@ -13,6 +13,7 @@ enum TypeKind {
     Function,
     Array,
     Enumeration,
+    EnumerationElement,
     Named,
     Void,
     Null,
@@ -63,6 +64,12 @@ class JotNumber : public JotType {
     TokenSpan get_type_position() override { return token.get_span(); }
 
     bool equals(const std::shared_ptr<JotType> &other) override;
+
+    bool is_boolean() { return kind == NumberKind::Integer1; }
+
+    bool is_integer() { return not is_float(); }
+
+    bool is_float() { return kind == NumberKind::Float32 || kind == NumberKind::Float64; }
 
   private:
     Token token;
@@ -155,9 +162,15 @@ class JotFunctionType : public JotType {
 
 class JotEnumType : public JotType {
   public:
-    JotEnumType(Token name, std::vector<Token> values) : name(name), values(values) {}
+    JotEnumType(Token name, std::unordered_map<std::string, int> values,
+                std::shared_ptr<JotType> element_type)
+        : name(name), values(values), element_type(element_type) {}
 
     Token get_type_token() override { return name; }
+
+    std::shared_ptr<JotType> get_element_type() { return element_type; }
+
+    std::unordered_map<std::string, int> get_enum_values() { return values; }
 
     std::string type_literal() override { return "enum"; }
 
@@ -169,7 +182,30 @@ class JotEnumType : public JotType {
 
   private:
     Token name;
-    std::vector<Token> values;
+    std::unordered_map<std::string, int> values;
+    std::shared_ptr<JotType> element_type;
+};
+
+class JotEnumElementType : public JotType {
+  public:
+    JotEnumElementType(Token name, std::shared_ptr<JotType> element_type)
+        : name(name), element_type(element_type) {}
+
+    Token get_type_token() override { return name; }
+
+    std::shared_ptr<JotType> get_element_type() { return element_type; }
+
+    std::string type_literal() override { return "enum " + name.get_literal(); }
+
+    TypeKind get_type_kind() override { return TypeKind::EnumerationElement; }
+
+    TokenSpan get_type_position() override { return name.get_span(); }
+
+    bool equals(const std::shared_ptr<JotType> &other) override;
+
+  private:
+    Token name;
+    std::shared_ptr<JotType> element_type;
 };
 
 class JotNamedType : public JotType {
