@@ -1,8 +1,11 @@
 #pragma once
 
 #include "jot_diagnostics.hpp"
+#include "jot_type.hpp"
 
+#include <memory>
 #include <unordered_set>
+
 
 class JotContext {
   public:
@@ -23,6 +26,7 @@ class JotContext {
     void set_postfix_function(std::string &name);
 
     JotDiagnosticEngine diagnostics;
+    std::unordered_map<std::string, std::shared_ptr<JotEnumType>> enumerations;
 
   private:
     std::unordered_set<std::string> visited_files;

@@ -269,7 +269,7 @@ std::shared_ptr<EnumDeclaration> JotParser::parse_enum_declaration() {
     assert_kind(TokenKind::CloseBrace, "Expect } in the end of enum declaration");
     auto enumeration_type =
         std::make_shared<JotEnumType>(enum_name, enum_values_indexes, element_type);
-    enumerations[enum_name.get_literal()] = enumeration_type;
+    context->enumerations[enum_name.get_literal()] = enumeration_type;
     return std::make_shared<EnumDeclaration>(enum_name, enumeration_type);
 }
 
@@ -428,8 +428,8 @@ std::shared_ptr<Expression> JotParser::parse_enum_access_expression() {
         auto colons_token = peek_and_advance_token();
         if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression)) {
             auto enum_name = literal->get_name();
-            if (enumerations.count(enum_name.get_literal())) {
-                auto enum_type = enumerations[enum_name.get_literal()];
+            if (context->enumerations.count(enum_name.get_literal())) {
+                auto enum_type = context->enumerations[enum_name.get_literal()];
                 auto element =
                     consume_kind(TokenKind::Symbol, "Expect identifier as enum field name");
 
@@ -715,8 +715,8 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type() {
     }
 
     // Check if this type is enumeration type
-    if (enumerations.count(type_literal)) {
-        auto enum_type = enumerations[type_literal];
+    if (context->enumerations.count(type_literal)) {
+        auto enum_type = context->enumerations[type_literal];
         auto enum_name = enum_type->get_type_token();
         auto enum_element_type =
             std::make_shared<JotEnumElementType>(enum_name, enum_type->get_element_type());

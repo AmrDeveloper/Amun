@@ -129,7 +129,6 @@ class JotParser {
 
     std::shared_ptr<JotContext> context;
     std::unique_ptr<JotTokenizer> tokenizer;
-    std::unordered_map<std::string, std::shared_ptr<JotEnumType>> enumerations;
     std::optional<Token> previous_token;
     std::optional<Token> current_token;
     std::optional<Token> next_token;
