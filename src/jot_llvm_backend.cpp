@@ -243,6 +243,9 @@ std::any JotLLVMBackend::visit(ReturnStatement *node) {
     } else if (value.type() == typeid(llvm::Constant *)) {
         auto init_value = std::any_cast<llvm::Constant *>(value);
         return Builder.CreateRet(init_value);
+    } else if (value.type() == typeid(llvm::LoadInst *)) {
+        auto load_inst = std::any_cast<llvm::LoadInst *>(value);
+        return Builder.CreateRet(load_inst);
     } else {
         jot::loge << "Un expected return type " << value.type().name() << '\n';
     }
