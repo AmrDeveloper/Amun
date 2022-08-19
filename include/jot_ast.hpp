@@ -16,6 +16,7 @@ class Statement {
 class Expression {
   public:
     virtual std::shared_ptr<JotType> get_type_node() = 0;
+    virtual void set_type_node(std::shared_ptr<JotType> new_type) = 0;
     virtual std::any accept(ExpressionVisitor *visitor) = 0;
 };
 
@@ -230,7 +231,9 @@ class IfExpression : public Expression {
                  std::shared_ptr<Expression> if_expression,
                  std::shared_ptr<Expression> else_expression)
         : if_token(if_token), else_token(else_token), condition(condition),
-          if_expression(if_expression), else_expression(else_expression) {}
+          if_expression(if_expression), else_expression(else_expression) {
+        type = if_expression->get_type_node();
+    }
 
     Token get_if_position() { return if_token; }
 
@@ -242,7 +245,9 @@ class IfExpression : public Expression {
 
     std::shared_ptr<Expression> get_else_value() { return else_expression; }
 
-    std::shared_ptr<JotType> get_type_node() override { return if_expression->get_type_node(); }
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -252,12 +257,15 @@ class IfExpression : public Expression {
     std::shared_ptr<Expression> condition;
     std::shared_ptr<Expression> if_expression;
     std::shared_ptr<Expression> else_expression;
+    std::shared_ptr<JotType> type;
 };
 
 class GroupExpression : public Expression {
   public:
     GroupExpression(Token position, std::shared_ptr<Expression> expression)
-        : position(position), expression(expression) {}
+        : position(position), expression(expression) {
+        type = expression->get_type_node();
+    }
 
     Token get_position() { return position; }
 
@@ -265,18 +273,23 @@ class GroupExpression : public Expression {
 
     std::shared_ptr<JotType> get_type_node() override { return expression->get_type_node(); }
 
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
+
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
   private:
     Token position;
     std::shared_ptr<Expression> expression;
+    std::shared_ptr<JotType> type;
 };
 
 class AssignExpression : public Expression {
   public:
     AssignExpression(std::shared_ptr<Expression> left, Token token,
                      std::shared_ptr<Expression> right)
-        : left(left), operator_token(token), right(right) {}
+        : left(left), operator_token(token), right(right) {
+        type = right->get_type_node();
+    }
 
     Token get_operator_token() { return operator_token; }
 
@@ -284,7 +297,9 @@ class AssignExpression : public Expression {
 
     std::shared_ptr<Expression> get_left() { return left; }
 
-    std::shared_ptr<JotType> get_type_node() override { return right->get_type_node(); }
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -292,13 +307,16 @@ class AssignExpression : public Expression {
     std::shared_ptr<Expression> left;
     Token operator_token;
     std::shared_ptr<Expression> right;
+    std::shared_ptr<JotType> type;
 };
 
 class BinaryExpression : public Expression {
   public:
     BinaryExpression(std::shared_ptr<Expression> left, Token token,
                      std::shared_ptr<Expression> right)
-        : left(left), operator_token(token), right(right) {}
+        : left(left), operator_token(token), right(right) {
+        type = right->get_type_node();
+    }
 
     Token get_operator_token() { return operator_token; }
 
@@ -306,7 +324,9 @@ class BinaryExpression : public Expression {
 
     std::shared_ptr<Expression> get_left() { return left; }
 
-    std::shared_ptr<JotType> get_type_node() override { return right->get_type_node(); }
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -314,13 +334,16 @@ class BinaryExpression : public Expression {
     std::shared_ptr<Expression> left;
     Token operator_token;
     std::shared_ptr<Expression> right;
+    std::shared_ptr<JotType> type;
 };
 
 class ComparisonExpression : public Expression {
   public:
     ComparisonExpression(std::shared_ptr<Expression> left, Token token,
                          std::shared_ptr<Expression> right)
-        : left(left), operator_token(token), right(right) {}
+        : left(left), operator_token(token), right(right) {
+        type = std::make_shared<JotNumberType>(operator_token, NumberKind::Integer1);
+    }
 
     Token get_operator_token() { return operator_token; }
 
@@ -328,9 +351,9 @@ class ComparisonExpression : public Expression {
 
     std::shared_ptr<Expression> get_left() { return left; }
 
-    std::shared_ptr<JotType> get_type_node() override {
-        return std::make_shared<JotNumber>(operator_token, NumberKind::Integer1);
-    }
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -338,13 +361,16 @@ class ComparisonExpression : public Expression {
     std::shared_ptr<Expression> left;
     Token operator_token;
     std::shared_ptr<Expression> right;
+    std::shared_ptr<JotType> type;
 };
 
 class LogicalExpression : public Expression {
   public:
     LogicalExpression(std::shared_ptr<Expression> left, Token token,
                       std::shared_ptr<Expression> right)
-        : left(left), operator_token(token), right(right) {}
+        : left(left), operator_token(token), right(right) {
+        type = std::make_shared<JotNumberType>(operator_token, NumberKind::Integer1);
+    }
 
     Token get_operator_token() { return operator_token; }
 
@@ -352,9 +378,9 @@ class LogicalExpression : public Expression {
 
     std::shared_ptr<Expression> get_left() { return left; }
 
-    std::shared_ptr<JotType> get_type_node() override {
-        return std::make_shared<JotNumber>(operator_token, NumberKind::Integer1);
-    }
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -362,6 +388,7 @@ class LogicalExpression : public Expression {
     std::shared_ptr<Expression> left;
     Token operator_token;
     std::shared_ptr<Expression> right;
+    std::shared_ptr<JotType> type;
 };
 
 class UnaryExpression : public Expression {
@@ -375,7 +402,7 @@ class UnaryExpression : public Expression {
 
     std::shared_ptr<JotType> get_type_node() override { return type; }
 
-    void set_type_node(std::shared_ptr<JotType> new_type) { type = new_type; }
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -399,7 +426,7 @@ class CallExpression : public Expression {
 
     std::shared_ptr<JotType> get_type_node() override { return type; }
 
-    void set_type_node(std::shared_ptr<JotType> new_type) { type = new_type; }
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -415,8 +442,7 @@ class IndexExpression : public Expression {
     IndexExpression(Token position, std::shared_ptr<Expression> value,
                     std::shared_ptr<Expression> index)
         : position(position), value(value), index(index) {
-        // Must replaced later
-        type = value->get_type_node();
+        type = std::make_shared<JotNoneType>(position);
     }
 
     Token get_position() { return position; }
@@ -425,9 +451,9 @@ class IndexExpression : public Expression {
 
     std::shared_ptr<Expression> get_index() { return index; }
 
-    void set_type_node(std::shared_ptr<JotType> new_type) { type = new_type; }
-
     std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -451,6 +477,8 @@ class EnumAccessExpression : public Expression {
 
     std::shared_ptr<JotType> get_type_node() override { return element_type; }
 
+    void set_type_node(std::shared_ptr<JotType> new_type) override { element_type = new_type; }
+
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
   private:
@@ -464,8 +492,9 @@ class ArrayExpression : public Expression {
   public:
     ArrayExpression(Token position, std::vector<std::shared_ptr<Expression>> values)
         : position(position), values(values) {
-        auto element_type = values[0]->get_type_node();
         auto size = values.size();
+        auto element_type =
+            size == 0 ? std::make_shared<JotNoneType>(position) : values[0]->get_type_node();
         type = std::make_shared<JotArrayType>(element_type, size);
     }
 
@@ -474,6 +503,8 @@ class ArrayExpression : public Expression {
     std::vector<std::shared_ptr<Expression>> get_values() { return values; }
 
     std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -486,13 +517,15 @@ class ArrayExpression : public Expression {
 class StringExpression : public Expression {
   public:
     StringExpression(Token value) : value(value) {
-        auto element_type = std::make_shared<JotNumber>(value, NumberKind::Integer8);
+        auto element_type = std::make_shared<JotNumberType>(value, NumberKind::Integer8);
         type = std::make_shared<JotPointerType>(value, element_type);
     }
 
     Token get_value() { return value; }
 
     std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -511,6 +544,8 @@ class LiteralExpression : public Expression {
 
     std::shared_ptr<JotType> get_type_node() override { return type; }
 
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
+
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
   private:
@@ -526,6 +561,8 @@ class NumberExpression : public Expression {
 
     std::shared_ptr<JotType> get_type_node() override { return type; }
 
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
+
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
   private:
@@ -536,11 +573,13 @@ class NumberExpression : public Expression {
 class CharacterExpression : public Expression {
   public:
     CharacterExpression(Token value)
-        : value(value), type(std::make_shared<JotNumber>(value, NumberKind::Integer8)) {}
+        : value(value), type(std::make_shared<JotNumberType>(value, NumberKind::Integer8)) {}
 
     Token get_value() { return value; }
 
     std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -552,11 +591,13 @@ class CharacterExpression : public Expression {
 class BooleanExpression : public Expression {
   public:
     BooleanExpression(Token value)
-        : value(value), type(std::make_shared<JotNumber>(value, NumberKind::Integer1)) {}
+        : value(value), type(std::make_shared<JotNumberType>(value, NumberKind::Integer1)) {}
 
     Token get_value() { return value; }
 
     std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
@@ -567,11 +608,13 @@ class BooleanExpression : public Expression {
 
 class NullExpression : public Expression {
   public:
-    NullExpression(Token value) : value(value), type(std::make_shared<JotNull>(value)) {}
+    NullExpression(Token value) : value(value), type(std::make_shared<JotNullType>(value)) {}
 
     Token get_value() { return value; }
 
     std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 

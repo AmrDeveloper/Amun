@@ -14,7 +14,7 @@ enum TypeKind {
     Array,
     Enumeration,
     EnumerationElement,
-    Named,
+    None,
     Void,
     Null,
 };
@@ -26,6 +26,7 @@ class JotType {
     virtual TypeKind get_type_kind() = 0;
     virtual TokenSpan get_type_position() = 0;
     virtual bool equals(const std::shared_ptr<JotType> &other) = 0;
+    virtual bool castable(const std::shared_ptr<JotType> &other) = 0;
 };
 
 enum NumberKind {
@@ -38,9 +39,9 @@ enum NumberKind {
     Float64,
 };
 
-class JotNumber : public JotType {
+class JotNumberType : public JotType {
   public:
-    JotNumber(Token token, NumberKind kind) : token(token), kind(kind) {}
+    JotNumberType(Token token, NumberKind kind) : token(token), kind(kind) {}
 
     NumberKind get_kind() { return kind; }
 
@@ -64,6 +65,8 @@ class JotNumber : public JotType {
     TokenSpan get_type_position() override { return token.get_span(); }
 
     bool equals(const std::shared_ptr<JotType> &other) override;
+
+    bool castable(const std::shared_ptr<JotType> &other) override;
 
     bool is_boolean() { return kind == NumberKind::Integer1; }
 
@@ -93,6 +96,8 @@ class JotPointerType : public JotType {
 
     bool equals(const std::shared_ptr<JotType> &other) override;
 
+    bool castable(const std::shared_ptr<JotType> &other) override;
+
   private:
     Token token;
     std::shared_ptr<JotType> point_to;
@@ -105,6 +110,8 @@ class JotArrayType : public JotType {
 
     std::shared_ptr<JotType> get_element_type() { return element_type; }
 
+    void set_element_type(std::shared_ptr<JotType> new_type) { element_type = new_type; }
+
     size_t get_size() { return size; }
 
     Token get_type_token() override { return element_type->get_type_token(); }
@@ -116,6 +123,8 @@ class JotArrayType : public JotType {
     TokenSpan get_type_position() override { return element_type->get_type_token().get_span(); }
 
     bool equals(const std::shared_ptr<JotType> &other) override;
+
+    bool castable(const std::shared_ptr<JotType> &other) override;
 
   private:
     std::shared_ptr<JotType> element_type;
@@ -154,6 +163,8 @@ class JotFunctionType : public JotType {
 
     bool equals(const std::shared_ptr<JotType> &other) override;
 
+    bool castable(const std::shared_ptr<JotType> &other) override;
+
   private:
     Token name;
     std::vector<std::shared_ptr<JotType>> parameters;
@@ -180,6 +191,8 @@ class JotEnumType : public JotType {
 
     bool equals(const std::shared_ptr<JotType> &other) override;
 
+    bool castable(const std::shared_ptr<JotType> &other) override;
+
   private:
     Token name;
     std::unordered_map<std::string, int> values;
@@ -203,32 +216,36 @@ class JotEnumElementType : public JotType {
 
     bool equals(const std::shared_ptr<JotType> &other) override;
 
+    bool castable(const std::shared_ptr<JotType> &other) override;
+
   private:
     Token name;
     std::shared_ptr<JotType> element_type;
 };
 
-class JotNamedType : public JotType {
+class JotNoneType : public JotType {
   public:
-    JotNamedType(Token name) : name(name) {}
+    JotNoneType(Token name) : name(name) {}
 
     Token get_type_token() override { return name; }
 
-    std::string type_literal() override { return "Named " + name.get_literal(); }
+    std::string type_literal() override { return "None Type"; }
 
-    TypeKind get_type_kind() override { return TypeKind::Named; }
+    TypeKind get_type_kind() override { return TypeKind::None; }
 
     TokenSpan get_type_position() override { return name.get_span(); }
 
     bool equals(const std::shared_ptr<JotType> &other) override;
 
+    bool castable(const std::shared_ptr<JotType> &other) override;
+
   private:
     Token name;
 };
 
-class JotVoid : public JotType {
+class JotVoidType : public JotType {
   public:
-    explicit JotVoid(Token token) : token(token) {}
+    explicit JotVoidType(Token token) : token(token) {}
 
     Token get_type_token() override { return token; }
 
@@ -240,13 +257,15 @@ class JotVoid : public JotType {
 
     bool equals(const std::shared_ptr<JotType> &other) override;
 
+    bool castable(const std::shared_ptr<JotType> &other) override;
+
   private:
     Token token;
 };
 
-class JotNull : public JotType {
+class JotNullType : public JotType {
   public:
-    explicit JotNull(Token token) : token(token) {}
+    explicit JotNullType(Token token) : token(token) {}
 
     Token get_type_token() override { return token; }
 
@@ -257,6 +276,8 @@ class JotNull : public JotType {
     TokenSpan get_type_position() override { return token.get_span(); }
 
     bool equals(const std::shared_ptr<JotType> &other) override;
+
+    bool castable(const std::shared_ptr<JotType> &other) override;
 
   private:
     Token token;

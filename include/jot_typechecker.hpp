@@ -81,6 +81,8 @@ class JotTypeChecker : public TreeVisitor {
 
     bool is_pointer_type(const std::shared_ptr<JotType> &type);
 
+    bool is_none_type(const std::shared_ptr<JotType> &type);
+
     bool is_same_type(const std::shared_ptr<JotType> &left, const std::shared_ptr<JotType> &right);
 
     void push_new_scope();

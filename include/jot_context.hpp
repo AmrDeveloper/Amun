@@ -6,7 +6,6 @@
 #include <memory>
 #include <unordered_set>
 
-
 class JotContext {
   public:
     bool is_path_visited(std::string &path);

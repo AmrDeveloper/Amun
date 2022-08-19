@@ -30,6 +30,25 @@ std::any JotTypeChecker::visit(FieldDeclaration *node) {
     auto left_type = node->get_type();
     auto right_type = node_jot_type(node->get_value()->accept(this));
 
+    bool is_left_none_type = is_none_type(left_type);
+    bool is_right_none_type = is_none_type(right_type);
+    if (is_left_none_type and is_right_none_type) {
+        context->diagnostics.add_diagnostic(
+            node->get_name().get_span(),
+            "Can't resolve field type when both rvalue and lvalue are unkown");
+        throw "Stop";
+    }
+
+    if (is_left_none_type) {
+        node->set_type(right_type);
+        left_type = right_type;
+    }
+
+    if (is_right_none_type) {
+        node->get_value()->set_type_node(left_type);
+        right_type = left_type;
+    }
+
     if (not left_type->equals(right_type)) {
         context->diagnostics.add_diagnostic(node->get_name().get_span(),
                                             "Type missmatch expect " + left_type->type_literal() +
@@ -450,8 +469,8 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type) {
     if (any_type.type() == typeid(std::shared_ptr<JotPointerType>)) {
         return std::any_cast<std::shared_ptr<JotPointerType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotNumber>)) {
-        return std::any_cast<std::shared_ptr<JotNumber>>(any_type);
+    if (any_type.type() == typeid(std::shared_ptr<JotNumberType>)) {
+        return std::any_cast<std::shared_ptr<JotNumberType>>(any_type);
     }
     if (any_type.type() == typeid(std::shared_ptr<JotArrayType>)) {
         return std::any_cast<std::shared_ptr<JotArrayType>>(any_type);
@@ -462,17 +481,14 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type) {
     if (any_type.type() == typeid(std::shared_ptr<JotEnumElementType>)) {
         return std::any_cast<std::shared_ptr<JotEnumElementType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotNamedType>)) {
-        return std::any_cast<std::shared_ptr<JotNamedType>>(any_type);
+    if (any_type.type() == typeid(std::shared_ptr<JotNoneType>)) {
+        return std::any_cast<std::shared_ptr<JotNoneType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotNamedType>)) {
-        return std::any_cast<std::shared_ptr<JotNamedType>>(any_type);
+    if (any_type.type() == typeid(std::shared_ptr<JotVoidType>)) {
+        return std::any_cast<std::shared_ptr<JotVoidType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotVoid>)) {
-        return std::any_cast<std::shared_ptr<JotVoid>>(any_type);
-    }
-    if (any_type.type() == typeid(std::shared_ptr<JotNull>)) {
-        return std::any_cast<std::shared_ptr<JotNull>>(any_type);
+    if (any_type.type() == typeid(std::shared_ptr<JotNullType>)) {
+        return std::any_cast<std::shared_ptr<JotNullType>>(any_type);
     }
     return std::any_cast<std::shared_ptr<JotType>>(any_type);
 }
@@ -483,7 +499,7 @@ bool JotTypeChecker::is_number_type(const std::shared_ptr<JotType> &type) {
 
 bool JotTypeChecker::is_integer_type(std::shared_ptr<JotType> &type) {
     if (type->get_type_kind() == TypeKind::Number) {
-        auto number_type = std::dynamic_pointer_cast<JotNumber>(type);
+        auto number_type = std::dynamic_pointer_cast<JotNumberType>(type);
         return number_type->is_integer();
     }
     return false;
@@ -495,7 +511,7 @@ bool JotTypeChecker::is_enum_element_type(const std::shared_ptr<JotType> &type) 
 
 bool JotTypeChecker::is_boolean_type(std::shared_ptr<JotType> &type) {
     if (type->get_type_kind() == TypeKind::Number) {
-        auto number_type = std::dynamic_pointer_cast<JotNumber>(type);
+        auto number_type = std::dynamic_pointer_cast<JotNumberType>(type);
         return number_type->is_boolean();
     }
     return false;
@@ -503,6 +519,20 @@ bool JotTypeChecker::is_boolean_type(std::shared_ptr<JotType> &type) {
 
 bool JotTypeChecker::is_pointer_type(const std::shared_ptr<JotType> &type) {
     return type->get_type_kind() == TypeKind::Pointer;
+}
+
+bool JotTypeChecker::is_none_type(const std::shared_ptr<JotType> &type) {
+    if (type->get_type_kind() == TypeKind::None)
+        return true;
+    if (type->get_type_kind() == TypeKind::Array) {
+        auto array_type = std::dynamic_pointer_cast<JotArrayType>(type);
+        return array_type->get_element_type()->get_type_kind() == TypeKind::None;
+    }
+    if (type->get_type_kind() == TypeKind::Pointer) {
+        auto array_type = std::dynamic_pointer_cast<JotPointerType>(type);
+        return array_type->get_point_to()->get_type_kind() == TypeKind::None;
+    }
+    return false;
 }
 
 bool JotTypeChecker::is_same_type(const std::shared_ptr<JotType> &left,

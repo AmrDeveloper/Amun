@@ -244,7 +244,7 @@ std::shared_ptr<EnumDeclaration> JotParser::parse_enum_declaration() {
         element_type = parse_type();
     } else {
         // Default enumeration element type is integer 32
-        element_type = std::make_shared<JotNumber>(enum_token, NumberKind::Integer32);
+        element_type = std::make_shared<JotNumberType>(enum_token, NumberKind::Integer32);
     }
 
     assert_kind(TokenKind::OpenBrace, "Expect { after enum name");
@@ -590,13 +590,13 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
 std::shared_ptr<NumberExpression> JotParser::parse_number_expression() {
     auto number_token = peek_and_advance_token();
     auto number_kind = get_number_kind(number_token.get_kind());
-    auto number_type = std::make_shared<JotNumber>(number_token, number_kind);
+    auto number_type = std::make_shared<JotNumberType>(number_token, number_kind);
     return std::make_shared<NumberExpression>(number_token, number_type);
 }
 
 std::shared_ptr<LiteralExpression> JotParser::parse_literal_expression() {
     Token symbol_token = peek_and_advance_token();
-    auto type = std::make_shared<JotNamedType>(symbol_token);
+    auto type = std::make_shared<JotNoneType>(symbol_token);
     return std::make_shared<LiteralExpression>(symbol_token, type);
 }
 
@@ -643,7 +643,7 @@ std::shared_ptr<JotType> JotParser::parse_type_with_prefix() {
     if (is_current_kind(TokenKind::And)) {
         advanced_token();
         auto operand = parse_type_with_prefix();
-        return std::make_shared<JotNumber>(operand->get_type_token(), NumberKind::Integer64);
+        return std::make_shared<JotNumberType>(operand->get_type_token(), NumberKind::Integer64);
     }
 
     // Parse function pointer type
@@ -683,35 +683,35 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type() {
     std::string type_literal = symbol_token.get_literal();
 
     if (type_literal == "int16") {
-        return std::make_shared<JotNumber>(symbol_token, NumberKind::Integer16);
+        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Integer16);
     }
 
     if (type_literal == "int32") {
-        return std::make_shared<JotNumber>(symbol_token, NumberKind::Integer32);
+        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Integer32);
     }
 
     if (type_literal == "int64") {
-        return std::make_shared<JotNumber>(symbol_token, NumberKind::Integer64);
+        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Integer64);
     }
 
     if (type_literal == "float32") {
-        return std::make_shared<JotNumber>(symbol_token, NumberKind::Float32);
+        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Float32);
     }
 
     if (type_literal == "float64") {
-        return std::make_shared<JotNumber>(symbol_token, NumberKind::Float64);
+        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Float64);
     }
 
     if (type_literal == "char" || type_literal == "int8") {
-        return std::make_shared<JotNumber>(symbol_token, NumberKind::Integer8);
+        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Integer8);
     }
 
     if (type_literal == "bool" || type_literal == "int1") {
-        return std::make_shared<JotNumber>(symbol_token, NumberKind::Integer1);
+        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Integer1);
     }
 
     if (type_literal == "void") {
-        return std::make_shared<JotVoid>(symbol_token);
+        return std::make_shared<JotVoidType>(symbol_token);
     }
 
     // Check if this type is enumeration type

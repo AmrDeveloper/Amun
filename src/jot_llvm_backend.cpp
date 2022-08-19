@@ -529,7 +529,7 @@ std::any JotLLVMBackend::visit(LiteralExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(NumberExpression *node) {
-    auto number_type = std::dynamic_pointer_cast<JotNumber>(node->get_type_node());
+    auto number_type = std::dynamic_pointer_cast<JotNumberType>(node->get_type_node());
     return llvm_number_value(node->get_value().get_literal(), number_type->get_kind());
 }
 
@@ -632,7 +632,7 @@ llvm::Value *JotLLVMBackend::llvm_character_value(char character) {
 llvm::Type *JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> type) {
     TypeKind type_kind = type->get_type_kind();
     if (type_kind == TypeKind::Number) {
-        auto jot_number_type = std::dynamic_pointer_cast<JotNumber>(type);
+        auto jot_number_type = std::dynamic_pointer_cast<JotNumberType>(type);
         NumberKind number_kind = jot_number_type->get_kind();
         switch (number_kind) {
         case NumberKind::Integer1: return llvm_int1_type;

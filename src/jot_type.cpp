@@ -1,14 +1,18 @@
 #include "../include/jot_type.hpp"
 
-bool JotNumber::equals(const std::shared_ptr<JotType> &other) {
-    if (auto other_number = std::dynamic_pointer_cast<JotNumber>(other)) {
+bool JotNumberType::equals(const std::shared_ptr<JotType> &other) {
+    if (auto other_number = std::dynamic_pointer_cast<JotNumberType>(other)) {
         return other_number->get_kind() == kind;
     }
     return kind == NumberKind::Integer64 && other->get_type_kind() == TypeKind::Pointer;
 }
 
+bool JotNumberType::castable(const std::shared_ptr<JotType> &other) {
+    return other->get_type_kind() == TypeKind::Number;
+}
+
 bool JotPointerType::equals(const std::shared_ptr<JotType> &other) {
-    if (auto other_number = std::dynamic_pointer_cast<JotNumber>(other)) {
+    if (auto other_number = std::dynamic_pointer_cast<JotNumberType>(other)) {
         return other_number->get_kind() == NumberKind::Integer64;
     }
     if (auto other_pointer = std::dynamic_pointer_cast<JotPointerType>(other)) {
@@ -16,6 +20,14 @@ bool JotPointerType::equals(const std::shared_ptr<JotType> &other) {
     }
     if (auto other_array = std::dynamic_pointer_cast<JotArrayType>(other)) {
         return get_point_to()->equals(other_array->get_element_type());
+    }
+    return false;
+}
+
+bool JotPointerType::castable(const std::shared_ptr<JotType> &other) {
+    // *void can be casted to any thing
+    if (this->get_point_to()->get_type_kind() == TypeKind::Void) {
+        return true;
     }
     return false;
 }
@@ -33,6 +45,8 @@ bool JotArrayType::equals(const std::shared_ptr<JotType> &other) {
     return false;
 }
 
+bool JotArrayType::castable(const std::shared_ptr<JotType> &other) { return false; }
+
 bool JotFunctionType::equals(const std::shared_ptr<JotType> &other) {
     if (auto other_function = std::dynamic_pointer_cast<JotFunctionType>(other)) {
         size_t parameter_size = other_function->get_parameters().size();
@@ -48,7 +62,11 @@ bool JotFunctionType::equals(const std::shared_ptr<JotType> &other) {
     return false;
 }
 
+bool JotFunctionType::castable(const std::shared_ptr<JotType> &other) { return false; }
+
 bool JotEnumType::equals(const std::shared_ptr<JotType> &other) { return false; }
+
+bool JotEnumType::castable(const std::shared_ptr<JotType> &other) { return false; }
 
 bool JotEnumElementType::equals(const std::shared_ptr<JotType> &other) {
     if (other->get_type_kind() == TypeKind::EnumerationElement) {
@@ -61,12 +79,20 @@ bool JotEnumElementType::equals(const std::shared_ptr<JotType> &other) {
     return false;
 }
 
-bool JotNamedType::equals(const std::shared_ptr<JotType> &other) { return false; }
+bool JotEnumElementType::castable(const std::shared_ptr<JotType> &other) { return false; }
 
-bool JotVoid::equals(const std::shared_ptr<JotType> &other) {
+bool JotNoneType::equals(const std::shared_ptr<JotType> &other) { return false; }
+
+bool JotNoneType::castable(const std::shared_ptr<JotType> &other) { return false; }
+
+bool JotVoidType::equals(const std::shared_ptr<JotType> &other) {
     return other->get_type_kind() == TypeKind::Void;
 }
 
-bool JotNull::equals(const std::shared_ptr<JotType> &other) {
+bool JotVoidType::castable(const std::shared_ptr<JotType> &other) { return false; }
+
+bool JotNullType::equals(const std::shared_ptr<JotType> &other) {
     return other->get_type_kind() == TypeKind::Pointer || other->get_type_kind() == TypeKind::Void;
 }
+
+bool JotNullType::castable(const std::shared_ptr<JotType> &other) { return false; }
