@@ -11,7 +11,7 @@ A Statically typed, compiled general purpose low level programming language buil
 - Enumeration
 - Function Pointer
 - Variables
-- Import and Load block
+- Import and Load statements and blocks
 - If, else if and else statements
 - If Else Expression
 - While statement

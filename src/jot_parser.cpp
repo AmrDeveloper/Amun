@@ -10,24 +10,19 @@ std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit() {
     std::vector<std::shared_ptr<Statement>> tree_nodes;
     try {
         while (is_source_available()) {
-            auto current_token = peek_current().get_kind();
-            switch (current_token) {
-            case TokenKind::ImportKeyword: {
+            if (is_current_kind(TokenKind::ImportKeyword)) {
                 auto module_tree_node = parse_import_declaration();
-                tree_nodes.insert(std::end(tree_nodes), std::begin(module_tree_node),
-                                  std::end(module_tree_node));
-                break;
+                merge_tree_nodes(tree_nodes, module_tree_node);
+                continue;
             }
-            case TokenKind::LoadKeyword: {
+
+            if (is_current_kind(TokenKind::LoadKeyword)) {
                 auto module_tree_node = parse_load_declaration();
-                tree_nodes.insert(std::end(tree_nodes), std::begin(module_tree_node),
-                                  std::end(module_tree_node));
-                break;
+                merge_tree_nodes(tree_nodes, module_tree_node);
+                continue;
             }
-            default: {
-                tree_nodes.push_back(parse_declaration_statement());
-            }
-            }
+
+            tree_nodes.push_back(parse_declaration_statement());
         }
     } catch (const char *message) {
     }
@@ -57,7 +52,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration() {
 
             auto nodes = parse_single_source_file(library_path);
             context->set_path_visited(library_path);
-            tree_nodes.insert(std::end(tree_nodes), std::begin(nodes), std::end(nodes));
+            merge_tree_nodes(tree_nodes, nodes);
         }
         assert_kind(TokenKind::CloseBrace, "Expect Close brace `}` after import block");
         return tree_nodes;
@@ -103,7 +98,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration() {
 
             auto nodes = parse_single_source_file(library_path);
             context->set_path_visited(library_path);
-            tree_nodes.insert(std::end(tree_nodes), std::begin(nodes), std::end(nodes));
+            merge_tree_nodes(tree_nodes, nodes);
         }
         assert_kind(TokenKind::CloseBrace, "Expect Close brace `}` after import block");
         return tree_nodes;
@@ -137,6 +132,11 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_single_source_file(std:
         throw "Stop";
     }
     return compilation_unit->get_tree_nodes();
+}
+
+void JotParser::merge_tree_nodes(std::vector<std::shared_ptr<Statement>> &distany,
+                                 std::vector<std::shared_ptr<Statement>> &source) {
+    distany.insert(std::end(distany), std::begin(source), std::end(source));
 }
 
 std::shared_ptr<Statement> JotParser::parse_declaration_statement() {

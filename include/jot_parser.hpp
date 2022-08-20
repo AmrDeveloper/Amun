@@ -30,6 +30,8 @@ class JotParser {
 
     std::vector<std::shared_ptr<Statement>> parse_single_source_file(std::string &path);
 
+    void merge_tree_nodes(std::vector<std::shared_ptr<Statement>>& distany, std::vector<std::shared_ptr<Statement>> &source);
+
     std::shared_ptr<Statement> parse_declaration_statement();
 
     std::shared_ptr<Statement> parse_statement();
