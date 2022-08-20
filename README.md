@@ -19,6 +19,7 @@ A Statically typed, compiled general purpose low level programming language buil
 - Binary, Logical, Comparisons Operators
 - Assignments Operatiors =, +=, -=, *=, /=
 - Standard C Headers as part of the Standard library
+- No implicit casting, every cast must be explicit to be clear
 
 ### Requirements for Developments
 - C++ Compiler (GCC or Clang) that support C++20
