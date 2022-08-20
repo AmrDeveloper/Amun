@@ -30,4 +30,9 @@ void create_file_with_content(const std::string &path, const std::string &conten
 
 void create_new_directory(const std::string &path) { std::filesystem::create_directory(path); }
 
+std::string find_parent_path(const std::string &path) {
+    std::filesystem::path file_system_path(path);
+    return file_system_path.parent_path().string();
+}
+
 bool is_file_exists(const std::string &path) { return std::filesystem::exists(path); }

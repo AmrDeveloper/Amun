@@ -11,6 +11,8 @@ class JotTokenizer {
           source_code_length(source_code.size()), start_position(0), current_position(0),
           line_number(1), column_start(0), column_current(0) {}
 
+    std::string get_current_file_path() { return file_name; }
+
     std::vector<Token> scan_all_tokens();
 
     Token scan_next_token();

@@ -1,0 +1,6 @@
+load "LoadsOne"
+
+fun main() int64 {
+    var s = sum(1, 1);
+    return 0;
+}

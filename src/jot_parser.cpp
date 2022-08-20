@@ -18,6 +18,12 @@ std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit() {
                                   std::end(module_tree_node));
                 break;
             }
+            case TokenKind::LoadKeyword: {
+                auto module_tree_node = parse_load_declaration();
+                tree_nodes.insert(std::end(tree_nodes), std::begin(module_tree_node),
+                                  std::end(module_tree_node));
+                break;
+            }
             default: {
                 tree_nodes.push_back(parse_declaration_statement());
             }
@@ -43,7 +49,9 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration() {
                 continue;
 
             if (not is_file_exists(library_path)) {
-                context->diagnostics.add_diagnostic(library_name.get_span(), "Path not exists");
+                context->diagnostics.add_diagnostic(library_name.get_span(),
+                                                    "No standard library with name " +
+                                                        library_name.get_literal());
                 throw "Stop";
             }
 
@@ -64,7 +72,55 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration() {
     }
 
     if (not is_file_exists(library_path)) {
-        context->diagnostics.add_diagnostic(library_name.get_span(), "Path not exists");
+        context->diagnostics.add_diagnostic(
+            library_name.get_span(), "No standard library with name " + library_name.get_literal());
+        throw "Stop";
+    }
+
+    return parse_single_source_file(library_path);
+}
+
+std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration() {
+    advanced_token();
+    if (is_current_kind(TokenKind::OpenBrace)) {
+        // load { <string> <string> }
+        advanced_token();
+        std::vector<std::shared_ptr<Statement>> tree_nodes;
+        while (is_source_available() && not is_current_kind(TokenKind::CloseBrace)) {
+            auto library_name =
+                consume_kind(TokenKind::String, "Expect string as file name after load statement");
+
+            std::string library_path = file_parent_path + library_name.get_literal() + ".jot";
+
+            if (context->is_path_visited(library_path))
+                continue;
+
+            if (not is_file_exists(library_path)) {
+                context->diagnostics.add_diagnostic(library_name.get_span(),
+                                                    "Path not exists " + library_path);
+                throw "Stop";
+            }
+
+            auto nodes = parse_single_source_file(library_path);
+            context->set_path_visited(library_path);
+            tree_nodes.insert(std::end(tree_nodes), std::begin(nodes), std::end(nodes));
+        }
+        assert_kind(TokenKind::CloseBrace, "Expect Close brace `}` after import block");
+        return tree_nodes;
+    }
+
+    auto library_name =
+        consume_kind(TokenKind::String, "Expect string as file name after load statement");
+
+    std::string library_path = file_parent_path + library_name.get_literal() + ".jot";
+
+    if (context->is_path_visited(library_path)) {
+        return std::vector<std::shared_ptr<Statement>>();
+    }
+
+    if (not is_file_exists(library_path)) {
+        context->diagnostics.add_diagnostic(library_name.get_span(),
+                                            "Path not exists " + library_path);
         throw "Stop";
     }
 

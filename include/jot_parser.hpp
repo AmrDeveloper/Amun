@@ -2,6 +2,7 @@
 
 #include "jot_ast.hpp"
 #include "jot_context.hpp"
+#include "jot_files.hpp"
 #include "jot_parser.hpp"
 #include "jot_token.hpp"
 #include "jot_tokenizer.hpp"
@@ -17,12 +18,15 @@ class JotParser {
         : context(context), tokenizer(std::move(tokenizer)) {
         advanced_token();
         advanced_token();
+        file_parent_path = find_parent_path(this->tokenizer->get_current_file_path()) + "/";
     }
 
     std::shared_ptr<CompilationUnit> parse_compilation_unit();
 
   private:
     std::vector<std::shared_ptr<Statement>> parse_import_declaration();
+
+    std::vector<std::shared_ptr<Statement>> parse_load_declaration();
 
     std::vector<std::shared_ptr<Statement>> parse_single_source_file(std::string &path);
 
@@ -127,6 +131,7 @@ class JotParser {
 
     bool is_source_available();
 
+    std::string file_parent_path;
     std::shared_ptr<JotContext> context;
     std::unique_ptr<JotTokenizer> tokenizer;
     std::optional<Token> previous_token;
