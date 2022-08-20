@@ -43,6 +43,7 @@ class ComparisonExpression;
 class LogicalExpression;
 class UnaryExpression;
 class CallExpression;
+class CastExpression;
 class IndexExpression;
 class EnumAccessExpression;
 class LiteralExpression;
@@ -70,6 +71,8 @@ class ExpressionVisitor {
     virtual std::any visit(UnaryExpression *node) = 0;
 
     virtual std::any visit(CallExpression *node) = 0;
+
+    virtual std::any visit(CastExpression *node) = 0;
 
     virtual std::any visit(IndexExpression *node) = 0;
 

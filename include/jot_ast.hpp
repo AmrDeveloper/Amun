@@ -437,6 +437,27 @@ class CallExpression : public Expression {
     std::shared_ptr<JotType> type;
 };
 
+class CastExpression : public Expression {
+  public:
+    CastExpression(Token position, std::shared_ptr<JotType> type, std::shared_ptr<Expression> value)
+        : position(position), type(type), value(value) {}
+
+    Token get_position() { return position; }
+
+    std::shared_ptr<Expression> get_value() { return value; }
+
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
+
+    std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+  private:
+    Token position;
+    std::shared_ptr<JotType> type;
+    std::shared_ptr<Expression> value;
+};
+
 class IndexExpression : public Expression {
   public:
     IndexExpression(Token position, std::shared_ptr<Expression> value,

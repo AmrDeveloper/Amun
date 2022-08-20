@@ -3,16 +3,16 @@
 #include "../include/jot_logger.hpp"
 #include "../include/jot_type.hpp"
 
-#include <llvm-14/llvm/IR/BasicBlock.h>
-#include <llvm-14/llvm/IR/Constant.h>
-#include <llvm-14/llvm/IR/Constants.h>
-#include <llvm-14/llvm/IR/DerivedTypes.h>
-#include <llvm-14/llvm/IR/Function.h>
-#include <llvm-14/llvm/IR/GlobalVariable.h>
-#include <llvm-14/llvm/IR/Instructions.h>
-#include <llvm-14/llvm/IR/Value.h>
-#include <llvm-14/llvm/Support/Casting.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constant.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Value.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Support/Casting.h>
 
 #include <any>
 #include <cstdlib>
@@ -484,6 +484,45 @@ std::any JotLLVMBackend::visit(CallExpression *node) {
         }
     }
     return Builder.CreateCall(function, arguments_values, "calltmp");
+}
+
+std::any JotLLVMBackend::visit(CastExpression *node) {
+    auto value = llvm_node_value(node->get_value()->accept(this));
+    auto value_type = llvm_type_from_jot_type(node->get_value()->get_type_node());
+    auto target_type = llvm_type_from_jot_type(node->get_type_node());
+
+    // Integer to Integer with different size
+    if (target_type->isIntegerTy() and value_type->isIntegerTy()) {
+        return Builder.CreateIntCast(value, target_type, true);
+    }
+
+    // Floating to Floating with differnt size
+    if (target_type->isFloatingPointTy() and value_type->isFloatingPointTy()) {
+        return Builder.CreateFPCast(value, target_type);
+    }
+
+    // Floating point to Integer
+    if (target_type->isIntegerTy() and value_type->isFloatingPointTy()) {
+        return Builder.CreateFPToSI(value, target_type);
+    }
+
+    // Integer to Floating point
+    if (target_type->isFloatingPointTy() and value_type->isIntegerTy()) {
+        return Builder.CreateSIToFP(value, target_type);
+    }
+
+    // Pointer to Integer
+    if (target_type->isIntegerTy() and value_type->isPointerTy()) {
+        return Builder.CreatePtrToInt(value, target_type);
+    }
+
+    // Integer to Pointer
+    if (target_type->isPointerTy() and value_type->isIntegerTy()) {
+        return Builder.CreateIntToPtr(value, target_type);
+    }
+
+    // Bit casting
+    return Builder.CreateBitCast(value, target_type);
 }
 
 std::any JotLLVMBackend::visit(IndexExpression *node) {

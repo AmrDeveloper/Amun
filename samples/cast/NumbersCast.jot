@@ -1,0 +1,15 @@
+fun main() int64 {
+    var int1toint8 = cast(int8) 0i1;
+    var int8toint16 = cast(int16) 0i8;
+    var int16toint32 = cast(int32) 0i16;
+    var int32toint64 = cast(int64) 0i32;
+
+    var int8toint1 = cast(int1) 0i8;
+    var int16toint8 = cast(int8) 0i16;
+    var int32toint16 = cast(int16) 0i32;
+    var int64toint32 = cast(int32) 0i64;
+
+    var float32tofloat64 = cast(float64) 0f32;
+    var float64tofloat32 = cast(float32) 0f64;
+    return 0;
+}

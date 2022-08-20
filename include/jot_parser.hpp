@@ -30,7 +30,8 @@ class JotParser {
 
     std::vector<std::shared_ptr<Statement>> parse_single_source_file(std::string &path);
 
-    void merge_tree_nodes(std::vector<std::shared_ptr<Statement>>& distany, std::vector<std::shared_ptr<Statement>> &source);
+    void merge_tree_nodes(std::vector<std::shared_ptr<Statement>> &distany,
+                          std::vector<std::shared_ptr<Statement>> &source);
 
     std::shared_ptr<Statement> parse_declaration_statement();
 
@@ -87,8 +88,6 @@ class JotParser {
 
     std::shared_ptr<Expression> parse_primary_expression();
 
-    std::shared_ptr<ArrayExpression> parse_array_expression();
-
     std::shared_ptr<NumberExpression> parse_number_expression();
 
     std::shared_ptr<LiteralExpression> parse_literal_expression();
@@ -96,6 +95,10 @@ class JotParser {
     std::shared_ptr<IfExpression> parse_if_expression();
 
     std::shared_ptr<GroupExpression> parse_group_expression();
+
+    std::shared_ptr<ArrayExpression> parse_array_expression();
+
+    std::shared_ptr<CastExpression> parse_cast_expression();
 
     std::shared_ptr<JotType> parse_type();
 

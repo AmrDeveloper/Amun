@@ -5,11 +5,11 @@
 #include "jot_symboltable.hpp"
 #include "jot_type.hpp"
 
-#include <llvm-14/llvm/IR/Constants.h>
-#include <llvm-14/llvm/IR/Function.h>
-#include <llvm-14/llvm/IR/Type.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Type.h>
 
 #include <any>
 #include <map>
@@ -81,6 +81,8 @@ class JotLLVMBackend : public TreeVisitor {
     std::any visit(UnaryExpression *node) override;
 
     std::any visit(CallExpression *node) override;
+
+    std::any visit(CastExpression *node) override;
 
     std::any visit(IndexExpression *node) override;
 

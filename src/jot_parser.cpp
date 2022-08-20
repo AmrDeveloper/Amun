@@ -635,6 +635,9 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
     case TokenKind::IfKeyword: {
         return parse_if_expression();
     }
+    case TokenKind::CastKeyword: {
+        return parse_cast_expression();
+    }
     default: {
         context->diagnostics.add_diagnostic(peek_current().get_span(),
                                             "Unexpected or unsupported expression");
@@ -683,6 +686,15 @@ std::shared_ptr<ArrayExpression> JotParser::parse_array_expression() {
     }
     assert_kind(TokenKind::CloseBracket, "Expect ] at the end of array values");
     return std::make_shared<ArrayExpression>(position, values);
+}
+
+std::shared_ptr<CastExpression> JotParser::parse_cast_expression() {
+    auto cast_token = consume_kind(TokenKind::CastKeyword, "Expect cast keyword");
+    assert_kind(TokenKind::OpenParen, "Expect `(` after cast keyword");
+    auto cast_to_type = parse_type();
+    assert_kind(TokenKind::CloseParen, "Expect `)` after cast type");
+    auto expression = parse_expression();
+    return std::make_shared<CastExpression>(cast_token, cast_to_type, expression);
 }
 
 std::shared_ptr<JotType> JotParser::parse_type() { return parse_type_with_prefix(); }

@@ -395,6 +395,19 @@ std::any JotTypeChecker::visit(CallExpression *node) {
     }
 }
 
+std::any JotTypeChecker::visit(CastExpression *node) {
+    auto value = node->get_value();
+    auto value_type = node_jot_type(value->accept(this));
+    auto cast_result_type = node->get_type_node();
+    if (not value_type->castable(cast_result_type)) {
+        context->diagnostics.add_diagnostic(node->get_position().get_span(),
+                                            "Can't cast from " + value_type->type_literal() +
+                                                " to " + cast_result_type->type_literal());
+        throw "Stop";
+    }
+    return cast_result_type;
+}
+
 std::any JotTypeChecker::visit(IndexExpression *node) {
     auto callee_type = node_jot_type(node->get_value()->accept(this));
     if (callee_type->get_type_kind() == TypeKind::Array) {
