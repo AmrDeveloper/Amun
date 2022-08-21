@@ -329,8 +329,6 @@ void JotTokenizer::skip_single_line_comment() {
     while (is_source_available() && peek() != '\n') {
         advance();
     }
-    line_number++;
-    column_current = 0;
 }
 
 void JotTokenizer::skip_multi_lines_comment() {
