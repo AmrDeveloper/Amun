@@ -296,37 +296,53 @@ std::any JotLLVMBackend::visit(GroupExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(AssignExpression *node) {
+    // Assign value to variable
+    // variable = value
     if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_left())) {
         auto name = literal->get_name().get_literal();
         auto value = node->get_right()->accept(this);
+
         if (value.type() == typeid(llvm::AllocaInst *)) {
             auto init_value = std::any_cast<llvm::AllocaInst *>(value);
             alloca_inst_scope->update(name, init_value);
             return Builder.CreateLoad(init_value->getAllocatedType(), init_value, name.c_str());
-        } else {
-            llvm::Value *right_value = llvm_node_value(value);
-            auto alloc_inst = std::any_cast<llvm::AllocaInst *>(alloca_inst_scope->lookup(name));
-            alloca_inst_scope->update(name, alloc_inst);
-            return Builder.CreateStore(right_value, alloc_inst);
+        }
+
+        llvm::Value *right_value = llvm_node_value(value);
+        auto alloc_inst = std::any_cast<llvm::AllocaInst *>(alloca_inst_scope->lookup(name));
+        alloca_inst_scope->update(name, alloc_inst);
+        return Builder.CreateStore(right_value, alloc_inst);
+    }
+
+    // Assign value to n dimentions array position
+    // array []? = value
+    if (auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node->get_left())) {
+        auto node_value = index_expression->get_value();
+        auto index = llvm_node_value(index_expression->get_index()->accept(this));
+        auto right_value = llvm_node_value(node->get_right()->accept(this));
+
+        // Update element value in Single dimention Array
+        if (auto array_literal = std::dynamic_pointer_cast<LiteralExpression>(node_value)) {
+            auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_node_value(
+                alloca_inst_scope->lookup(array_literal->get_name().get_literal())));
+            auto ptr =
+                Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero_int32_value, index});
+            return Builder.CreateStore(right_value, ptr);
+        }
+
+        // Update element value in Multi dimentions Array
+        if (auto sub_index_expression = std::dynamic_pointer_cast<IndexExpression>(node_value)) {
+            auto array = llvm_node_value(node_value->accept(this));
+            auto element_type = llvm_type_from_jot_type(node->get_type_node());
+            auto load_inst = dyn_cast<llvm::LoadInst>(array);
+            auto ptr = Builder.CreateGEP(array->getType(), load_inst->getPointerOperand(),
+                                         {zero_int32_value, index});
+            return Builder.CreateStore(right_value, ptr);
         }
     }
 
-    if (auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node->get_left())) {
-        auto array_literal =
-            std::dynamic_pointer_cast<LiteralExpression>(index_expression->get_value());
-        auto index = llvm_node_value(index_expression->get_index()->accept(this));
-        auto value = llvm_node_value(node->get_right()->accept(this));
-        auto alloca = llvm::dyn_cast<llvm::AllocaInst>(
-            llvm_node_value(alloca_inst_scope->lookup(array_literal->get_name().get_literal())));
-        auto zero = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, 0, true));
-        auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero, index});
-        return Builder.CreateStore(value, ptr);
-    }
-
-    else {
-        jot::loge << "Invalid assignments expression\n";
-        return 0;
-    }
+    jot::loge << "Internal compiler error: Invalid assignments with multi d array \n";
+    exit(EXIT_FAILURE);
 }
 
 std::any JotLLVMBackend::visit(BinaryExpression *node) {
@@ -527,26 +543,36 @@ std::any JotLLVMBackend::visit(CastExpression *node) {
 
 std::any JotLLVMBackend::visit(IndexExpression *node) {
     auto index = llvm_node_value(node->get_index()->accept(this));
-    auto values = node->get_value()->get_type_node();
+    auto node_value = node->get_value();
+    auto values = node_value->get_type_node();
 
     if (values->get_type_kind() == TypeKind::Pointer) {
         auto element_type = llvm_type_from_jot_type(node->get_type_node());
-        auto value = llvm_node_value(node->get_value()->accept(this));
+        auto value = llvm_node_value(node_value->accept(this));
         auto ptr = Builder.CreateGEP(element_type, value, index);
         return Builder.CreateLoad(element_type, ptr);
     }
 
-    if (auto constants = llvm::dyn_cast<llvm::ConstantInt>(index)) {
-        auto value = llvm_node_value(node->get_value()->accept(this));
-        return Builder.CreateExtractValue(value, constants->getSExtValue());
+    // One dimension Array Index Expression
+    if (auto array_literal = std::dynamic_pointer_cast<LiteralExpression>(node_value)) {
+        auto alloca = llvm::dyn_cast<llvm::AllocaInst>(
+            llvm_node_value(alloca_inst_scope->lookup(array_literal->get_name().get_literal())));
+        auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero_int32_value, index});
+        return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
     }
 
-    auto array_literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_value());
-    auto alloca = llvm::dyn_cast<llvm::AllocaInst>(
-        llvm_node_value(alloca_inst_scope->lookup(array_literal->get_name().get_literal())));
-    auto zero = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, 0, true));
-    auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero, index});
-    return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
+    // Multidimensional Array Index Expression
+    if (auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node_value)) {
+        auto array = llvm_node_value(node_value->accept(this));
+        auto element_type = llvm_type_from_jot_type(node->get_type_node());
+        auto load_inst = dyn_cast<llvm::LoadInst>(array);
+        auto ptr = Builder.CreateGEP(array->getType(), load_inst->getPointerOperand(),
+                                     {zero_int32_value, index});
+        return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
+    }
+
+    jot::loge << "Internal compiler error: Invalid Index expression \n";
+    exit(EXIT_FAILURE);
 }
 
 std::any JotLLVMBackend::visit(EnumAccessExpression *node) {
@@ -579,11 +605,15 @@ std::any JotLLVMBackend::visit(ArrayExpression *node) {
         values.push_back(llvm_node_value(value->accept(this)));
     }
     auto alloca = Builder.CreateAlloca(arrayType);
-    auto zero = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, 0, true));
     for (size_t i = 0; i < values.size(); i++) {
         auto index = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, i, true));
-        auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero, index});
-        Builder.CreateStore(values[i], ptr);
+        auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero_int32_value, index});
+
+        auto value = values[i];
+        if (value->getType() == ptr->getType()) {
+            value = Builder.CreateLoad(value->getType()->getPointerElementType(), value);
+        }
+        Builder.CreateStore(value, ptr);
     }
     return alloca;
 }
@@ -706,6 +736,7 @@ llvm::Type *JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
         auto enum_element_type = std::dynamic_pointer_cast<JotEnumElementType>(type);
         return llvm_type_from_jot_type(enum_element_type->get_element_type());
     }
+    jot::loge << "Unkown element type\n";
     return llvm_int64_type;
 }
 

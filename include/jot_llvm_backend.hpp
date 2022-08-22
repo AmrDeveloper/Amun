@@ -38,6 +38,9 @@ static auto llvm_float64_type = llvm::Type::getDoubleTy(llvm_context);
 // LLVM Void type
 static auto llvm_void_type = llvm::Type::getVoidTy(llvm_context);
 
+// LLVM 32 bit integer with zero value
+static auto zero_int32_value = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, 0, true));
+
 class JotLLVMBackend : public TreeVisitor {
   public:
     JotLLVMBackend() {
