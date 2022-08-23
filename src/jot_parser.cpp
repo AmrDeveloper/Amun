@@ -262,6 +262,15 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
     register_function_call(kind, name_literal);
 
     auto return_type = parse_type();
+
+    // Function can't return fixed size array, you can use pointer format to return allocated array
+    if (return_type->get_type_kind() == TypeKind::Array) {
+        context->diagnostics.add_diagnostic(return_type->get_type_position(),
+                                            "Function cannot return array type " +
+                                                return_type->type_literal());
+        throw "Stop";
+    }
+
     if (is_external)
         assert_kind(TokenKind::Semicolon, "Expect ; after external function declaration");
     return std::make_shared<FunctionPrototype>(name, parameters, return_type,
@@ -716,8 +725,7 @@ std::shared_ptr<JotType> JotParser::parse_type_with_prefix() {
 
     // Parse function pointer type
     if (is_current_kind(TokenKind::OpenParen)) {
-        auto paren_token = peek_current();
-        advanced_token();
+        auto paren_token = peek_and_advance_token();
         std::vector<std::shared_ptr<JotType>> parameters_types;
         while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
             parameters_types.push_back(parse_type());
@@ -729,12 +737,28 @@ std::shared_ptr<JotType> JotParser::parse_type_with_prefix() {
         return std::make_shared<JotFunctionType>(paren_token, parameters_types, return_type);
     }
 
+    // Parse Fixed size array type
+    if (is_current_kind(TokenKind::OpenBracket)) {
+        auto bracket_token = peek_and_advance_token();
+        auto size = parse_number_expression();
+        auto number_type = std::dynamic_pointer_cast<JotNumberType>(size->get_type_node());
+        if (not number_type->is_integer()) {
+            context->diagnostics.add_diagnostic(number_type->get_type_position(),
+                                                "Array size must be an integer constants");
+            throw "Stop";
+        }
+        auto number_value = std::atoi(size->get_value().get_literal().c_str());
+        assert_kind(TokenKind::CloseBracket, "Expect ] after array size.");
+        auto element_type = parse_type();
+        return std::make_shared<JotArrayType>(element_type, number_value);
+    }
+
     return parse_type_with_postfix();
 }
 
 std::shared_ptr<JotType> JotParser::parse_type_with_postfix() {
     auto primary_type = parse_primary_type();
-    // TODO: will used later to support [] and maybe ?
+    // TODO: Can used later to provide sume postfix features such as ? for null safty
     return primary_type;
 }
 

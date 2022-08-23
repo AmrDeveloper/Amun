@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -116,7 +117,9 @@ class JotArrayType : public JotType {
 
     Token get_type_token() override { return element_type->get_type_token(); }
 
-    std::string type_literal() override { return "[" + element_type->type_literal() + "]"; }
+    std::string type_literal() override {
+        return "[" + std::to_string(size) + "]" + element_type->type_literal();
+    }
 
     TypeKind get_type_kind() override { return TypeKind::Array; }
 
