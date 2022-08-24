@@ -435,11 +435,13 @@ std::any JotLLVMBackend::visit(UnaryExpression *node) {
         return Builder.CreateNeg(right);
     }
     case TokenKind::Bang: {
+        // Bang can be implemented as (value == false)
         return Builder.CreateICmpEQ(right, false_value);
     }
     case TokenKind::Star: {
-        jot::loge << "Unary * operator not implemented yet\n";
-        exit(1);
+        // Pointer Dereference operator
+        auto pointer_to_type = llvm_type_from_jot_type(node->get_type_node());
+        return Builder.CreateLoad(pointer_to_type, right);
     }
     case TokenKind::And: {
         jot::loge << "Unary & operator not implemented yet\n";

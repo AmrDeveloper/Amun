@@ -1,0 +1,8 @@
+extern fun printf(format *char, value int64) int64;
+
+fun main() int64 {
+    var array = [1, 2, 3, 4];
+    var ptr : *int64 = cast(*int64) array;
+    printf("Pointer derefernce result = %d should equal 1\n", *ptr);
+    return 0;
+}
