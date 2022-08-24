@@ -1,0 +1,7 @@
+extern fun printf(format *char, value bool) int64;
+
+fun main() int64 {
+    printf("!true = %d\n", !true);
+    printf("!false = %d\n", !false);
+    return 0;
+}
