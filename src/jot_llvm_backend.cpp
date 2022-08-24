@@ -15,7 +15,6 @@
 #include <llvm/Support/Casting.h>
 
 #include <any>
-#include <cstdlib>
 #include <memory>
 
 std::unique_ptr<llvm::Module>
@@ -436,15 +435,15 @@ std::any JotLLVMBackend::visit(UnaryExpression *node) {
         return Builder.CreateNeg(right);
     }
     case TokenKind::Bang: {
-        jot::loge << "Unary ! operator not implemented yet\n";
-        exit(1);
+        return Builder.CreateICmpEQ(right, false_value);
     }
     case TokenKind::Star: {
         jot::loge << "Unary * operator not implemented yet\n";
         exit(1);
     }
     case TokenKind::And: {
-        return right;
+        jot::loge << "Unary & operator not implemented yet\n";
+        exit(1);
     }
     case TokenKind::Not: {
         return Builder.CreateNot(right);
