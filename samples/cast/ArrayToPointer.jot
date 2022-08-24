@@ -1,0 +1,8 @@
+extern fun printf(format *char, ptr *int64) int64;
+
+fun main() int64 {
+    var array = [1, 2, 3, 4];
+    var ptr : *int64 = cast(*int64) array;
+    printf("%p\n", ptr);
+    return 0;
+}

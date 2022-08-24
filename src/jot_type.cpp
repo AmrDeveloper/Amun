@@ -45,7 +45,13 @@ bool JotArrayType::equals(const std::shared_ptr<JotType> &other) {
     return false;
 }
 
-bool JotArrayType::castable(const std::shared_ptr<JotType> &other) { return false; }
+bool JotArrayType::castable(const std::shared_ptr<JotType> &other) {
+    // Array of type T can be casted to a pointer of type T
+    if (auto other_pointer = std::dynamic_pointer_cast<JotPointerType>(other)) {
+        return element_type->equals(other_pointer->get_point_to());
+    }
+    return false;
+}
 
 bool JotFunctionType::equals(const std::shared_ptr<JotType> &other) {
     if (auto other_function = std::dynamic_pointer_cast<JotFunctionType>(other)) {

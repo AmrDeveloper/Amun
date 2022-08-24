@@ -536,6 +536,14 @@ std::any JotLLVMBackend::visit(CastExpression *node) {
         return Builder.CreateIntToPtr(value, target_type);
     }
 
+    // Array of type T to pointer or type T
+    if (target_type->isPointerTy() and value_type->isArrayTy()) {
+        auto load_inst = dyn_cast<llvm::LoadInst>(value);
+        auto ptr = Builder.CreateGEP(value->getType(), load_inst->getPointerOperand(),
+                                     {zero_int32_value, zero_int32_value});
+        return ptr;
+    }
+
     // Bit casting
     return Builder.CreateBitCast(value, target_type);
 }
