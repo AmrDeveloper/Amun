@@ -4,22 +4,22 @@ fun main() int64 {
     // Must print If 10
     var value : int64 = 10;
     if value == 10 {
-        printf("If %i", value);
+        printf("If %i\n", value);
     } else if value == 20 {
-        printf("else %i", value);
+        printf("else %i\n", value);
     } else {
-        printf("else %i", value);
+        printf("else %i\n", value);
     }
 
     // Must print else if 20
     value = 20;
 
     if value == 10 {
-        printf("If %i", value);
+        printf("If %i\n", value);
     } else if value == 20 {
-        printf("else if %i", value);
+        printf("else if %i\n", value);
     } else {
-        printf("else %i", value);
+        printf("else %i\n", value);
     }
 
 
@@ -27,11 +27,11 @@ fun main() int64 {
     value = 50;
 
     if value == 10 {
-        printf("If %i", value);
+        printf("If %i\n", value);
     } else if value == 20 {
-        printf("else %i", value);
+        printf("else %i\n", value);
     } else {
-        printf("else %i", value);
+        printf("else %i\n", value);
     }
     return 0;
 }

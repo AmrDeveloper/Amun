@@ -1,0 +1,8 @@
+extern fun puts(s *char) int64;
+
+fun main() int64 {
+    var name = "Jot";
+    var nptr = &name;
+    puts(*nptr);
+    return 0;
+}

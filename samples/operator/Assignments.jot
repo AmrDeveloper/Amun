@@ -3,19 +3,19 @@ extern fun printf(format *char, value int64) int64;
 fun main() int64 {
     var x : int64 = 10;
     x += 1;
-    printf("x += 1 %i expect 11", x);
+    printf("x += 1 %i expect 11\n", x);
 
     x -= 1;
-    printf("x -= 1 %i\n expect 10", x);
+    printf("x -= 1 %i expect 10\n", x);
 
     x *= 10;
-    printf("x *= 1 %i\n expect 100", x);
+    printf("x *= 1 %i expect 100\n", x);
 
     x /= 10;
-    printf("x /= 1 %i\n expect 10", x);
+    printf("x /= 1 %i expect 10\n", x);
 
     var y = 10;
     x += y;
-    printf("x += y %i\n expect 20", x);
+    printf("x += y %i expect 20\n", x);
     return 0;
 }

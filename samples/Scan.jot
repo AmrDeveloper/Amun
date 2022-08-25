@@ -1,0 +1,9 @@
+extern fun printf(format *char, value int64) int64;
+extern fun scanf(format *char, value *int64) int64;
+
+fun main() int64 {
+    var input = 0;
+    scanf("%d", &input);
+    printf("Your number is %d\n", input);
+    return 0;
+}
