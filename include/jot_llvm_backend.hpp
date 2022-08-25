@@ -111,6 +111,8 @@ class JotLLVMBackend : public TreeVisitor {
   private:
     llvm::Value *llvm_node_value(std::any any_value);
 
+    llvm::Value *llvm_resolve_value(std::any any_value);
+
     llvm::Value *llvm_number_value(std::string value_litearl, NumberKind size);
 
     llvm::Value *llvm_boolean_value(bool value);

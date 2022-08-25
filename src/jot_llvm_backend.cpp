@@ -25,8 +25,8 @@ JotLLVMBackend::compile(std::string module_name,
         for (auto &statement : compilation_unit->get_tree_nodes()) {
             statement->accept(this);
         }
-    } catch (const std::bad_any_cast &e) {
-        jot::loge << "LLVM Backend : " << e.what() << '\n';
+    } catch (...) {
+        jot::loge << "LLVM Backend Exception \n";
     }
     return std::move(llvm_module);
 }
@@ -307,7 +307,7 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
             return Builder.CreateLoad(init_value->getAllocatedType(), init_value, name.c_str());
         }
 
-        llvm::Value *right_value = llvm_node_value(value);
+        llvm::Value *right_value = llvm_resolve_value(value);
         auto alloc_inst = std::any_cast<llvm::AllocaInst *>(alloca_inst_scope->lookup(name));
         alloca_inst_scope->update(name, alloc_inst);
         return Builder.CreateStore(right_value, alloc_inst);
@@ -317,7 +317,7 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
     // array []? = value
     if (auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node->get_left())) {
         auto node_value = index_expression->get_value();
-        auto index = llvm_node_value(index_expression->get_index()->accept(this));
+        auto index = llvm_resolve_value(index_expression->get_index()->accept(this));
         auto right_value = llvm_node_value(node->get_right()->accept(this));
 
         // Update element value in Single dimention Array
@@ -345,8 +345,8 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(BinaryExpression *node) {
-    auto left = llvm_node_value(node->get_left()->accept(this));
-    auto right = llvm_node_value(node->get_right()->accept(this));
+    auto left = llvm_resolve_value(node->get_left()->accept(this));
+    auto right = llvm_resolve_value(node->get_right()->accept(this));
     if (not left || not right) {
         return nullptr;
     }
@@ -375,8 +375,8 @@ std::any JotLLVMBackend::visit(BinaryExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(ComparisonExpression *node) {
-    auto left = llvm_node_value(node->get_left()->accept(this));
-    auto right = llvm_node_value(node->get_right()->accept(this));
+    auto left = llvm_resolve_value(node->get_left()->accept(this));
+    auto right = llvm_resolve_value(node->get_right()->accept(this));
     if (not left || not right) {
         return nullptr;
     }
@@ -429,32 +429,41 @@ std::any JotLLVMBackend::visit(LogicalExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(UnaryExpression *node) {
-    auto right = llvm_node_value(node->get_right()->accept(this));
-    switch (node->get_operator_token().get_kind()) {
-    case TokenKind::Minus: {
+    auto operator_kind = node->get_operator_token().get_kind();
+
+    if (operator_kind == TokenKind::Minus) {
+        auto right = llvm_resolve_value(node->get_right()->accept(this));
         return Builder.CreateNeg(right);
     }
-    case TokenKind::Bang: {
-        // Bang can be implemented as (value == false)
+
+    // Bang can be implemented as (value == false)
+    if (operator_kind == TokenKind::Bang) {
+
+        auto right = llvm_resolve_value(node->get_right()->accept(this));
         return Builder.CreateICmpEQ(right, false_value);
     }
-    case TokenKind::Star: {
-        // Pointer Dereference operator
-        auto pointer_to_type = llvm_type_from_jot_type(node->get_type_node());
-        return Builder.CreateLoad(pointer_to_type, right);
+
+    // Pointer Dereference operator
+    if (operator_kind == TokenKind::Star) {
+        auto right = llvm_node_value(node->get_right()->accept(this));
+        return Builder.CreateLoad(right->getType()->getPointerElementType(), right);
     }
-    case TokenKind::And: {
-        jot::loge << "Unary & operator not implemented yet\n";
-        exit(1);
+
+    // Address of operator to return pointer of operand
+    if (operator_kind == TokenKind::And) {
+        auto right = llvm_node_value(node->get_right()->accept(this));
+        auto ptr = Builder.CreateAlloca(right->getType(), nullptr);
+        Builder.CreateStore(right, ptr);
+        return ptr;
     }
-    case TokenKind::Not: {
-        return Builder.CreateNot(right);
+
+    if (operator_kind == TokenKind::Not) {
+        auto right2 = llvm_resolve_value(node->get_right()->accept(this));
+        return Builder.CreateNot(right2);
     }
-    default: {
-        jot::loge << "Invalid Unary operator\n";
-        exit(1);
-    }
-    }
+
+    jot::loge << "Invalid Unary operator\n";
+    exit(1);
 }
 
 std::any JotLLVMBackend::visit(CallExpression *node) {
@@ -504,7 +513,7 @@ std::any JotLLVMBackend::visit(CallExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(CastExpression *node) {
-    auto value = llvm_node_value(node->get_value()->accept(this));
+    auto value = llvm_resolve_value(node->get_value()->accept(this));
     auto value_type = llvm_type_from_jot_type(node->get_value()->get_type_node());
     auto target_type = llvm_type_from_jot_type(node->get_type_node());
 
@@ -551,13 +560,13 @@ std::any JotLLVMBackend::visit(CastExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(IndexExpression *node) {
-    auto index = llvm_node_value(node->get_index()->accept(this));
+    auto index = llvm_resolve_value(node->get_index()->accept(this));
     auto node_value = node->get_value();
     auto values = node_value->get_type_node();
 
     if (values->get_type_kind() == TypeKind::Pointer) {
         auto element_type = llvm_type_from_jot_type(node->get_type_node());
-        auto value = llvm_node_value(node_value->accept(this));
+        auto value = llvm_resolve_value(node_value->accept(this));
         auto ptr = Builder.CreateGEP(element_type, value, index);
         return Builder.CreateLoad(element_type, ptr);
     }
@@ -593,12 +602,6 @@ std::any JotLLVMBackend::visit(EnumAccessExpression *node) {
 std::any JotLLVMBackend::visit(LiteralExpression *node) {
     auto name = node->get_name().get_literal();
     auto alloca_inst = alloca_inst_scope->lookup(name);
-
-    if (alloca_inst.type() == typeid(llvm::AllocaInst *)) {
-        llvm::AllocaInst *variable = std::any_cast<llvm::AllocaInst *>(alloca_inst);
-        return Builder.CreateLoad(variable->getAllocatedType(), variable);
-    }
-
     return alloca_inst;
 }
 
@@ -611,7 +614,7 @@ std::any JotLLVMBackend::visit(ArrayExpression *node) {
     auto arrayType = llvm_type_from_jot_type(node->get_type_node());
     std::vector<llvm::Value *> values;
     for (auto &value : node->get_values()) {
-        values.push_back(llvm_node_value(value->accept(this)));
+        values.push_back(llvm_resolve_value(value->accept(this)));
     }
     auto alloca = Builder.CreateAlloca(arrayType);
     for (size_t i = 0; i < values.size(); i++) {
@@ -664,6 +667,14 @@ llvm::Value *JotLLVMBackend::llvm_node_value(std::any any_value) {
         jot::loge << "Unknown type " << any_value.type().name() << '\n';
     }
     return nullptr;
+}
+
+llvm::Value *JotLLVMBackend::llvm_resolve_value(std::any any_value) {
+    auto llvm_value = llvm_node_value(any_value);
+    if (auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_value)) {
+        return Builder.CreateLoad(alloca->getAllocatedType(), alloca);
+    }
+    return llvm_value;
 }
 
 llvm::Value *JotLLVMBackend::llvm_number_value(std::string value_litearl, NumberKind size) {

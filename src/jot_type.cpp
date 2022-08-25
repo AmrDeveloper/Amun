@@ -4,7 +4,7 @@ bool JotNumberType::equals(const std::shared_ptr<JotType> &other) {
     if (auto other_number = std::dynamic_pointer_cast<JotNumberType>(other)) {
         return other_number->get_kind() == kind;
     }
-    return kind == NumberKind::Integer64 && other->get_type_kind() == TypeKind::Pointer;
+    return false;
 }
 
 bool JotNumberType::castable(const std::shared_ptr<JotType> &other) {
@@ -12,9 +12,6 @@ bool JotNumberType::castable(const std::shared_ptr<JotType> &other) {
 }
 
 bool JotPointerType::equals(const std::shared_ptr<JotType> &other) {
-    if (auto other_number = std::dynamic_pointer_cast<JotNumberType>(other)) {
-        return other_number->get_kind() == NumberKind::Integer64;
-    }
     if (auto other_pointer = std::dynamic_pointer_cast<JotPointerType>(other)) {
         return other_pointer->get_point_to()->equals(this->get_point_to());
     }
