@@ -1,0 +1,15 @@
+extern fun printf(format *char, value int64) int64;
+
+var x = 10;
+
+fun return_global() int64 {
+    return x;
+}
+
+fun main() int64 {
+    var y = 10 + x;
+    printf("%d\n", x);
+    printf("%d\n", y);
+    printf("%d\n", return_global());
+    return 0;
+}
