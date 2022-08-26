@@ -557,8 +557,7 @@ class ArrayExpression : public Expression {
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
     bool is_constant() override {
-        return type->get_type_kind() == TypeKind::Number or
-               type->get_type_kind() == TypeKind::EnumerationElement;
+        return false;
     }
 
   private:
