@@ -11,7 +11,8 @@ A Statically typed, compiled general purpose low level programming language buil
 - Multi Dimensional Arrays
 - Enumeration
 - Function Pointer
-- Variables
+- Local Variables
+- Global Variables
 - Import and Load statements and blocks
 - If, else if and else statements
 - If Else Expression
