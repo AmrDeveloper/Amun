@@ -167,7 +167,7 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
         return parse_function_declaration(FunctionCallKind::Normal);
     }
     case TokenKind::VarKeyword: {
-        return parse_field_declaration();
+        return parse_field_declaration(true);
     }
     case TokenKind::EnumKeyword: {
         return parse_enum_declaration();
@@ -183,7 +183,7 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
 std::shared_ptr<Statement> JotParser::parse_statement() {
     switch (peek_current().get_kind()) {
     case TokenKind::VarKeyword: {
-        return parse_field_declaration();
+        return parse_field_declaration(false);
     }
     case TokenKind::IfKeyword: {
         return parse_if_statement();
@@ -203,7 +203,7 @@ std::shared_ptr<Statement> JotParser::parse_statement() {
     }
 }
 
-std::shared_ptr<FieldDeclaration> JotParser::parse_field_declaration() {
+std::shared_ptr<FieldDeclaration> JotParser::parse_field_declaration(bool is_global) {
     assert_kind(TokenKind::VarKeyword, "Expect var keyword.");
     auto name = consume_kind(TokenKind::Symbol, "Expect identifier as variable name.");
     if (is_current_kind(TokenKind::Colon)) {
@@ -217,7 +217,7 @@ std::shared_ptr<FieldDeclaration> JotParser::parse_field_declaration() {
     assert_kind(TokenKind::Equal, "Expect = after variable name.");
     auto value = parse_expression();
     assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after field declaration");
-    return std::make_shared<FieldDeclaration>(name, value->get_type_node(), value);
+    return std::make_shared<FieldDeclaration>(name, value->get_type_node(), value, is_global);
 }
 
 std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionCallKind kind,

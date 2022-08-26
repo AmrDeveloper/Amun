@@ -8,6 +8,7 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Value.h>
@@ -39,14 +40,21 @@ std::any JotLLVMBackend::visit(BlockStatement *node) {
 }
 
 std::any JotLLVMBackend::visit(FieldDeclaration *node) {
-    auto current_function = Builder.GetInsertBlock()->getParent();
-
     auto var_name = node->get_name().get_literal();
-
     auto llvm_type = llvm_type_from_jot_type(node->get_type());
-
     auto value = node->get_value()->accept(this);
 
+    if (node->is_global()) {
+        auto global_variable = new llvm::GlobalVariable(
+            *llvm_module, llvm_type, true, llvm::GlobalValue::ExternalLinkage, 0, var_name.c_str());
+        global_variable->setAlignment(
+            llvm::MaybeAlign(llvm_module->getDataLayout().getTypeAllocSize(llvm_type)));
+        auto constant_value = llvm::dyn_cast<llvm::Constant>(llvm_node_value(value));
+        global_variable->setInitializer(constant_value);
+        return 0;
+    }
+
+    auto current_function = Builder.GetInsertBlock()->getParent();
     if (value.type() == typeid(llvm::Value *)) {
         auto init_value = std::any_cast<llvm::Value *>(value);
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
@@ -245,6 +253,10 @@ std::any JotLLVMBackend::visit(ReturnStatement *node) {
     } else if (value.type() == typeid(llvm::LoadInst *)) {
         auto load_inst = std::any_cast<llvm::LoadInst *>(value);
         return Builder.CreateRet(load_inst);
+    } else if (value.type() == typeid(llvm::GlobalVariable *)) {
+        auto variable = std::any_cast<llvm::GlobalVariable *>(value);
+        auto value = Builder.CreateLoad(variable->getValueType(), variable);
+        return Builder.CreateRet(value);
     } else {
         jot::loge << "Un expected return type " << value.type().name() << '\n';
     }
@@ -582,7 +594,6 @@ std::any JotLLVMBackend::visit(IndexExpression *node) {
     // Multidimensional Array Index Expression
     if (auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node_value)) {
         auto array = llvm_node_value(node_value->accept(this));
-        auto element_type = llvm_type_from_jot_type(node->get_type_node());
         auto load_inst = dyn_cast<llvm::LoadInst>(array);
         auto ptr = Builder.CreateGEP(array->getType(), load_inst->getPointerOperand(),
                                      {zero_int32_value, index});
@@ -602,7 +613,10 @@ std::any JotLLVMBackend::visit(EnumAccessExpression *node) {
 std::any JotLLVMBackend::visit(LiteralExpression *node) {
     auto name = node->get_name().get_literal();
     auto alloca_inst = alloca_inst_scope->lookup(name);
-    return alloca_inst;
+    if (alloca_inst.type() != typeid(nullptr))
+        return alloca_inst;
+    // If it not in alloca inst table, maybe it global variable
+    return llvm_module->getNamedGlobal(name);
 }
 
 std::any JotLLVMBackend::visit(NumberExpression *node) {
@@ -663,8 +677,11 @@ llvm::Value *JotLLVMBackend::llvm_node_value(std::any any_value) {
         return std::any_cast<llvm::PHINode *>(any_value);
     } else if (any_value.type() == typeid(llvm::Function *)) {
         return std::any_cast<llvm::Function *>(any_value);
+    } else if (any_value.type() == typeid(llvm::GlobalVariable *)) {
+        return std::any_cast<llvm::GlobalVariable *>(any_value);
     } else {
         jot::loge << "Unknown type " << any_value.type().name() << '\n';
+        exit(1);
     }
     return nullptr;
 }
@@ -673,6 +690,9 @@ llvm::Value *JotLLVMBackend::llvm_resolve_value(std::any any_value) {
     auto llvm_value = llvm_node_value(any_value);
     if (auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_value)) {
         return Builder.CreateLoad(alloca->getAllocatedType(), alloca);
+    }
+    if (auto variable = llvm::dyn_cast<llvm::GlobalVariable>(llvm_value)) {
+        return Builder.CreateLoad(variable->getValueType(), variable);
     }
     return llvm_value;
 }

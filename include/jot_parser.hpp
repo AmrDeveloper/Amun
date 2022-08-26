@@ -37,7 +37,7 @@ class JotParser {
 
     std::shared_ptr<Statement> parse_statement();
 
-    std::shared_ptr<FieldDeclaration> parse_field_declaration();
+    std::shared_ptr<FieldDeclaration> parse_field_declaration(bool is_global);
 
     std::shared_ptr<FunctionPrototype> parse_function_prototype(FunctionCallKind kind,
                                                                 bool is_external);

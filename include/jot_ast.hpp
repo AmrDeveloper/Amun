@@ -57,8 +57,9 @@ class Parameter {
 
 class FieldDeclaration : public Statement {
   public:
-    FieldDeclaration(Token name, std::shared_ptr<JotType> type, std::shared_ptr<Expression> value)
-        : name(name), type(type), value(value) {}
+    FieldDeclaration(Token name, std::shared_ptr<JotType> type, std::shared_ptr<Expression> value,
+                     bool global = false)
+        : name(name), type(type), value(value), global(global) {}
 
     Token get_name() { return name; }
 
@@ -68,12 +69,15 @@ class FieldDeclaration : public Statement {
 
     std::shared_ptr<Expression> get_value() { return value; }
 
+    bool is_global() { return global; }
+
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
   private:
     Token name;
     std::shared_ptr<JotType> type;
     std::shared_ptr<Expression> value;
+    bool global;
 };
 
 enum FunctionCallKind {
