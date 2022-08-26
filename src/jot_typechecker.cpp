@@ -28,7 +28,14 @@ std::any JotTypeChecker::visit(BlockStatement *node) {
 
 std::any JotTypeChecker::visit(FieldDeclaration *node) {
     auto left_type = node->get_type();
-    auto right_type = node_jot_type(node->get_value()->accept(this));
+    auto right_value = node->get_value();
+    auto right_type = node_jot_type(right_value->accept(this));
+
+    if (node->is_global() and !right_value->is_constant()) {
+        context->diagnostics.add_diagnostic(node->get_name().get_span(),
+                                            "Initializer element is not a compile-time constant");
+        throw "Stop";
+    }
 
     bool is_left_none_type = is_none_type(left_type);
     bool is_right_none_type = is_none_type(right_type);

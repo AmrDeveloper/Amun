@@ -18,6 +18,7 @@ class Expression {
     virtual std::shared_ptr<JotType> get_type_node() = 0;
     virtual void set_type_node(std::shared_ptr<JotType> new_type) = 0;
     virtual std::any accept(ExpressionVisitor *visitor) = 0;
+    virtual bool is_constant() = 0;
 };
 
 class CompilationUnit {
@@ -255,6 +256,8 @@ class IfExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
+    bool is_constant() override { return false; }
+
   private:
     Token if_token;
     Token else_token;
@@ -281,6 +284,8 @@ class GroupExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
+    bool is_constant() override { return expression->is_constant(); }
+
   private:
     Token position;
     std::shared_ptr<Expression> expression;
@@ -306,6 +311,8 @@ class AssignExpression : public Expression {
     void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return false; }
 
   private:
     std::shared_ptr<Expression> left;
@@ -334,6 +341,8 @@ class BinaryExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
+    bool is_constant() override { return left->is_constant() and right->is_constant(); }
+
   private:
     std::shared_ptr<Expression> left;
     Token operator_token;
@@ -360,6 +369,8 @@ class ComparisonExpression : public Expression {
     void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return left->is_constant() and right->is_constant(); }
 
   private:
     std::shared_ptr<Expression> left;
@@ -388,6 +399,8 @@ class LogicalExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
+    bool is_constant() override { return left->is_constant() and right->is_constant(); }
+
   private:
     std::shared_ptr<Expression> left;
     Token operator_token;
@@ -409,6 +422,8 @@ class UnaryExpression : public Expression {
     void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return right->is_constant(); }
 
   private:
     Token operator_token;
@@ -434,6 +449,8 @@ class CallExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
+    bool is_constant() override { return false; }
+
   private:
     Token position;
     std::shared_ptr<Expression> callee;
@@ -455,6 +472,8 @@ class CastExpression : public Expression {
     void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return value->is_constant(); }
 
   private:
     Token position;
@@ -482,6 +501,8 @@ class IndexExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
+    bool is_constant() override { return false; }
+
   private:
     Token position;
     std::shared_ptr<Expression> value;
@@ -505,6 +526,8 @@ class EnumAccessExpression : public Expression {
     void set_type_node(std::shared_ptr<JotType> new_type) override { element_type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return true; }
 
   private:
     Token enum_name;
@@ -533,6 +556,11 @@ class ArrayExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
+    bool is_constant() override {
+        return type->get_type_kind() == TypeKind::Number or
+               type->get_type_kind() == TypeKind::EnumerationElement;
+    }
+
   private:
     Token position;
     std::vector<std::shared_ptr<Expression>> values;
@@ -554,6 +582,8 @@ class StringExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
+    bool is_constant() override { return false; }
+
   private:
     Token value;
     std::shared_ptr<JotType> type;
@@ -573,6 +603,8 @@ class LiteralExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
+    bool is_constant() override { return false; }
+
   private:
     Token name;
     std::shared_ptr<JotType> type;
@@ -589,6 +621,8 @@ class NumberExpression : public Expression {
     void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return true; }
 
   private:
     Token value;
@@ -608,6 +642,8 @@ class CharacterExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
+    bool is_constant() override { return true; }
+
   private:
     Token value;
     std::shared_ptr<JotType> type;
@@ -626,6 +662,8 @@ class BooleanExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
+    bool is_constant() override { return true; }
+
   private:
     Token value;
     std::shared_ptr<JotType> type;
@@ -642,6 +680,8 @@ class NullExpression : public Expression {
     void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return true; }
 
   private:
     Token value;
