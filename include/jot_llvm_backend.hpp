@@ -80,6 +80,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(BinaryExpression *node) override;
 
+    std::any visit(ShiftExpression *node) override;
+
     std::any visit(ComparisonExpression *node) override;
 
     std::any visit(LogicalExpression *node) override;

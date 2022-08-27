@@ -386,6 +386,27 @@ std::any JotLLVMBackend::visit(BinaryExpression *node) {
     }
 }
 
+std::any JotLLVMBackend::visit(ShiftExpression *node) {
+    auto left = llvm_resolve_value(node->get_left()->accept(this));
+    auto right = llvm_resolve_value(node->get_right()->accept(this));
+    if (not left || not right) {
+        return nullptr;
+    }
+
+    auto operator_kind = node->get_operator_token().get_kind();
+
+    if (operator_kind == TokenKind::LeftShift) {
+        return Builder.CreateShl(left, right);
+    }
+
+    if (operator_kind == TokenKind::RightShift) {
+        return Builder.CreateAShr(left, right);
+    }
+
+    jot::loge << "Invalid Shift expression operator\n";
+    exit(1);
+}
+
 std::any JotLLVMBackend::visit(ComparisonExpression *node) {
     auto left = llvm_resolve_value(node->get_left()->accept(this));
     auto right = llvm_resolve_value(node->get_right()->accept(this));

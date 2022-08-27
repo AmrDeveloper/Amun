@@ -350,6 +350,35 @@ class BinaryExpression : public Expression {
     std::shared_ptr<JotType> type;
 };
 
+class ShiftExpression : public Expression {
+  public:
+    ShiftExpression(std::shared_ptr<Expression> left, Token token,
+                    std::shared_ptr<Expression> right)
+        : left(left), operator_token(token), right(right) {
+        type = right->get_type_node();
+    }
+
+    Token get_operator_token() { return operator_token; }
+
+    std::shared_ptr<Expression> get_right() { return right; }
+
+    std::shared_ptr<Expression> get_left() { return left; }
+
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
+
+    std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return left->is_constant() and right->is_constant(); }
+
+  private:
+    std::shared_ptr<Expression> left;
+    Token operator_token;
+    std::shared_ptr<Expression> right;
+    std::shared_ptr<JotType> type;
+};
+
 class ComparisonExpression : public Expression {
   public:
     ComparisonExpression(std::shared_ptr<Expression> left, Token token,
@@ -556,9 +585,7 @@ class ArrayExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
-    bool is_constant() override {
-        return false;
-    }
+    bool is_constant() override { return false; }
 
   private:
     Token position;

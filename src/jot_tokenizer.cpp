@@ -40,19 +40,37 @@ Token JotTokenizer::scan_next_token() {
     case ';': return build_token(TokenKind::Semicolon);
     case '~': return build_token(TokenKind::Not);
 
-    // Two character token
+    // One or Two character token
     case ':': return build_token(match(':') ? TokenKind::ColonColon : TokenKind::Colon);
     case '|': return build_token(match('|') ? TokenKind::LogicalOr : TokenKind::Or);
     case '&': return build_token(match('&') ? TokenKind::LogicalAnd : TokenKind::And);
     case '=': return build_token(match('=') ? TokenKind::EqualEqual : TokenKind::Equal);
     case '!': return build_token(match('=') ? TokenKind::BangEqual : TokenKind::Bang);
-    case '>': return build_token(match('=') ? TokenKind::GreaterEqual : TokenKind::Greater);
-    case '<': return build_token(match('=') ? TokenKind::SmallerEqual : TokenKind::Smaller);
     case '+': return build_token(match('=') ? TokenKind::PlusEqual : TokenKind::Plus);
     case '-': return build_token(match('=') ? TokenKind::MinusEqual : TokenKind::Minus);
     case '*': return build_token(match('=') ? TokenKind::StarEqual : TokenKind::Star);
     case '/': return build_token(match('=') ? TokenKind::SlashEqual : TokenKind::Slash);
     case '%': return build_token(match('=') ? TokenKind::PercentEqual : TokenKind::Percent);
+
+    case '>': {
+        if (match('='))
+            return build_token(TokenKind::GreaterEqual);
+
+        if (match('>'))
+            return build_token(TokenKind::RightShift);
+
+        return build_token(TokenKind::Greater);
+    }
+
+    case '<': {
+        if (match('='))
+            return build_token(TokenKind::SmallerEqual);
+
+        if (match('<'))
+            return build_token(TokenKind::LeftShift);
+
+        return build_token(TokenKind::Smaller);
+    }
 
     case 'A':
     case 'B':

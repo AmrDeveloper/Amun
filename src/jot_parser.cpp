@@ -456,12 +456,22 @@ std::shared_ptr<Expression> JotParser::parse_equality_expression() {
 }
 
 std::shared_ptr<Expression> JotParser::parse_comparison_expression() {
-    auto expression = parse_term_expression();
+    auto expression = parse_shift_expression();
     while (is_current_kind(TokenKind::Greater) || is_current_kind(TokenKind::GreaterEqual) ||
            is_current_kind(TokenKind::Smaller) || is_current_kind(TokenKind::SmallerEqual)) {
         Token operator_token = peek_and_advance_token();
-        auto right = parse_term_expression();
+        auto right = parse_shift_expression();
         expression = std::make_shared<ComparisonExpression>(expression, operator_token, right);
+    }
+    return expression;
+}
+
+std::shared_ptr<Expression> JotParser::parse_shift_expression() {
+    auto expression = parse_term_expression();
+    while (is_current_kind(TokenKind::RightShift) || is_current_kind(TokenKind::LeftShift)) {
+        Token operator_token = peek_and_advance_token();
+        auto right = parse_term_expression();
+        expression = std::make_shared<ShiftExpression>(expression, operator_token, right);
     }
     return expression;
 }

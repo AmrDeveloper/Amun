@@ -39,6 +39,7 @@ class IfExpression;
 class GroupExpression;
 class AssignExpression;
 class BinaryExpression;
+class ShiftExpression;
 class ComparisonExpression;
 class LogicalExpression;
 class UnaryExpression;
@@ -63,6 +64,8 @@ class ExpressionVisitor {
     virtual std::any visit(AssignExpression *node) = 0;
 
     virtual std::any visit(BinaryExpression *node) = 0;
+
+    virtual std::any visit(ShiftExpression *node) = 0;
 
     virtual std::any visit(ComparisonExpression *node) = 0;
 

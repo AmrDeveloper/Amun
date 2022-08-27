@@ -55,6 +55,9 @@ enum TokenKind {
     Smaller,
     SmallerEqual,
 
+    RightShift,
+    LeftShift,
+
     PlusEqual,
     MinusEqual,
     StarEqual,
@@ -135,6 +138,9 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
     {TokenKind::GreaterEqual, ">="},
     {TokenKind::Smaller, "<"},
     {TokenKind::SmallerEqual, "<="},
+
+    {TokenKind::RightShift, ">>"},
+    {TokenKind::LeftShift, "<<"},
 
     {TokenKind::PlusEqual, "+="},
     {TokenKind::MinusEqual, "-="},

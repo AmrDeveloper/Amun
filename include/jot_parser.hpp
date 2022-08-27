@@ -70,6 +70,8 @@ class JotParser {
 
     std::shared_ptr<Expression> parse_comparison_expression();
 
+    std::shared_ptr<Expression> parse_shift_expression();
+
     std::shared_ptr<Expression> parse_term_expression();
 
     std::shared_ptr<Expression> parse_factor_expression();

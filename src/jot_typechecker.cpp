@@ -223,6 +223,40 @@ std::any JotTypeChecker::visit(BinaryExpression *node) {
     return left_type;
 }
 
+std::any JotTypeChecker::visit(ShiftExpression *node) {
+    auto left_type = node_jot_type(node->get_left()->accept(this));
+    auto right_type = node_jot_type(node->get_right()->accept(this));
+
+    bool is_left_number = is_number_type(left_type) or is_enum_element_type(left_type);
+    bool is_right_number = is_number_type(right_type) or is_enum_element_type(right_type);
+    bool is_the_same = left_type->equals(right_type);
+    if (not is_left_number || not is_right_number || not is_the_same) {
+        if (not is_left_number) {
+            context->diagnostics.add_diagnostic(
+                node->get_operator_token().get_span(),
+                "Shift Expressions Expected left to be number but got " +
+                    left_type->type_literal());
+        }
+
+        if (not is_right_number) {
+            context->diagnostics.add_diagnostic(
+                node->get_operator_token().get_span(),
+                "Shift Expressions Expected right to be number but got " +
+                    left_type->type_literal());
+        }
+
+        if (not is_the_same) {
+            context->diagnostics.add_diagnostic(node->get_operator_token().get_span(),
+                                                "Shift Expression type missmatch " +
+                                                    left_type->type_literal() + " and " +
+                                                    right_type->type_literal());
+        }
+
+        throw "Stop";
+    }
+    return node_jot_type(node->get_type_node());
+}
+
 std::any JotTypeChecker::visit(ComparisonExpression *node) {
     auto left_type = node_jot_type(node->get_left()->accept(this));
     auto right_type = node_jot_type(node->get_right()->accept(this));
@@ -237,6 +271,7 @@ std::any JotTypeChecker::visit(ComparisonExpression *node) {
                 "Expected Comparison left to be number or enum element but got " +
                     left_type->type_literal());
         }
+
         if (not is_right_number) {
             context->diagnostics.add_diagnostic(
                 node->get_operator_token().get_span(),
