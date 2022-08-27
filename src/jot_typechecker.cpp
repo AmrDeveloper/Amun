@@ -227,21 +227,21 @@ std::any JotTypeChecker::visit(ShiftExpression *node) {
     auto left_type = node_jot_type(node->get_left()->accept(this));
     auto right_type = node_jot_type(node->get_right()->accept(this));
 
-    bool is_left_number = is_number_type(left_type) or is_enum_element_type(left_type);
-    bool is_right_number = is_number_type(right_type) or is_enum_element_type(right_type);
+    bool is_left_number = is_integer_type(left_type);
+    bool is_right_number = is_integer_type(right_type);
     bool is_the_same = left_type->equals(right_type);
     if (not is_left_number || not is_right_number || not is_the_same) {
         if (not is_left_number) {
             context->diagnostics.add_diagnostic(
                 node->get_operator_token().get_span(),
-                "Shift Expressions Expected left to be number but got " +
+                "Shift Expressions Expected left to be integers but got " +
                     left_type->type_literal());
         }
 
         if (not is_right_number) {
             context->diagnostics.add_diagnostic(
                 node->get_operator_token().get_span(),
-                "Shift Expressions Expected right to be number but got " +
+                "Shift Expressions Expected right to be integers but got " +
                     left_type->type_literal());
         }
 
