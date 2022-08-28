@@ -194,6 +194,9 @@ std::shared_ptr<Statement> JotParser::parse_statement() {
     case TokenKind::ReturnKeyword: {
         return parse_return_statement();
     }
+    case TokenKind::DeferKeyword: {
+        return parse_defer_statement();
+    }
     case TokenKind::OpenBrace: {
         return parse_block_statement();
     }
@@ -278,6 +281,9 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
 }
 
 std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(FunctionCallKind kind) {
+    auto parent_node_scope = current_ast_scope;
+    current_ast_scope = AstNodeScope::FunctionScope;
+
     auto prototype = parse_function_prototype(kind, false);
 
     if (is_current_kind(TokenKind::Equal)) {
@@ -285,11 +291,13 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(Funct
         auto value = parse_expression();
         auto return_statement = std::make_shared<ReturnStatement>(equal_token, value);
         assert_kind(TokenKind::Semicolon, "Expect ; after function value");
+        current_ast_scope = parent_node_scope;
         return std::make_shared<FunctionDeclaration>(prototype, return_statement);
     }
 
     if (is_current_kind(TokenKind::OpenBrace)) {
         auto block = parse_block_statement();
+        current_ast_scope = parent_node_scope;
         return std::make_shared<FunctionDeclaration>(prototype, block);
     }
 
@@ -361,7 +369,29 @@ std::shared_ptr<ReturnStatement> JotParser::parse_return_statement() {
     return std::make_shared<ReturnStatement>(keyword, value);
 }
 
+std::shared_ptr<DeferStatement> JotParser::parse_defer_statement() {
+    auto defer_token = consume_kind(TokenKind::DeferKeyword, "Expect Defer keyword.");
+    if (current_ast_scope == AstNodeScope::FunctionScope) {
+        auto expression = parse_expression();
+        if (auto call_expression = std::dynamic_pointer_cast<CallExpression>(expression)) {
+            assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after defer call statement");
+            return std::make_shared<DeferStatement>(defer_token, call_expression);
+        }
+
+        context->diagnostics.add_diagnostic(defer_token.get_span(),
+                                            "defer keyword expect call expression");
+        throw "Stop";
+    }
+    context->diagnostics.add_diagnostic(defer_token.get_span(),
+                                        "defer keyword can only used inside function main block, "
+                                        "nested blocks such as if or while are not supported yet");
+    throw "Stop";
+}
+
 std::shared_ptr<IfStatement> JotParser::parse_if_statement() {
+    auto parent_node_scope = current_ast_scope;
+    current_ast_scope = AstNodeScope::ConditionalScope;
+
     auto if_token = consume_kind(TokenKind::IfKeyword, "Expect If keyword.");
     auto condition = parse_expression();
     auto then_block = parse_statement();
@@ -388,13 +418,18 @@ std::shared_ptr<IfStatement> JotParser::parse_if_statement() {
             conditional_blocks.push_back(elif_condition_block);
         }
     }
+    current_ast_scope = parent_node_scope;
     return std::make_shared<IfStatement>(conditional_blocks);
 }
 
 std::shared_ptr<WhileStatement> JotParser::parse_while_statement() {
+    auto parent_node_scope = current_ast_scope;
+    current_ast_scope = AstNodeScope::ConditionalScope;
+
     auto keyword = consume_kind(TokenKind::WhileKeyword, "Expect while keyword.");
     auto condition = parse_expression();
     auto body = parse_statement();
+    current_ast_scope = parent_node_scope;
     return std::make_shared<WhileStatement>(keyword, condition, body);
 }
 

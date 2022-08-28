@@ -12,6 +12,12 @@
 #include <optional>
 #include <unordered_map>
 
+enum class AstNodeScope {
+    GlobalScope,
+    FunctionScope,
+    ConditionalScope,
+};
+
 class JotParser {
   public:
     JotParser(std::shared_ptr<JotContext> context, std::unique_ptr<JotTokenizer> tokenizer)
@@ -49,6 +55,8 @@ class JotParser {
     std::shared_ptr<Parameter> parse_parameter();
 
     std::shared_ptr<ReturnStatement> parse_return_statement();
+
+    std::shared_ptr<DeferStatement> parse_defer_statement();
 
     std::shared_ptr<IfStatement> parse_if_statement();
 
@@ -144,4 +152,5 @@ class JotParser {
     std::optional<Token> previous_token;
     std::optional<Token> current_token;
     std::optional<Token> next_token;
+    AstNodeScope current_ast_scope = AstNodeScope::GlobalScope;
 };

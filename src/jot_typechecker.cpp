@@ -164,6 +164,11 @@ std::any JotTypeChecker::visit(WhileStatement *node) {
 
 std::any JotTypeChecker::visit(ReturnStatement *node) { return node->return_value()->accept(this); }
 
+std::any JotTypeChecker::visit(DeferStatement *node) {
+    node->get_call_expression()->accept(this);
+    return 0;
+}
+
 std::any JotTypeChecker::visit(ExpressionStatement *node) {
     return node->get_expression()->accept(this);
 }

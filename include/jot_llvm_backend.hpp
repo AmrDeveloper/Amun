@@ -14,6 +14,12 @@
 #include <any>
 #include <map>
 #include <memory>
+#include <vector>
+
+class DeferCall {
+  public:
+    virtual void generate_call() = 0;
+};
 
 // LLVM Context, Builder and Current Module
 static llvm::LLVMContext llvm_context;
@@ -21,6 +27,7 @@ static llvm::IRBuilder<> Builder(llvm_context);
 static std::unique_ptr<llvm::Module> llvm_module;
 static std::map<std::string, std::shared_ptr<FunctionPrototype>> functions_table;
 static std::map<std::string, llvm::Function *> llvm_functions;
+static std::vector<std::shared_ptr<DeferCall>> defers_stack;
 
 // LLVM Integer types
 static auto llvm_int1_type = llvm::Type::getInt1Ty(llvm_context);
@@ -43,6 +50,28 @@ static auto false_value = Builder.getInt1(false);
 
 // LLVM 32 bit integer with zero value
 static auto zero_int32_value = Builder.getInt32(0);
+
+class DeferFunctionCall : public DeferCall {
+  public:
+    DeferFunctionCall(llvm::Function *function, std::vector<llvm::Value *> arguments)
+        : function(function), arguments(arguments) {}
+    llvm::Function *function;
+    std::vector<llvm::Value *> arguments;
+
+    void generate_call() override { Builder.CreateCall(function, arguments); }
+};
+
+class DeferFunctionPtrCall : public DeferCall {
+  public:
+    DeferFunctionPtrCall(llvm::FunctionType *function_type, llvm::Value *callee,
+                         std::vector<llvm::Value *> arguments)
+        : function_type(function_type), callee(callee), arguments(arguments) {}
+    llvm::FunctionType *function_type;
+    llvm::Value *callee;
+    std::vector<llvm::Value *> arguments;
+
+    void generate_call() override { Builder.CreateCall(function_type, callee, arguments); }
+};
 
 class JotLLVMBackend : public TreeVisitor {
   public:
@@ -69,6 +98,8 @@ class JotLLVMBackend : public TreeVisitor {
     std::any visit(WhileStatement *node) override;
 
     std::any visit(ReturnStatement *node) override;
+
+    std::any visit(DeferStatement *node) override;
 
     std::any visit(ExpressionStatement *node) override;
 
@@ -127,6 +158,10 @@ class JotLLVMBackend : public TreeVisitor {
                                                 const std::string var_name, llvm::Type *type);
 
     llvm::Function *lookup_function(std::string name);
+
+    void execute_defer_calls();
+
+    void clear_defer_calls_stack();
 
     void push_alloca_inst_scope();
 

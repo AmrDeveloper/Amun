@@ -12,6 +12,7 @@ class EnumDeclaration;
 class IfStatement;
 class WhileStatement;
 class ReturnStatement;
+class DeferStatement;
 class ExpressionStatement;
 
 class StatementVisitor {
@@ -31,6 +32,8 @@ class StatementVisitor {
     virtual std::any visit(WhileStatement *node) = 0;
 
     virtual std::any visit(ReturnStatement *node) = 0;
+
+    virtual std::any visit(DeferStatement *node) = 0;
 
     virtual std::any visit(ExpressionStatement *node) = 0;
 };

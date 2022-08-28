@@ -44,6 +44,8 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
     auto llvm_type = llvm_type_from_jot_type(node->get_type());
     auto value = node->get_value()->accept(this);
 
+    // Globals code generation block can be moved into other function to be clear and handle more
+    // cases and to handle also soem compile time evaluations
     if (node->is_global()) {
         auto global_variable = new llvm::GlobalVariable(
             *llvm_module, llvm_type, true, llvm::GlobalValue::ExternalLinkage, 0, var_name.c_str());
@@ -145,11 +147,13 @@ std::any JotLLVMBackend::visit(FunctionDeclaration *node) {
 
     verifyFunction(*function);
 
+    clear_defer_calls_stack();
+
     return function;
 }
 
-std::any JotLLVMBackend::visit(EnumDeclaration *node) {
-    // TODO: Implement it later
+std::any JotLLVMBackend::visit([[maybe_unused]] EnumDeclaration *node) {
+    // Enumeration type is only compile time type, no need to generate any IR for it
     return 0;
 }
 
@@ -230,10 +234,16 @@ std::any JotLLVMBackend::visit(WhileStatement *node) {
 }
 
 std::any JotLLVMBackend::visit(ReturnStatement *node) {
+    // Generate code for defer calls if there are any
+    execute_defer_calls();
+
     if (node->return_value()->get_type_node()->get_type_kind() == TypeKind::Void) {
         return Builder.CreateRetVoid();
     }
+
     auto value = node->return_value()->accept(this);
+
+    // This code must be cleard with branches in Field Dec to be more clear and easy to extend
     if (value.type() == typeid(llvm::Value *)) {
         auto return_value = std::any_cast<llvm::Value *>(value);
         return Builder.CreateRet(return_value);
@@ -260,6 +270,59 @@ std::any JotLLVMBackend::visit(ReturnStatement *node) {
     } else {
         jot::loge << "Un expected return type " << value.type().name() << '\n';
     }
+    return 0;
+}
+
+std::any JotLLVMBackend::visit(DeferStatement *node) {
+    auto call_expression = node->get_call_expression();
+    auto callee = std::dynamic_pointer_cast<LiteralExpression>(call_expression->get_callee());
+    auto callee_literal = callee->get_name().get_literal();
+    auto function = lookup_function(callee_literal);
+    if (not function) {
+        auto value = llvm_node_value(alloca_inst_scope->lookup(callee_literal));
+        if (auto alloca = llvm::dyn_cast<llvm::AllocaInst>(value)) {
+            auto loaded = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
+            auto function_type = llvm_type_from_jot_type(call_expression->get_type_node());
+            if (auto function_pointer = llvm::dyn_cast<llvm::FunctionType>(function_type)) {
+                std::vector<llvm::Value *> arguments_values;
+                auto arguments = call_expression->get_arguments();
+                size_t arguments_size = arguments.size();
+                for (size_t i = 0; i < arguments_size; i++) {
+                    auto value = llvm_node_value(arguments[i]->accept(this));
+                    if (function_pointer->getParamType(i) == value->getType()) {
+                        arguments_values.push_back(value);
+                    } else {
+                        auto expected_type = function_pointer->getParamType(i);
+                        auto loaded_value = Builder.CreateLoad(expected_type, value);
+                        arguments_values.push_back(loaded_value);
+                    }
+                }
+                auto defer_function_call = std::make_shared<DeferFunctionPtrCall>(
+                    function_pointer, loaded, arguments_values);
+                defers_stack.insert(defers_stack.begin(), defer_function_call);
+            }
+        }
+        return 0;
+    }
+
+    auto arguments_size = function->arg_size();
+    auto arguments = call_expression->get_arguments();
+    std::vector<llvm::Value *> arguments_values;
+    for (size_t i = 0; i < arguments_size; i++) {
+        auto value = llvm_node_value(arguments[i]->accept(this));
+        if (function->getArg(i)->getType() == value->getType()) {
+            arguments_values.push_back(value);
+        } else {
+            auto expected_type = function->getArg(i)->getType();
+            auto loaded_value = Builder.CreateLoad(expected_type, value);
+            arguments_values.push_back(loaded_value);
+        }
+    }
+
+    auto defer_function_call = std::make_shared<DeferFunctionCall>(function, arguments_values);
+
+    // Inser must be at the begin to simulate stack but in vector to easy traverse and clear
+    defers_stack.insert(defers_stack.begin(), defer_function_call);
     return 0;
 }
 
@@ -500,6 +563,8 @@ std::any JotLLVMBackend::visit(UnaryExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(CallExpression *node) {
+    // The arguments values vector code in defer and call nodes can encapsulate into helper function
+    // Not all call expression has literal callee, this code should be checked and cover more cases
     auto callee = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee());
     auto callee_literal = callee->get_name().get_literal();
     auto function = lookup_function(callee_literal);
@@ -797,8 +862,9 @@ llvm::Type *JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
         auto enum_element_type = std::dynamic_pointer_cast<JotEnumElementType>(type);
         return llvm_type_from_jot_type(enum_element_type->get_element_type());
     }
-    jot::loge << "Unkown element type\n";
-    return llvm_int64_type;
+    jot::loge << "Compiler Internal error: Can't find LLVM Type for this Jot Type "
+              << type->type_literal() << '\n';
+    exit(1);
 }
 
 llvm::AllocaInst *JotLLVMBackend::create_entry_block_alloca(llvm::Function *function,
@@ -820,6 +886,14 @@ llvm::Function *JotLLVMBackend::lookup_function(std::string name) {
 
     return llvm_functions[name];
 }
+
+void JotLLVMBackend::execute_defer_calls() {
+    for (auto &defer_call : defers_stack) {
+        defer_call->generate_call();
+    }
+}
+
+void JotLLVMBackend::clear_defer_calls_stack() { defers_stack.clear(); }
 
 void JotLLVMBackend::push_alloca_inst_scope() {
     alloca_inst_scope = std::make_shared<JotSymbolTable>(alloca_inst_scope);
