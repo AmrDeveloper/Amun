@@ -27,7 +27,7 @@ int execute_create_command(unused int argc, char **argv) {
     string_stream << "extern fun puts(c *char) int32;" << '\n';
     string_stream << "\n";
     string_stream << "fun main() int32 {" << '\n';
-    string_stream << "    puts(\"Hello, World!\");" << '\n';
+    string_stream << R"(    puts("Hello, World!\n");)" << '\n';
     string_stream << "    return 0;" << '\n';
     string_stream << "}";
 
