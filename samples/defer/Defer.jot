@@ -1,0 +1,9 @@
+extern fun puts(s *char) int64;
+
+fun main() int64 {
+    defer puts("first");
+    defer puts("scond");
+    defer puts("third");
+    puts("Starting The main function...");
+    return 0;
+}

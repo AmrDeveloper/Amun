@@ -1,0 +1,15 @@
+extern fun printf(format *char, value int64) int64;
+
+fun print(x int64) int64 {
+    printf("%d\n", x);
+    return 0;
+}
+
+fun main() int64 {
+    var fun_ptr = &print;
+    var x = 10;
+    defer fun_ptr(x);
+    x += 20;
+    printf("%d\n", x);
+    return 0;
+}
