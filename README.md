@@ -18,10 +18,11 @@ A Statically typed, compiled general purpose low level programming language buil
 - If Else Expression
 - While statement
 - Declare Prefix, Infix, Postfix functions
-- Binary, Logical, Comparisons Operators
+- Binary, Logical, Comparisons, Bitwise Operators
 - Assignments Operatiors =, +=, -=, *=, /=
 - Standard C Headers as part of the Standard library
 - No implicit casting, every cast must be explicit to be clear
+- Defer Statement
 
 ### Requirements for Developments
 - C++ Compiler (GCC or Clang) that support C++20
