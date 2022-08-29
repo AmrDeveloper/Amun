@@ -186,6 +186,8 @@ std::any JotLLVMBackend::visit(IfStatement *node) {
         conditional_blocks[i]->get_body()->accept(this);
         pop_alloca_inst_scope();
 
+        // Refactor: move has_return_statement to class and update it inside the visitor of return
+        // statement :D
         bool has_return_statement = false;
         auto body = conditional_blocks[i]->get_body();
         if (std::dynamic_pointer_cast<ReturnStatement>(body)) {
@@ -196,13 +198,19 @@ std::any JotLLVMBackend::visit(IfStatement *node) {
             }
         }
 
-        if (not has_return_statement)
+        if (not has_break_statement && not has_return_statement) {
             Builder.CreateBr(end_block);
+        }
+
         Builder.SetInsertPoint(false_branch);
     }
 
     current_function->getBasicBlockList().push_back(end_block);
-    Builder.SetInsertPoint(end_block);
+
+    if (has_break_statement)
+        has_break_statement = false;
+    else
+        Builder.SetInsertPoint(end_block);
 
     return 0;
 }
@@ -213,6 +221,8 @@ std::any JotLLVMBackend::visit(WhileStatement *node) {
     auto loop_branch = llvm::BasicBlock::Create(llvm_context, "while.loop");
     auto end_branch = llvm::BasicBlock::Create(llvm_context, "while.end");
 
+    break_block_stack.push(end_branch);
+
     Builder.CreateBr(condition_branch);
     current_function->getBasicBlockList().push_back(condition_branch);
     Builder.SetInsertPoint(condition_branch);
@@ -222,13 +232,20 @@ std::any JotLLVMBackend::visit(WhileStatement *node) {
 
     current_function->getBasicBlockList().push_back(loop_branch);
     Builder.SetInsertPoint(loop_branch);
+
     push_alloca_inst_scope();
     node->get_body()->accept(this);
     pop_alloca_inst_scope();
-    Builder.CreateBr(condition_branch);
+
+    if (has_break_statement)
+        has_break_statement = false;
+    else
+        Builder.CreateBr(condition_branch);
 
     current_function->getBasicBlockList().push_back(end_branch);
     Builder.SetInsertPoint(end_branch);
+
+    break_block_stack.pop();
 
     return 0;
 }
@@ -323,6 +340,14 @@ std::any JotLLVMBackend::visit(DeferStatement *node) {
 
     // Inser must be at the begin to simulate stack but in vector to easy traverse and clear
     defers_stack.insert(defers_stack.begin(), defer_function_call);
+    return 0;
+}
+
+std::any JotLLVMBackend::visit(BreakStatement *node) {
+    auto break_block = break_block_stack.top();
+    break_block_stack.pop();
+    has_break_statement = true;
+    Builder.CreateBr(break_block);
     return 0;
 }
 

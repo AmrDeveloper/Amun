@@ -169,6 +169,8 @@ std::any JotTypeChecker::visit(DeferStatement *node) {
     return 0;
 }
 
+std::any JotTypeChecker::visit(BreakStatement *node) { return 0; }
+
 std::any JotTypeChecker::visit(ExpressionStatement *node) {
     return node->get_expression()->accept(this);
 }

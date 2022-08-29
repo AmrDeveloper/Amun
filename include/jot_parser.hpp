@@ -58,6 +58,8 @@ class JotParser {
 
     std::shared_ptr<DeferStatement> parse_defer_statement();
 
+    std::shared_ptr<BreakStatement> parse_break_statement();
+
     std::shared_ptr<IfStatement> parse_if_statement();
 
     std::shared_ptr<WhileStatement> parse_while_statement();

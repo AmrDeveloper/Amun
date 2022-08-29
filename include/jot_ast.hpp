@@ -234,6 +234,18 @@ class DeferStatement : public Statement {
     std::shared_ptr<CallExpression> call;
 };
 
+class BreakStatement : public Statement {
+  public:
+    BreakStatement(Token token) : break_token(token) {}
+
+    Token get_position() { return break_token; }
+
+    std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
+
+  private:
+    Token break_token;
+};
+
 class ExpressionStatement : public Statement {
   public:
     ExpressionStatement(std::shared_ptr<Expression> expression) : expression(expression) {}

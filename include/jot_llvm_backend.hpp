@@ -14,6 +14,7 @@
 #include <any>
 #include <map>
 #include <memory>
+#include <stack>
 #include <vector>
 
 class DeferCall {
@@ -28,6 +29,7 @@ static std::unique_ptr<llvm::Module> llvm_module;
 static std::map<std::string, std::shared_ptr<FunctionPrototype>> functions_table;
 static std::map<std::string, llvm::Function *> llvm_functions;
 static std::vector<std::shared_ptr<DeferCall>> defers_stack;
+static std::stack<llvm::BasicBlock *> break_block_stack;
 
 // LLVM Integer types
 static auto llvm_int1_type = llvm::Type::getInt1Ty(llvm_context);
@@ -101,6 +103,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(DeferStatement *node) override;
 
+    std::any visit(BreakStatement *node) override;
+
     std::any visit(ExpressionStatement *node) override;
 
     std::any visit(IfExpression *node) override;
@@ -142,6 +146,8 @@ class JotLLVMBackend : public TreeVisitor {
     std::any visit(NullExpression *node) override;
 
   private:
+    bool has_break_statement = false;
+
     llvm::Value *llvm_node_value(std::any any_value);
 
     llvm::Value *llvm_resolve_value(std::any any_value);

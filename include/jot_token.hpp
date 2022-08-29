@@ -20,6 +20,8 @@ enum TokenKind {
     CastKeyword,
     DeferKeyword,
 
+    BreakKeyword,
+
     PrefixKeyword,
     InfixKeyword,
     PostfixKeyword,
@@ -108,6 +110,8 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
     {TokenKind::FalseKeyword, "False"},
     {TokenKind::NullKeyword, "Null"},
 
+    {TokenKind::BreakKeyword, "Break"},
+
     {TokenKind::PrefixKeyword, "Prefix"},
     {TokenKind::InfixKeyword, "Infix"},
     {TokenKind::PostfixKeyword, "Postfix"},
@@ -175,16 +179,16 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
 };
 
 static std::unordered_map<std::string, TokenKind> language_keywords = {
-    {"load", TokenKind::LoadKeyword},      {"import", TokenKind::ImportKeyword},
-    {"var", TokenKind::VarKeyword},        {"type", TokenKind::TypeKeyword},
-    {"fun", TokenKind::FunKeyword},        {"enum", TokenKind::EnumKeyword},
-    {"return", TokenKind::ReturnKeyword},  {"extern", TokenKind::ExternKeyword},
-    {"if", TokenKind::IfKeyword},          {"else", TokenKind::ElseKeyword},
-    {"while", TokenKind::WhileKeyword},    {"cast", TokenKind::CastKeyword},
-    {"defer", TokenKind::DeferKeyword},    {"true", TokenKind::TrueKeyword},
-    {"false", TokenKind::FalseKeyword},    {"null", TokenKind::NullKeyword},
-    {"prefix", TokenKind::PrefixKeyword},  {"infix", TokenKind::InfixKeyword},
-    {"postfix", TokenKind::PostfixKeyword}};
+    {"load", TokenKind::LoadKeyword},     {"import", TokenKind::ImportKeyword},
+    {"var", TokenKind::VarKeyword},       {"type", TokenKind::TypeKeyword},
+    {"fun", TokenKind::FunKeyword},       {"enum", TokenKind::EnumKeyword},
+    {"return", TokenKind::ReturnKeyword}, {"extern", TokenKind::ExternKeyword},
+    {"if", TokenKind::IfKeyword},         {"else", TokenKind::ElseKeyword},
+    {"while", TokenKind::WhileKeyword},   {"cast", TokenKind::CastKeyword},
+    {"defer", TokenKind::DeferKeyword},   {"true", TokenKind::TrueKeyword},
+    {"false", TokenKind::FalseKeyword},   {"null", TokenKind::NullKeyword},
+    {"break", TokenKind::BreakKeyword},   {"prefix", TokenKind::PrefixKeyword},
+    {"infix", TokenKind::InfixKeyword},   {"postfix", TokenKind::PostfixKeyword}};
 
 static std::unordered_set<TokenKind> unary_operators{
     TokenKind::Minus, TokenKind::Bang, TokenKind::Star, TokenKind::And, TokenKind::Not,

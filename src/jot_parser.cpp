@@ -197,6 +197,9 @@ std::shared_ptr<Statement> JotParser::parse_statement() {
     case TokenKind::DeferKeyword: {
         return parse_defer_statement();
     }
+    case TokenKind::BreakKeyword: {
+        return parse_break_statement();
+    }
     case TokenKind::OpenBrace: {
         return parse_block_statement();
     }
@@ -386,6 +389,19 @@ std::shared_ptr<DeferStatement> JotParser::parse_defer_statement() {
                                         "defer keyword can only used inside function main block, "
                                         "nested blocks such as if or while are not supported yet");
     throw "Stop";
+}
+
+std::shared_ptr<BreakStatement> JotParser::parse_break_statement() {
+    auto break_token = consume_kind(TokenKind::BreakKeyword, "Expect break keyword.");
+
+    if (current_ast_scope != AstNodeScope::ConditionalScope) {
+        context->diagnostics.add_diagnostic(break_token.get_span(),
+                                            "break keyword can only used inside loops");
+        throw "Stop";
+    }
+
+    assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after defer call statement");
+    return std::make_shared<BreakStatement>(break_token);
 }
 
 std::shared_ptr<IfStatement> JotParser::parse_if_statement() {
