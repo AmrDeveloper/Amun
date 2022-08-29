@@ -1,0 +1,11 @@
+extern fun puts(s *char) int64;
+
+fun main(argc int64) int64 {
+    var counter = 5;
+    while true {
+        counter -= 1;
+        puts("Hello, World!");
+        if counter == 0 break;
+    }
+    return 0;
+}
