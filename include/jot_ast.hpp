@@ -8,17 +8,60 @@
 #include <memory>
 #include <vector>
 
-class Statement {
-  public:
-    virtual std::any accept(StatementVisitor *visitor) = 0;
+enum class AstNodeType {
+    Node,
+    Block,
+    Field,
+    Prototype,
+    Function,
+    Enum,
+    If,
+    While,
+    Return,
+    Defer,
+    Break,
+    Continue,
+    Expression,
+
+    IfExpr,
+    GroupExpr,
+    AssignExpr,
+    BinaryExpr,
+    ShiftExpr,
+    ComparisonExpr,
+    LogicalExpr,
+    UnaryExpr,
+    CallExpr,
+    CastExpr,
+    IndexExpr,
+    EnumElementExpr,
+    ArrayExpr,
+    StringExpr,
+    LiteralExpr,
+    NumberExpr,
+    CharExpr,
+    BoolExpr,
+    NullExpr
 };
 
-class Expression {
+class AstNode {
+  public:
+    virtual AstNodeType get_ast_node_type() = 0;
+};
+
+class Statement : public AstNode {
+  public:
+    virtual std::any accept(StatementVisitor *visitor) = 0;
+    AstNodeType get_ast_node_type() { return AstNodeType::Node; }
+};
+
+class Expression : public AstNode {
   public:
     virtual std::shared_ptr<JotType> get_type_node() = 0;
     virtual void set_type_node(std::shared_ptr<JotType> new_type) = 0;
     virtual std::any accept(ExpressionVisitor *visitor) = 0;
     virtual bool is_constant() = 0;
+    AstNodeType get_ast_node_type() { return AstNodeType::Node; }
 };
 
 class CompilationUnit {
@@ -38,6 +81,8 @@ class BlockStatement : public Statement {
     std::vector<std::shared_ptr<Statement>> get_nodes() { return nodes; }
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::Block; }
 
   private:
     std::vector<std::shared_ptr<Statement>> nodes;
@@ -74,6 +119,8 @@ class FieldDeclaration : public Statement {
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::Field; }
+
   private:
     Token name;
     std::shared_ptr<JotType> type;
@@ -108,6 +155,8 @@ class FunctionPrototype : public Statement {
 
     bool is_external() { return external; }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::Prototype; }
+
   private:
     Token name;
     std::vector<std::shared_ptr<Parameter>> parameters;
@@ -128,6 +177,8 @@ class FunctionDeclaration : public Statement {
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::Function; }
+
   private:
     std::shared_ptr<FunctionPrototype> prototype;
     std::shared_ptr<Statement> body;
@@ -143,6 +194,8 @@ class EnumDeclaration : public Statement {
     std::shared_ptr<JotType> get_enum_type() { return enum_type; }
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::Enum; }
 
   private:
     Token name;
@@ -178,6 +231,8 @@ class IfStatement : public Statement {
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::If; }
+
   private:
     std::vector<std::shared_ptr<ConditionalBlock>> conditional_blocks;
 };
@@ -196,6 +251,8 @@ class WhileStatement : public Statement {
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::While; }
+
   private:
     Token position;
     std::shared_ptr<Expression> condition;
@@ -213,6 +270,8 @@ class ReturnStatement : public Statement {
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::Return; }
+
   private:
     Token position;
     std::shared_ptr<Expression> value;
@@ -229,6 +288,8 @@ class DeferStatement : public Statement {
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::Defer; }
+
   private:
     Token position;
     std::shared_ptr<CallExpression> call;
@@ -242,6 +303,22 @@ class BreakStatement : public Statement {
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::Break; }
+
+  private:
+    Token break_token;
+};
+
+class ContinueStatement : public Statement {
+  public:
+    ContinueStatement(Token token) : break_token(token) {}
+
+    Token get_position() { return break_token; }
+
+    std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::Continue; }
+
   private:
     Token break_token;
 };
@@ -253,6 +330,8 @@ class ExpressionStatement : public Statement {
     std::shared_ptr<Expression> get_expression() { return expression; }
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::Expression; }
 
   private:
     std::shared_ptr<Expression> expression;
@@ -286,6 +365,8 @@ class IfExpression : public Expression {
 
     bool is_constant() override { return false; }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::IfExpr; }
+
   private:
     Token if_token;
     Token else_token;
@@ -314,6 +395,8 @@ class GroupExpression : public Expression {
 
     bool is_constant() override { return expression->is_constant(); }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::GroupExpr; }
+
   private:
     Token position;
     std::shared_ptr<Expression> expression;
@@ -341,6 +424,8 @@ class AssignExpression : public Expression {
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
     bool is_constant() override { return false; }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::AssignExpr; }
 
   private:
     std::shared_ptr<Expression> left;
@@ -371,6 +456,8 @@ class BinaryExpression : public Expression {
 
     bool is_constant() override { return left->is_constant() and right->is_constant(); }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::BinaryExpr; }
+
   private:
     std::shared_ptr<Expression> left;
     Token operator_token;
@@ -399,6 +486,8 @@ class ShiftExpression : public Expression {
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
     bool is_constant() override { return left->is_constant() and right->is_constant(); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::ShiftExpr; }
 
   private:
     std::shared_ptr<Expression> left;
@@ -429,6 +518,8 @@ class ComparisonExpression : public Expression {
 
     bool is_constant() override { return left->is_constant() and right->is_constant(); }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::ComparisonExpr; }
+
   private:
     std::shared_ptr<Expression> left;
     Token operator_token;
@@ -458,6 +549,8 @@ class LogicalExpression : public Expression {
 
     bool is_constant() override { return left->is_constant() and right->is_constant(); }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::LogicalExpr; }
+
   private:
     std::shared_ptr<Expression> left;
     Token operator_token;
@@ -481,6 +574,8 @@ class UnaryExpression : public Expression {
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
     bool is_constant() override { return right->is_constant(); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::UnaryExpr; }
 
   private:
     Token operator_token;
@@ -508,6 +603,8 @@ class CallExpression : public Expression {
 
     bool is_constant() override { return false; }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::CallExpr; }
+
   private:
     Token position;
     std::shared_ptr<Expression> callee;
@@ -531,6 +628,8 @@ class CastExpression : public Expression {
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
     bool is_constant() override { return value->is_constant(); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::CastExpr; }
 
   private:
     Token position;
@@ -560,6 +659,8 @@ class IndexExpression : public Expression {
 
     bool is_constant() override { return false; }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::IndexExpr; }
+
   private:
     Token position;
     std::shared_ptr<Expression> value;
@@ -585,6 +686,8 @@ class EnumAccessExpression : public Expression {
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
     bool is_constant() override { return true; }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::EnumElementExpr; }
 
   private:
     Token enum_name;
@@ -638,6 +741,8 @@ class StringExpression : public Expression {
 
     bool is_constant() override { return false; }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::StringExpr; }
+
   private:
     Token value;
     std::shared_ptr<JotType> type;
@@ -659,6 +764,8 @@ class LiteralExpression : public Expression {
 
     bool is_constant() override { return false; }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::LiteralExpr; }
+
   private:
     Token name;
     std::shared_ptr<JotType> type;
@@ -677,6 +784,8 @@ class NumberExpression : public Expression {
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
     bool is_constant() override { return true; }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::NumberExpr; }
 
   private:
     Token value;
@@ -698,6 +807,8 @@ class CharacterExpression : public Expression {
 
     bool is_constant() override { return true; }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::CharExpr; }
+
   private:
     Token value;
     std::shared_ptr<JotType> type;
@@ -718,6 +829,8 @@ class BooleanExpression : public Expression {
 
     bool is_constant() override { return true; }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::BoolExpr; }
+
   private:
     Token value;
     std::shared_ptr<JotType> type;
@@ -736,6 +849,8 @@ class NullExpression : public Expression {
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
     bool is_constant() override { return true; }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::NullExpr; }
 
   private:
     Token value;

@@ -105,6 +105,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(BreakStatement *node) override;
 
+    std::any visit(ContinueStatement *node) override;
+
     std::any visit(ExpressionStatement *node) override;
 
     std::any visit(IfExpression *node) override;
@@ -146,7 +148,8 @@ class JotLLVMBackend : public TreeVisitor {
     std::any visit(NullExpression *node) override;
 
   private:
-    bool has_break_statement = false;
+    std::stack<llvm::BasicBlock *> continue_blocks_stack;
+    bool has_break_or_continue_statement = false;
 
     llvm::Value *llvm_node_value(std::any any_value);
 

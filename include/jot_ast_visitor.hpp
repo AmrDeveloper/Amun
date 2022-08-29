@@ -14,6 +14,7 @@ class WhileStatement;
 class ReturnStatement;
 class DeferStatement;
 class BreakStatement;
+class ContinueStatement;
 class ExpressionStatement;
 
 class StatementVisitor {
@@ -37,6 +38,8 @@ class StatementVisitor {
     virtual std::any visit(DeferStatement *node) = 0;
 
     virtual std::any visit(BreakStatement *node) = 0;
+
+    virtual std::any visit(ContinueStatement *node) = 0;
 
     virtual std::any visit(ExpressionStatement *node) = 0;
 };

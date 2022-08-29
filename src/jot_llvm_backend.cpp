@@ -35,6 +35,12 @@ JotLLVMBackend::compile(std::string module_name,
 std::any JotLLVMBackend::visit(BlockStatement *node) {
     for (auto &statement : node->get_nodes()) {
         statement->accept(this);
+
+        // In the same block there are no needs to generate code for unreachable code
+        if (statement->get_ast_node_type() == AstNodeType::Break or
+            statement->get_ast_node_type() == AstNodeType::Continue) {
+            break;
+        }
     }
     return 0;
 }
@@ -198,7 +204,7 @@ std::any JotLLVMBackend::visit(IfStatement *node) {
             }
         }
 
-        if (not has_break_statement && not has_return_statement) {
+        if (not has_break_or_continue_statement && not has_return_statement) {
             Builder.CreateBr(end_block);
         }
 
@@ -207,8 +213,8 @@ std::any JotLLVMBackend::visit(IfStatement *node) {
 
     current_function->getBasicBlockList().push_back(end_block);
 
-    if (has_break_statement)
-        has_break_statement = false;
+    if (has_break_or_continue_statement)
+        has_break_or_continue_statement = false;
     else
         Builder.SetInsertPoint(end_block);
 
@@ -222,6 +228,7 @@ std::any JotLLVMBackend::visit(WhileStatement *node) {
     auto end_branch = llvm::BasicBlock::Create(llvm_context, "while.end");
 
     break_block_stack.push(end_branch);
+    continue_blocks_stack.push(condition_branch);
 
     Builder.CreateBr(condition_branch);
     current_function->getBasicBlockList().push_back(condition_branch);
@@ -237,8 +244,8 @@ std::any JotLLVMBackend::visit(WhileStatement *node) {
     node->get_body()->accept(this);
     pop_alloca_inst_scope();
 
-    if (has_break_statement)
-        has_break_statement = false;
+    if (has_break_or_continue_statement)
+        has_break_or_continue_statement = false;
     else
         Builder.CreateBr(condition_branch);
 
@@ -246,6 +253,7 @@ std::any JotLLVMBackend::visit(WhileStatement *node) {
     Builder.SetInsertPoint(end_branch);
 
     break_block_stack.pop();
+    continue_blocks_stack.pop();
 
     return 0;
 }
@@ -346,8 +354,16 @@ std::any JotLLVMBackend::visit(DeferStatement *node) {
 std::any JotLLVMBackend::visit(BreakStatement *node) {
     auto break_block = break_block_stack.top();
     break_block_stack.pop();
-    has_break_statement = true;
+    has_break_or_continue_statement = true;
     Builder.CreateBr(break_block);
+    return 0;
+}
+
+std::any JotLLVMBackend::visit(ContinueStatement *node) {
+    auto continue_block = continue_blocks_stack.top();
+    continue_blocks_stack.pop();
+    has_break_or_continue_statement = true;
+    Builder.CreateBr(continue_block);
     return 0;
 }
 

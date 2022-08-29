@@ -200,6 +200,9 @@ std::shared_ptr<Statement> JotParser::parse_statement() {
     case TokenKind::BreakKeyword: {
         return parse_break_statement();
     }
+    case TokenKind::ContinueKeyword: {
+        return parse_continue_statement();
+    }
     case TokenKind::OpenBrace: {
         return parse_block_statement();
     }
@@ -402,6 +405,20 @@ std::shared_ptr<BreakStatement> JotParser::parse_break_statement() {
 
     assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after defer call statement");
     return std::make_shared<BreakStatement>(break_token);
+}
+
+std::shared_ptr<ContinueStatement> JotParser::parse_continue_statement() {
+    auto continue_token = consume_kind(TokenKind::ContinueKeyword, "Expect continue keyword.");
+
+    if (current_ast_scope != AstNodeScope::ConditionalScope or loop_stack_size == 0) {
+        context->diagnostics.add_diagnostic(
+            continue_token.get_span(),
+            "continue keyword can only be used inside at last one while loop");
+        throw "Stop";
+    }
+
+    assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after defer call statement");
+    return std::make_shared<ContinueStatement>(continue_token);
 }
 
 std::shared_ptr<IfStatement> JotParser::parse_if_statement() {
