@@ -1,0 +1,10 @@
+extern fun puts(s *char) int64;
+
+fun main(argc int64) int64 {
+    while true {
+        puts("Hello");
+        continue;
+        puts("World");
+    }
+    return 0;
+}
