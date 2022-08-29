@@ -10,18 +10,19 @@
 void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> compilation_unit) {
     auto statements = compilation_unit->get_tree_nodes();
     try {
+        // Iterate over top level nodes
         for (auto &statement : statements) {
             statement->accept(this);
         }
-    } catch (const std::bad_any_cast &e) {
-        jot::loge << "TypeChecker: " << e.what() << '\n';
-    } catch (const char *message) {
+    } catch (...) {
+        jot::loge << "Compiler Internal error in TypeChecker";
     }
 }
 
 std::any JotTypeChecker::visit(BlockStatement *node) {
     for (auto &statement : node->get_nodes()) {
         statement->accept(this);
+        // Here we can report error for unreachable code after continue or break keyword
     }
     return 0;
 }
