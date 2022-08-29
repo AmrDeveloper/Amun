@@ -394,9 +394,9 @@ std::shared_ptr<DeferStatement> JotParser::parse_defer_statement() {
 std::shared_ptr<BreakStatement> JotParser::parse_break_statement() {
     auto break_token = consume_kind(TokenKind::BreakKeyword, "Expect break keyword.");
 
-    if (current_ast_scope != AstNodeScope::ConditionalScope) {
-        context->diagnostics.add_diagnostic(break_token.get_span(),
-                                            "break keyword can only used inside loops");
+    if (current_ast_scope != AstNodeScope::ConditionalScope or loop_stack_size == 0) {
+        context->diagnostics.add_diagnostic(
+            break_token.get_span(), "break keyword can only be used inside at last one while loop");
         throw "Stop";
     }
 
@@ -444,7 +444,11 @@ std::shared_ptr<WhileStatement> JotParser::parse_while_statement() {
 
     auto keyword = consume_kind(TokenKind::WhileKeyword, "Expect while keyword.");
     auto condition = parse_expression();
+
+    loop_stack_size += 1;
     auto body = parse_statement();
+    loop_stack_size -= 1;
+
     current_ast_scope = parent_node_scope;
     return std::make_shared<WhileStatement>(keyword, condition, body);
 }
