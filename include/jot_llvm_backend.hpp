@@ -25,11 +25,6 @@ class DeferCall {
 // LLVM Context, Builder and Current Module
 static llvm::LLVMContext llvm_context;
 static llvm::IRBuilder<> Builder(llvm_context);
-static std::unique_ptr<llvm::Module> llvm_module;
-static std::map<std::string, std::shared_ptr<FunctionPrototype>> functions_table;
-static std::map<std::string, llvm::Function *> llvm_functions;
-static std::vector<std::shared_ptr<DeferCall>> defers_stack;
-static std::stack<llvm::BasicBlock *> break_block_stack;
 
 // LLVM Integer types
 static auto llvm_int1_type = llvm::Type::getInt1Ty(llvm_context);
@@ -148,9 +143,6 @@ class JotLLVMBackend : public TreeVisitor {
     std::any visit(NullExpression *node) override;
 
   private:
-    std::stack<llvm::BasicBlock *> continue_blocks_stack;
-    bool has_break_or_continue_statement = false;
-
     llvm::Value *llvm_node_value(std::any any_value);
 
     llvm::Value *llvm_resolve_value(std::any any_value);
@@ -176,6 +168,18 @@ class JotLLVMBackend : public TreeVisitor {
 
     void pop_alloca_inst_scope();
 
+    std::unique_ptr<llvm::Module> llvm_module;
+
+    std::map<std::string, std::shared_ptr<FunctionPrototype>> functions_table;
+    std::map<std::string, llvm::Function *> llvm_functions;
+
+    std::vector<std::shared_ptr<DeferCall>> defer_calls_stack;
+    std::stack<llvm::BasicBlock *> break_blocks_stack;
+    std::stack<llvm::BasicBlock *> continue_blocks_stack;
+
     std::shared_ptr<JotSymbolTable> alloca_inst_global_scope;
     std::shared_ptr<JotSymbolTable> alloca_inst_scope;
+
+    bool has_return_statement = false;
+    bool has_break_or_continue_statement = false;
 };

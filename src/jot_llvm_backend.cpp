@@ -192,20 +192,10 @@ std::any JotLLVMBackend::visit(IfStatement *node) {
         conditional_blocks[i]->get_body()->accept(this);
         pop_alloca_inst_scope();
 
-        // Refactor: move has_return_statement to class and update it inside the visitor of return
-        // statement :D
-        bool has_return_statement = false;
-        auto body = conditional_blocks[i]->get_body();
-        if (std::dynamic_pointer_cast<ReturnStatement>(body)) {
-            has_return_statement = true;
-        } else if (auto block = std::dynamic_pointer_cast<BlockStatement>(body)) {
-            if (std::dynamic_pointer_cast<ReturnStatement>(block->get_nodes().back())) {
-                has_return_statement = true;
-            }
-        }
-
         if (not has_break_or_continue_statement && not has_return_statement) {
             Builder.CreateBr(end_block);
+        } else {
+            has_return_statement = false;
         }
 
         Builder.SetInsertPoint(false_branch);
@@ -227,7 +217,7 @@ std::any JotLLVMBackend::visit(WhileStatement *node) {
     auto loop_branch = llvm::BasicBlock::Create(llvm_context, "while.loop");
     auto end_branch = llvm::BasicBlock::Create(llvm_context, "while.end");
 
-    break_block_stack.push(end_branch);
+    break_blocks_stack.push(end_branch);
     continue_blocks_stack.push(condition_branch);
 
     Builder.CreateBr(condition_branch);
@@ -252,7 +242,7 @@ std::any JotLLVMBackend::visit(WhileStatement *node) {
     current_function->getBasicBlockList().push_back(end_branch);
     Builder.SetInsertPoint(end_branch);
 
-    break_block_stack.pop();
+    break_blocks_stack.pop();
     continue_blocks_stack.pop();
 
     return 0;
@@ -261,6 +251,8 @@ std::any JotLLVMBackend::visit(WhileStatement *node) {
 std::any JotLLVMBackend::visit(ReturnStatement *node) {
     // Generate code for defer calls if there are any
     execute_defer_calls();
+
+    has_return_statement = true;
 
     if (node->return_value()->get_type_node()->get_type_kind() == TypeKind::Void) {
         return Builder.CreateRetVoid();
@@ -324,7 +316,7 @@ std::any JotLLVMBackend::visit(DeferStatement *node) {
                 }
                 auto defer_function_call = std::make_shared<DeferFunctionPtrCall>(
                     function_pointer, loaded, arguments_values);
-                defers_stack.insert(defers_stack.begin(), defer_function_call);
+                defer_calls_stack.insert(defer_calls_stack.begin(), defer_function_call);
             }
         }
         return 0;
@@ -347,19 +339,19 @@ std::any JotLLVMBackend::visit(DeferStatement *node) {
     auto defer_function_call = std::make_shared<DeferFunctionCall>(function, arguments_values);
 
     // Inser must be at the begin to simulate stack but in vector to easy traverse and clear
-    defers_stack.insert(defers_stack.begin(), defer_function_call);
+    defer_calls_stack.insert(defer_calls_stack.begin(), defer_function_call);
     return 0;
 }
 
-std::any JotLLVMBackend::visit(BreakStatement *node) {
-    auto break_block = break_block_stack.top();
-    break_block_stack.pop();
+std::any JotLLVMBackend::visit([[maybe_unused]] BreakStatement *node) {
+    auto break_block = break_blocks_stack.top();
+    break_blocks_stack.pop();
     has_break_or_continue_statement = true;
     Builder.CreateBr(break_block);
     return 0;
 }
 
-std::any JotLLVMBackend::visit(ContinueStatement *node) {
+std::any JotLLVMBackend::visit([[maybe_unused]] ContinueStatement *node) {
     auto continue_block = continue_blocks_stack.top();
     continue_blocks_stack.pop();
     has_break_or_continue_statement = true;
@@ -929,12 +921,12 @@ llvm::Function *JotLLVMBackend::lookup_function(std::string name) {
 }
 
 void JotLLVMBackend::execute_defer_calls() {
-    for (auto &defer_call : defers_stack) {
+    for (auto &defer_call : defer_calls_stack) {
         defer_call->generate_call();
     }
 }
 
-void JotLLVMBackend::clear_defer_calls_stack() { defers_stack.clear(); }
+void JotLLVMBackend::clear_defer_calls_stack() { defer_calls_stack.clear(); }
 
 void JotLLVMBackend::push_alloca_inst_scope() {
     alloca_inst_scope = std::make_shared<JotSymbolTable>(alloca_inst_scope);
