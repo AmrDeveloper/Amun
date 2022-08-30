@@ -18,4 +18,7 @@ class JotCompiler {
 
   private:
     std::shared_ptr<JotContext> jot_context;
+
+    // This variable will be refactored later to be a part flag of JotOptions
+    bool should_report_warings = true;
 };

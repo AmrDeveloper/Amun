@@ -12,9 +12,10 @@ int JotCompiler::compile_source_code(const char *source_file) {
     type_checker.check_compilation_unit(compilation_unit);
 
     if (jot_context->diagnostics.diagnostics_size() > 0) {
-        std::cout << "Report Type check errors:" << std::endl;
-        std::cout << "------------------------------" << std::endl << std::endl;
-        jot_context->diagnostics.report_diagnostics();
+        if (should_report_warings) {
+            jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Warning);
+        }
+        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Error);
         exit(EXIT_FAILURE);
     }
 
@@ -40,9 +41,10 @@ int JotCompiler::check_source_code(const char *source_file) {
     type_checker.check_compilation_unit(compilation_unit);
 
     if (jot_context->diagnostics.diagnostics_size() > 0) {
-        std::cout << "Report Type check errors:" << std::endl;
-        std::cout << "------------------------------" << std::endl << std::endl;
-        jot_context->diagnostics.report_diagnostics();
+        if (should_report_warings) {
+            jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Warning);
+        }
+        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Error);
         exit(EXIT_FAILURE);
     }
 
@@ -62,9 +64,10 @@ std::shared_ptr<CompilationUnit> JotCompiler::parse_source_code(const char *sour
     auto compilation_unit = parser.parse_compilation_unit();
 
     if (jot_context->diagnostics.diagnostics_size() > 0) {
-        std::cout << "Report Parser errors:" << std::endl;
-        std::cout << "------------------------------" << std::endl << std::endl;
-        jot_context->diagnostics.report_diagnostics();
+        if (should_report_warings) {
+            jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Warning);
+        }
+        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Error);
         exit(EXIT_FAILURE);
     }
 

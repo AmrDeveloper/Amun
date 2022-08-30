@@ -44,9 +44,9 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration() {
                 continue;
 
             if (not is_file_exists(library_path)) {
-                context->diagnostics.add_diagnostic(library_name.get_span(),
-                                                    "No standard library with name " +
-                                                        library_name.get_literal());
+                context->diagnostics.add_diagnostic_error(library_name.get_span(),
+                                                          "No standard library with name " +
+                                                              library_name.get_literal());
                 throw "Stop";
             }
 
@@ -67,7 +67,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration() {
     }
 
     if (not is_file_exists(library_path)) {
-        context->diagnostics.add_diagnostic(
+        context->diagnostics.add_diagnostic_error(
             library_name.get_span(), "No standard library with name " + library_name.get_literal());
         throw "Stop";
     }
@@ -91,8 +91,8 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration() {
                 continue;
 
             if (not is_file_exists(library_path)) {
-                context->diagnostics.add_diagnostic(library_name.get_span(),
-                                                    "Path not exists " + library_path);
+                context->diagnostics.add_diagnostic_error(library_name.get_span(),
+                                                          "Path not exists " + library_path);
                 throw "Stop";
             }
 
@@ -114,8 +114,8 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration() {
     }
 
     if (not is_file_exists(library_path)) {
-        context->diagnostics.add_diagnostic(library_name.get_span(),
-                                            "Path not exists " + library_path);
+        context->diagnostics.add_diagnostic_error(library_name.get_span(),
+                                                  "Path not exists " + library_path);
         throw "Stop";
     }
 
@@ -156,7 +156,7 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
         else if (is_current_kind(TokenKind::FunKeyword))
             return parse_function_declaration(call_kind);
 
-        context->diagnostics.add_diagnostic(
+        context->diagnostics.add_diagnostic_error(
             peek_current().get_span(), "Prefix, Infix, postfix keyword used only with functions");
         throw "Stop";
     }
@@ -173,8 +173,8 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
         return parse_enum_declaration();
     }
     default: {
-        context->diagnostics.add_diagnostic(peek_current().get_span(),
-                                            "Invalid top level declaration statement");
+        context->diagnostics.add_diagnostic_error(peek_current().get_span(),
+                                                  "Invalid top level declaration statement");
         throw "Stop";
     }
     }
@@ -250,20 +250,20 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
     auto parameters_size = parameters.size();
 
     if (kind == FunctionCallKind::Prefix && parameters_size != 1) {
-        context->diagnostics.add_diagnostic(name.get_span(),
-                                            "Prefix function must have exactly one parameter");
+        context->diagnostics.add_diagnostic_error(
+            name.get_span(), "Prefix function must have exactly one parameter");
         throw "Stop";
     }
 
     if (kind == FunctionCallKind::Infix && parameters_size != 2) {
-        context->diagnostics.add_diagnostic(name.get_span(),
-                                            "Infix function must have exactly Two parameter");
+        context->diagnostics.add_diagnostic_error(name.get_span(),
+                                                  "Infix function must have exactly Two parameter");
         throw "Stop";
     }
 
     if (kind == FunctionCallKind::Postfix && parameters_size != 1) {
-        context->diagnostics.add_diagnostic(name.get_span(),
-                                            "Postfix function must have exactly one parameter");
+        context->diagnostics.add_diagnostic_error(
+            name.get_span(), "Postfix function must have exactly one parameter");
         throw "Stop";
     }
 
@@ -274,9 +274,9 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
 
     // Function can't return fixed size array, you can use pointer format to return allocated array
     if (return_type->get_type_kind() == TypeKind::Array) {
-        context->diagnostics.add_diagnostic(return_type->get_type_position(),
-                                            "Function cannot return array type " +
-                                                return_type->type_literal());
+        context->diagnostics.add_diagnostic_error(return_type->get_type_position(),
+                                                  "Function cannot return array type " +
+                                                      return_type->type_literal());
         throw "Stop";
     }
 
@@ -307,8 +307,8 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(Funct
         return std::make_shared<FunctionDeclaration>(prototype, block);
     }
 
-    context->diagnostics.add_diagnostic(peek_current().get_span(),
-                                        "Invalid function declaration body");
+    context->diagnostics.add_diagnostic_error(peek_current().get_span(),
+                                              "Invalid function declaration body");
     throw "Stop";
 }
 
@@ -335,8 +335,8 @@ std::shared_ptr<EnumDeclaration> JotParser::parse_enum_declaration() {
         enum_values.push_back(enum_value);
 
         if (enum_values_indexes.count(enum_value.get_literal())) {
-            context->diagnostics.add_diagnostic(enum_value.get_span(),
-                                                "Can't declare 2 elements with the same name");
+            context->diagnostics.add_diagnostic_error(
+                enum_value.get_span(), "Can't declare 2 elements with the same name");
             throw "Stop";
         } else {
             enum_values_indexes[enum_value.get_literal()] = index++;
@@ -384,13 +384,13 @@ std::shared_ptr<DeferStatement> JotParser::parse_defer_statement() {
             return std::make_shared<DeferStatement>(defer_token, call_expression);
         }
 
-        context->diagnostics.add_diagnostic(defer_token.get_span(),
-                                            "defer keyword expect call expression");
+        context->diagnostics.add_diagnostic_error(defer_token.get_span(),
+                                                  "defer keyword expect call expression");
         throw "Stop";
     }
-    context->diagnostics.add_diagnostic(defer_token.get_span(),
-                                        "defer keyword can only used inside function main block, "
-                                        "nested blocks such as if or while are not supported yet");
+    context->diagnostics.add_diagnostic_error(
+        defer_token.get_span(), "defer keyword can only used inside function main block, "
+                                "nested blocks such as if or while are not supported yet");
     throw "Stop";
 }
 
@@ -398,7 +398,7 @@ std::shared_ptr<BreakStatement> JotParser::parse_break_statement() {
     auto break_token = consume_kind(TokenKind::BreakKeyword, "Expect break keyword.");
 
     if (current_ast_scope != AstNodeScope::ConditionalScope or loop_stack_size == 0) {
-        context->diagnostics.add_diagnostic(
+        context->diagnostics.add_diagnostic_error(
             break_token.get_span(), "break keyword can only be used inside at last one while loop");
         throw "Stop";
     }
@@ -411,7 +411,7 @@ std::shared_ptr<ContinueStatement> JotParser::parse_continue_statement() {
     auto continue_token = consume_kind(TokenKind::ContinueKeyword, "Expect continue keyword.");
 
     if (current_ast_scope != AstNodeScope::ConditionalScope or loop_stack_size == 0) {
-        context->diagnostics.add_diagnostic(
+        context->diagnostics.add_diagnostic_error(
             continue_token.get_span(),
             "continue keyword can only be used inside at last one while loop");
         throw "Stop";
@@ -582,10 +582,10 @@ std::shared_ptr<Expression> JotParser::parse_enum_access_expression() {
 
                 auto enum_values = enum_type->get_enum_values();
                 if (not enum_values.count(element.get_literal())) {
-                    context->diagnostics.add_diagnostic(element.get_span(),
-                                                        "Can't find element with name " +
-                                                            element.get_literal() + " in enum " +
-                                                            enum_name.get_literal());
+                    context->diagnostics.add_diagnostic_error(
+                        element.get_span(), "Can't find element with name " +
+                                                element.get_literal() + " in enum " +
+                                                enum_name.get_literal());
                     throw "Stop";
                 }
 
@@ -595,14 +595,14 @@ std::shared_ptr<Expression> JotParser::parse_enum_access_expression() {
                 return std::make_shared<EnumAccessExpression>(enum_name, element, index,
                                                               enum_element_type);
             } else {
-                context->diagnostics.add_diagnostic(enum_name.get_span(),
-                                                    "Can't find enum declaration with name " +
-                                                        enum_name.get_literal());
+                context->diagnostics.add_diagnostic_error(enum_name.get_span(),
+                                                          "Can't find enum declaration with name " +
+                                                              enum_name.get_literal());
                 throw "Stop";
             }
         } else {
-            context->diagnostics.add_diagnostic(colons_token.get_span(),
-                                                "Expect identifier as Enum name");
+            context->diagnostics.add_diagnostic_error(colons_token.get_span(),
+                                                      "Expect identifier as Enum name");
             throw "Stop";
         }
     }
@@ -730,8 +730,8 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
         return parse_cast_expression();
     }
     default: {
-        context->diagnostics.add_diagnostic(peek_current().get_span(),
-                                            "Unexpected or unsupported expression");
+        context->diagnostics.add_diagnostic_error(peek_current().get_span(),
+                                                  "Unexpected or unsupported expression");
         throw "Stop";
     }
     }
@@ -825,8 +825,8 @@ std::shared_ptr<JotType> JotParser::parse_type_with_prefix() {
         auto size = parse_number_expression();
         auto number_type = std::dynamic_pointer_cast<JotNumberType>(size->get_type_node());
         if (not number_type->is_integer()) {
-            context->diagnostics.add_diagnostic(number_type->get_type_position(),
-                                                "Array size must be an integer constants");
+            context->diagnostics.add_diagnostic_error(number_type->get_type_position(),
+                                                      "Array size must be an integer constants");
             throw "Stop";
         }
         auto number_value = std::atoi(size->get_value().get_literal().c_str());
@@ -848,7 +848,7 @@ std::shared_ptr<JotType> JotParser::parse_primary_type() {
     if (is_current_kind(TokenKind::Symbol)) {
         return parse_identifier_type();
     }
-    context->diagnostics.add_diagnostic(peek_current().get_span(), "Expected symbol as type");
+    context->diagnostics.add_diagnostic_error(peek_current().get_span(), "Expected symbol as type");
     throw "Stop";
 }
 
@@ -899,7 +899,8 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type() {
 
     // TODO: Check if this type is Structure type
 
-    context->diagnostics.add_diagnostic(peek_current().get_span(), "Unexpected identifier type");
+    context->diagnostics.add_diagnostic_error(peek_current().get_span(),
+                                              "Unexpected identifier type");
     throw "Stop";
 }
 
@@ -915,8 +916,8 @@ NumberKind JotParser::get_number_kind(TokenKind token) {
     case TokenKind::Float32Type: return NumberKind::Float32;
     case TokenKind::Float64Type: return NumberKind::Float64;
     default: {
-        context->diagnostics.add_diagnostic(peek_current().get_span(),
-                                            "Token kind is not a number");
+        context->diagnostics.add_diagnostic_error(peek_current().get_span(),
+                                                  "Token kind is not a number");
         throw "Stop";
     }
     }
@@ -969,7 +970,7 @@ Token JotParser::consume_kind(TokenKind kind, const char *message) {
         advanced_token();
         return previous_token.value();
     }
-    context->diagnostics.add_diagnostic(peek_current().get_span(), message);
+    context->diagnostics.add_diagnostic_error(peek_current().get_span(), message);
     throw "Stop";
 }
 
@@ -983,7 +984,7 @@ void JotParser::assert_kind(TokenKind kind, const char *message) {
     if (kind == TokenKind::Semicolon) {
         location = peek_previous().get_span();
     }
-    context->diagnostics.add_diagnostic(location, message);
+    context->diagnostics.add_diagnostic_error(location, message);
     throw "Stop";
 }
 
