@@ -8,6 +8,12 @@
 #include <memory>
 #include <vector>
 
+// TODO: All ast nodes can be improved and using std::move not copy values
+
+/*
+ * This enum types will be very useful in the refactor
+ * and make it easy to check for the type without castring
+ */
 enum class AstNodeType {
     Node,
     Block,

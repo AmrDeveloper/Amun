@@ -22,7 +22,8 @@ void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> com
 std::any JotTypeChecker::visit(BlockStatement *node) {
     for (auto &statement : node->get_nodes()) {
         statement->accept(this);
-        // Here we can report error for unreachable code after continue or break keyword
+        // Here we can report warn for unreachable code after return, continue or break keyword
+        // We can make it error after return, must modify the diagnostics engine first
     }
     return 0;
 }

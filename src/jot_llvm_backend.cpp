@@ -37,7 +37,8 @@ std::any JotLLVMBackend::visit(BlockStatement *node) {
         statement->accept(this);
 
         // In the same block there are no needs to generate code for unreachable code
-        if (statement->get_ast_node_type() == AstNodeType::Break or
+        if (statement->get_ast_node_type() == AstNodeType::Return or
+            statement->get_ast_node_type() == AstNodeType::Break or
             statement->get_ast_node_type() == AstNodeType::Continue) {
             break;
         }
