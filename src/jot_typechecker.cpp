@@ -15,7 +15,6 @@ void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> com
             statement->accept(this);
         }
     } catch (...) {
-        jot::loge << "Compiler Internal error in TypeChecker";
     }
 }
 
@@ -96,13 +95,17 @@ std::any JotTypeChecker::visit(FunctionPrototype *node) {
 
 std::any JotTypeChecker::visit(FunctionDeclaration *node) {
     auto prototype = node->get_prototype();
-    auto function_type = node->get_prototype()->accept(this);
+    auto function_type = node_jot_type(node->get_prototype()->accept(this));
+    auto function = std::dynamic_pointer_cast<JotFunctionType>(function_type);
+    current_function_return_type = function->get_return_type();
+
     push_new_scope();
     for (auto &parameter : prototype->get_parameters()) {
         symbol_table->define(parameter->get_name().get_literal(), parameter->get_type());
     }
     node->get_body()->accept(this);
     pop_current_scope();
+
     return function_type;
 }
 
@@ -164,7 +167,19 @@ std::any JotTypeChecker::visit(WhileStatement *node) {
     return 0;
 }
 
-std::any JotTypeChecker::visit(ReturnStatement *node) { return node->return_value()->accept(this); }
+std::any JotTypeChecker::visit(ReturnStatement *node) {
+    auto return_type = node_jot_type(node->return_value()->accept(this));
+
+    if (not return_type->equals(current_function_return_type)) {
+        context->diagnostics.add_diagnostic_error(node->get_position().get_span(),
+                                                  "Expect return value to be " +
+                                                      current_function_return_type->type_literal() +
+                                                      " but got " + return_type->type_literal());
+        throw "Stop";
+    }
+
+    return 0;
+}
 
 std::any JotTypeChecker::visit(DeferStatement *node) {
     node->get_call_expression()->accept(this);

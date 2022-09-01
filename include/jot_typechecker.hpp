@@ -103,4 +103,5 @@ class JotTypeChecker : public TreeVisitor {
     std::shared_ptr<JotContext> context;
     std::shared_ptr<JotSymbolTable> global_scope;
     std::shared_ptr<JotSymbolTable> symbol_table;
+    std::shared_ptr<JotType> current_function_return_type;
 };
