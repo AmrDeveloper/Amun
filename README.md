@@ -17,7 +17,7 @@ A Statically typed, compiled general purpose low level programming language buil
 - If, else if and else statements
 - If Else Expression
 - While statement
-- Break and continue statements
+- Break and continue statements with optional times
 - Declare Prefix, Infix, Postfix functions
 - Binary, Logical, Comparisons, Bitwise Operators
 - Assignments Operatiors =, +=, -=, *=, /=
