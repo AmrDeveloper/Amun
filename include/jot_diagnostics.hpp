@@ -39,10 +39,14 @@ class JotDiagnosticEngine {
 
     void add_diagnostic_warn(TokenSpan location, std::string message);
 
-    int diagnostics_size();
+    int get_warns_number();
+
+    int get_errors_number();
 
   private:
     void report_diagnostic(JotDiagnostic &diagnostic);
 
     std::vector<JotDiagnostic> diagnostics;
+    int errors_number = 0;
+    int warns_number = 0;
 };

@@ -36,11 +36,15 @@ void JotDiagnosticEngine::report_diagnostic(JotDiagnostic &diagnostic) {
 }
 
 void JotDiagnosticEngine::add_diagnostic_error(TokenSpan location, std::string message) {
+    errors_number++;
     diagnostics.push_back({location, message, DiagnosticLevel::Error});
 }
 
 void JotDiagnosticEngine::add_diagnostic_warn(TokenSpan location, std::string message) {
+    warns_number++;
     diagnostics.push_back({location, message, DiagnosticLevel::Warning});
 }
 
-int JotDiagnosticEngine::diagnostics_size() { return diagnostics.size(); }
+int JotDiagnosticEngine::get_warns_number() { return warns_number; }
+
+int JotDiagnosticEngine::get_errors_number() { return errors_number; }

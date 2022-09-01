@@ -2,7 +2,9 @@
 #include "../include/jot_files.hpp"
 #include "../include/jot_logger.hpp"
 
+#include <algorithm>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -128,7 +130,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_single_source_file(std:
     auto tokenizer = std::make_unique<JotTokenizer>(file_name, source_content);
     JotParser parser(context, std::move(tokenizer));
     auto compilation_unit = parser.parse_compilation_unit();
-    if (context->diagnostics.diagnostics_size() > 0) {
+    if (context->diagnostics.get_errors_number() > 0) {
         throw "Stop";
     }
     return compilation_unit->get_tree_nodes();
@@ -403,8 +405,46 @@ std::shared_ptr<BreakStatement> JotParser::parse_break_statement() {
         throw "Stop";
     }
 
-    assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after defer call statement");
-    return std::make_shared<BreakStatement>(break_token);
+    if (is_current_kind(TokenKind::Semicolon)) {
+        assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after break call statement");
+        return std::make_shared<BreakStatement>(break_token, false, 1);
+    }
+
+    auto break_times = parse_expression();
+    if (auto number_expr = std::dynamic_pointer_cast<NumberExpression>(break_times)) {
+        auto number_value = number_expr->get_value();
+        auto number_kind = number_value.get_kind();
+        if (number_kind == TokenKind::Float or number_kind == TokenKind::Float32Type or
+            number_kind == TokenKind::Float64Type) {
+
+            context->diagnostics.add_diagnostic_error(
+                break_token.get_span(),
+                "expect break keyword times to be integer but found floating pointer value");
+            throw "Stop";
+        }
+
+        int times_int = std::stoi(number_value.get_literal());
+        if (times_int < 1) {
+            context->diagnostics.add_diagnostic_error(
+                break_token.get_span(), "expect break times must be positive value and at last 1");
+            throw "Stop";
+        }
+
+        if (times_int > loop_stack_size) {
+            context->diagnostics.add_diagnostic_error(
+                break_token.get_span(), "break times can't be bigger than the number of loops you "
+                                        "have, expect less than or equals " +
+                                            std::to_string(loop_stack_size));
+            throw "Stop";
+        }
+
+        assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after brea statement");
+        return std::make_shared<BreakStatement>(break_token, true, times_int);
+    }
+
+    context->diagnostics.add_diagnostic_error(break_token.get_span(),
+                                              "break keyword times must be a number");
+    throw "Stop";
 }
 
 std::shared_ptr<ContinueStatement> JotParser::parse_continue_statement() {
@@ -417,8 +457,48 @@ std::shared_ptr<ContinueStatement> JotParser::parse_continue_statement() {
         throw "Stop";
     }
 
-    assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after defer call statement");
-    return std::make_shared<ContinueStatement>(continue_token);
+    if (is_current_kind(TokenKind::Semicolon)) {
+        assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after defer call statement");
+        return std::make_shared<ContinueStatement>(continue_token, false, 1);
+    }
+
+    auto continue_times = parse_expression();
+    if (auto number_expr = std::dynamic_pointer_cast<NumberExpression>(continue_times)) {
+        auto number_value = number_expr->get_value();
+        auto number_kind = number_value.get_kind();
+        if (number_kind == TokenKind::Float or number_kind == TokenKind::Float32Type or
+            number_kind == TokenKind::Float64Type) {
+
+            context->diagnostics.add_diagnostic_error(
+                continue_token.get_span(),
+                "expect continue times to be integer but found floating pointer value");
+            throw "Stop";
+        }
+
+        int times_int = std::stoi(number_value.get_literal());
+        if (times_int < 1) {
+            context->diagnostics.add_diagnostic_error(
+                continue_token.get_span(),
+                "expect continue times must be positive value and at last 1");
+            throw "Stop";
+        }
+
+        if (times_int > loop_stack_size) {
+            context->diagnostics.add_diagnostic_error(
+                continue_token.get_span(),
+                "continue times can't be bigger than the number of loops you "
+                "have, expect less than or equals " +
+                    std::to_string(loop_stack_size));
+            throw "Stop";
+        }
+
+        assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after brea statement");
+        return std::make_shared<ContinueStatement>(continue_token, true, times_int);
+    }
+
+    context->diagnostics.add_diagnostic_error(continue_token.get_span(),
+                                              "continue keyword times must be a number");
+    throw "Stop";
 }
 
 std::shared_ptr<IfStatement> JotParser::parse_if_statement() {

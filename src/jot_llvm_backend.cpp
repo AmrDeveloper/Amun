@@ -345,18 +345,24 @@ std::any JotLLVMBackend::visit(DeferStatement *node) {
 }
 
 std::any JotLLVMBackend::visit([[maybe_unused]] BreakStatement *node) {
-    auto break_block = break_blocks_stack.top();
-    break_blocks_stack.pop();
     has_break_or_continue_statement = true;
-    Builder.CreateBr(break_block);
+
+    for (int i = 1; i < node->get_times(); i++) {
+        break_blocks_stack.pop();
+    }
+
+    Builder.CreateBr(break_blocks_stack.top());
     return 0;
 }
 
 std::any JotLLVMBackend::visit([[maybe_unused]] ContinueStatement *node) {
-    auto continue_block = continue_blocks_stack.top();
-    continue_blocks_stack.pop();
     has_break_or_continue_statement = true;
-    Builder.CreateBr(continue_block);
+
+    for (int i = 1; i < node->get_times(); i++) {
+        continue_blocks_stack.pop();
+    }
+
+    Builder.CreateBr(continue_blocks_stack.top());
     return 0;
 }
 

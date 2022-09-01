@@ -171,9 +171,21 @@ std::any JotTypeChecker::visit(DeferStatement *node) {
     return 0;
 }
 
-std::any JotTypeChecker::visit(BreakStatement *node) { return 0; }
+std::any JotTypeChecker::visit(BreakStatement *node) {
+    if (node->is_has_times() and node->get_times() == 1) {
+        context->diagnostics.add_diagnostic_warn(node->get_position().get_span(),
+                                                 "`break 1;` can implicity written as `break;`");
+    }
+    return 0;
+}
 
-std::any JotTypeChecker::visit(ContinueStatement *node) { return 0; }
+std::any JotTypeChecker::visit(ContinueStatement *node) {
+    if (node->is_has_times() and node->get_times() == 1) {
+        context->diagnostics.add_diagnostic_warn(
+            node->get_position().get_span(), "`continue 1;` can implicity written as `continue;`");
+    }
+    return 0;
+}
 
 std::any JotTypeChecker::visit(ExpressionStatement *node) {
     return node->get_expression()->accept(this);

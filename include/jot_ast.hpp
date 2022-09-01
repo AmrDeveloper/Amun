@@ -303,9 +303,14 @@ class DeferStatement : public Statement {
 
 class BreakStatement : public Statement {
   public:
-    BreakStatement(Token token) : break_token(token) {}
+    BreakStatement(Token token, bool has_times, int times)
+        : break_token(token), has_times(has_times), times(times) {}
 
     Token get_position() { return break_token; }
+
+    bool is_has_times() { return has_times; }
+
+    int get_times() { return times; }
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
@@ -313,13 +318,20 @@ class BreakStatement : public Statement {
 
   private:
     Token break_token;
+    bool has_times;
+    int times;
 };
 
 class ContinueStatement : public Statement {
   public:
-    ContinueStatement(Token token) : break_token(token) {}
+    ContinueStatement(Token token, bool has_times, int times)
+        : break_token(token), has_times(has_times), times(times) {}
 
     Token get_position() { return break_token; }
+
+    bool is_has_times() { return has_times; }
+
+    int get_times() { return times; }
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
@@ -327,6 +339,9 @@ class ContinueStatement : public Statement {
 
   private:
     Token break_token;
+    bool has_times;
+
+    int times;
 };
 
 class ExpressionStatement : public Statement {
