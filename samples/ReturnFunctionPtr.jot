@@ -6,7 +6,7 @@ fun function() int64 {
 }
 
 fun functionReturnFunctionPtr() *() int64 {
-    return function;
+    return &function;
 }
 
 fun main() int64 {
