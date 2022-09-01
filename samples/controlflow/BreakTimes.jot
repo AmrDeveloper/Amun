@@ -1,0 +1,18 @@
+extern fun puts(s *char) int64;
+
+fun main(argc int64) int64 {
+    var i = 10;
+    while i > 0 {
+        i -= 1;
+        var j = 3;
+        puts("Hello");
+        while j > 0 {
+            j -= 1;
+            puts("World");
+            // This instruction will break the first while loop
+            // Expected intput to be just Hello\nWorld
+            break 2;
+        }
+    }
+    return 0;
+}
