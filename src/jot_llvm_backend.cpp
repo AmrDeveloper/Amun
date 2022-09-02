@@ -603,8 +603,32 @@ std::any JotLLVMBackend::visit(UnaryExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(CallExpression *node) {
-    // The arguments values vector code in defer and call nodes can encapsulate into helper function
-    // Not all call expression has literal callee, this code should be checked and cover more cases
+    // If callee is also a CallExpression this case when you have a function that return a function
+    // pointer and you call it for example function()();
+    if (node->get_callee()->get_ast_node_type() == AstNodeType::CallExpr) {
+        auto callee_function = llvm_node_value(node->get_callee()->accept(this));
+        auto call_instruction = llvm::dyn_cast<llvm::CallInst>(callee_function);
+        auto function = call_instruction->getCalledFunction();
+        auto callee_function_type = function->getFunctionType();
+        auto return_ptr_type = callee_function_type->getReturnType()->getPointerElementType();
+        auto function_pointer_type = llvm::dyn_cast<llvm::FunctionType>(return_ptr_type);
+
+        std::vector<llvm::Value *> arguments_values;
+        auto arguments = node->get_arguments();
+        size_t arguments_size = arguments.size();
+        for (size_t i = 0; i < arguments_size; i++) {
+            auto value = llvm_node_value(arguments[i]->accept(this));
+            if (function_pointer_type->getParamType(i) == value->getType()) {
+                arguments_values.push_back(value);
+            } else {
+                auto expected_type = function_pointer_type->getParamType(i);
+                auto loaded_value = Builder.CreateLoad(expected_type, value);
+                arguments_values.push_back(loaded_value);
+            }
+        }
+        return Builder.CreateCall(function_pointer_type, call_instruction, arguments_values);
+    }
+
     auto callee = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee());
     auto callee_literal = callee->get_name().get_literal();
     auto function = lookup_function(callee_literal);

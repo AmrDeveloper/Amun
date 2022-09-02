@@ -469,11 +469,50 @@ std::any JotTypeChecker::visit(CallExpression *node) {
                 node->get_position().get_span(), "Can't resolve function call with name " + name);
             throw "Stop";
         }
-    } else {
-        context->diagnostics.add_diagnostic_error(node->get_position().get_span(),
-                                                  "Call expression must be a literal");
-        throw "Stop";
     }
+
+    if (auto call = std::dynamic_pointer_cast<CallExpression>(node->get_callee())) {
+        auto call_result = node_jot_type(call->accept(this));
+        auto function_pointer_type = std::dynamic_pointer_cast<JotPointerType>(call_result);
+        auto function_type =
+            std::dynamic_pointer_cast<JotFunctionType>(function_pointer_type->get_point_to());
+        node->set_type_node(function_type);
+
+        auto parameters = function_type->get_parameters();
+        auto arguments = node->get_arguments();
+
+        if (parameters.size() != arguments.size()) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_position().get_span(),
+                "Invalid number of arguments, expect " + std::to_string(parameters.size()) +
+                    " but got " + std::to_string(arguments.size()));
+            throw "Stop";
+        }
+
+        std::vector<std::shared_ptr<JotType>> arguments_types;
+        for (auto &argument : arguments) {
+            arguments_types.push_back(node_jot_type(argument->accept(this)));
+        }
+
+        size_t arguments_size = arguments_types.size();
+        for (size_t i = 0; i < arguments_size; i++) {
+            if (not parameters[i]->equals(arguments_types[i])) {
+                context->diagnostics.add_diagnostic_error(
+                    node->get_position().get_span(),
+                    "Argument type didn't match parameter type expect " +
+                        parameters[i]->type_literal() + " got " +
+                        arguments_types[i]->type_literal());
+                throw "Stop";
+            }
+        }
+
+        return function_type->get_return_type();
+    }
+
+    context->diagnostics.add_diagnostic_error(
+        node->get_position().get_span(),
+        "Call expression callee must be a literal or another call expression");
+    throw "Stop";
 }
 
 std::any JotTypeChecker::visit(CastExpression *node) {
