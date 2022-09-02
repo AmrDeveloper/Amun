@@ -1,0 +1,16 @@
+extern fun printf(format *char, value int64) int64;
+
+fun function(x int64) int64 {
+    printf("Hello Function %d\n", x);
+    return 0;
+}
+
+fun functionReturnFunctionPtr() *(int64) int64 {
+    return &function;
+}
+
+fun main() int64 {
+    var x = 10;
+    var y : int64 = functionReturnFunctionPtr()(x);
+    return 0;
+}
