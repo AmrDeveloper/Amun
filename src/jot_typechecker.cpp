@@ -432,32 +432,7 @@ std::any JotTypeChecker::visit(CallExpression *node) {
                 node->set_type_node(type);
                 auto parameters = type->get_parameters();
                 auto arguments = node->get_arguments();
-                if (parameters.size() != arguments.size()) {
-                    context->diagnostics.add_diagnostic_error(
-                        node->get_position().get_span(),
-                        "Invalid number of arguments " + name + " expect " +
-                            std::to_string(parameters.size()) + " but got " +
-                            std::to_string(arguments.size()));
-                    throw "Stop";
-                }
-
-                std::vector<std::shared_ptr<JotType>> arguments_types;
-                for (auto &argument : arguments) {
-                    arguments_types.push_back(node_jot_type(argument->accept(this)));
-                }
-
-                size_t arguments_size = arguments_types.size();
-                for (size_t i = 0; i < arguments_size; i++) {
-                    if (not parameters[i]->equals(arguments_types[i])) {
-                        context->diagnostics.add_diagnostic_error(
-                            node->get_position().get_span(),
-                            "Argument type didn't match parameter type expect " +
-                                parameters[i]->type_literal() + " got " +
-                                arguments_types[i]->type_literal());
-                        throw "Stop";
-                    }
-                }
-
+                check_parameters_types(node->get_position().get_span(), arguments, parameters);
                 return type->get_return_type();
             } else {
                 context->diagnostics.add_diagnostic_error(
@@ -477,35 +452,9 @@ std::any JotTypeChecker::visit(CallExpression *node) {
         auto function_type =
             std::dynamic_pointer_cast<JotFunctionType>(function_pointer_type->get_point_to());
         node->set_type_node(function_type);
-
         auto parameters = function_type->get_parameters();
         auto arguments = node->get_arguments();
-
-        if (parameters.size() != arguments.size()) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_position().get_span(),
-                "Invalid number of arguments, expect " + std::to_string(parameters.size()) +
-                    " but got " + std::to_string(arguments.size()));
-            throw "Stop";
-        }
-
-        std::vector<std::shared_ptr<JotType>> arguments_types;
-        for (auto &argument : arguments) {
-            arguments_types.push_back(node_jot_type(argument->accept(this)));
-        }
-
-        size_t arguments_size = arguments_types.size();
-        for (size_t i = 0; i < arguments_size; i++) {
-            if (not parameters[i]->equals(arguments_types[i])) {
-                context->diagnostics.add_diagnostic_error(
-                    node->get_position().get_span(),
-                    "Argument type didn't match parameter type expect " +
-                        parameters[i]->type_literal() + " got " +
-                        arguments_types[i]->type_literal());
-                throw "Stop";
-            }
-        }
-
+        check_parameters_types(node->get_position().get_span(), arguments, parameters);
         return function_type->get_return_type();
     }
 
@@ -666,6 +615,33 @@ bool JotTypeChecker::is_none_type(const std::shared_ptr<JotType> &type) {
         return array_type->get_point_to()->get_type_kind() == TypeKind::None;
     }
     return false;
+}
+
+void JotTypeChecker::check_parameters_types(TokenSpan location,
+                                            std::vector<std::shared_ptr<Expression>> &arguments,
+                                            std::vector<std::shared_ptr<JotType>> &parameters) {
+    if (parameters.size() != arguments.size()) {
+        context->diagnostics.add_diagnostic_error(
+            location, "Invalid number of arguments, expect " + std::to_string(parameters.size()) +
+                          " but got " + std::to_string(arguments.size()));
+        throw "Stop";
+    }
+
+    std::vector<std::shared_ptr<JotType>> arguments_types;
+    for (auto &argument : arguments) {
+        arguments_types.push_back(node_jot_type(argument->accept(this)));
+    }
+
+    size_t arguments_size = arguments_types.size();
+    for (size_t i = 0; i < arguments_size; i++) {
+        if (not parameters[i]->equals(arguments_types[i])) {
+            context->diagnostics.add_diagnostic_error(
+                location, "Argument type didn't match parameter type expect " +
+                              parameters[i]->type_literal() + " got " +
+                              arguments_types[i]->type_literal());
+            throw "Stop";
+        }
+    }
 }
 
 bool JotTypeChecker::is_same_type(const std::shared_ptr<JotType> &left,
