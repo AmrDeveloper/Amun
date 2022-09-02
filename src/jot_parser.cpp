@@ -297,7 +297,7 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(Funct
     if (is_current_kind(TokenKind::Equal)) {
         auto equal_token = peek_and_advance_token();
         auto value = parse_expression();
-        auto return_statement = std::make_shared<ReturnStatement>(equal_token, value);
+        auto return_statement = std::make_shared<ReturnStatement>(equal_token, value, true);
         assert_kind(TokenKind::Semicolon, "Expect ; after function value");
         current_ast_scope = parent_node_scope;
         return std::make_shared<FunctionDeclaration>(prototype, return_statement);
@@ -372,9 +372,13 @@ std::shared_ptr<BlockStatement> JotParser::parse_block_statement() {
 
 std::shared_ptr<ReturnStatement> JotParser::parse_return_statement() {
     auto keyword = consume_kind(TokenKind::ReturnKeyword, "Expect return keyword.");
+    if (is_current_kind(TokenKind::Semicolon)) {
+        assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after return keyword");
+        return std::make_shared<ReturnStatement>(keyword, nullptr, false);
+    }
     auto value = parse_expression();
     assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after return statement");
-    return std::make_shared<ReturnStatement>(keyword, value);
+    return std::make_shared<ReturnStatement>(keyword, value, true);
 }
 
 std::shared_ptr<DeferStatement> JotParser::parse_defer_statement() {

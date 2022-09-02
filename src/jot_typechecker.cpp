@@ -168,9 +168,20 @@ std::any JotTypeChecker::visit(WhileStatement *node) {
 }
 
 std::any JotTypeChecker::visit(ReturnStatement *node) {
+    if (not node->has_value()) {
+        if (current_function_return_type->get_type_kind() != TypeKind::Void) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_position().get_span(), "Expect return value to be " +
+                                                     current_function_return_type->type_literal() +
+                                                     " but got void");
+            throw "Stop";
+        }
+        return 0;
+    }
+
     auto return_type = node_jot_type(node->return_value()->accept(this));
 
-    if (not return_type->equals(current_function_return_type)) {
+    if (not current_function_return_type->equals(return_type)) {
         context->diagnostics.add_diagnostic_error(node->get_position().get_span(),
                                                   "Expect return value to be " +
                                                       current_function_return_type->type_literal() +

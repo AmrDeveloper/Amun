@@ -255,7 +255,7 @@ std::any JotLLVMBackend::visit(ReturnStatement *node) {
 
     has_return_statement = true;
 
-    if (node->return_value()->get_type_node()->get_type_kind() == TypeKind::Void) {
+    if (not node->has_value()) {
         return Builder.CreateRetVoid();
     }
 
@@ -671,7 +671,7 @@ std::any JotLLVMBackend::visit(CallExpression *node) {
             arguments_values.push_back(loaded_value);
         }
     }
-    return Builder.CreateCall(function, arguments_values, "calltmp");
+    return Builder.CreateCall(function, arguments_values);
 }
 
 std::any JotLLVMBackend::visit(CastExpression *node) {
@@ -902,16 +902,22 @@ llvm::Type *JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
         case NumberKind::Float32: return llvm_float32_type;
         case NumberKind::Float64: return llvm_float64_type;
         }
-    } else if (type_kind == TypeKind::Array) {
+    }
+
+    if (type_kind == TypeKind::Array) {
         auto jot_array_type = std::dynamic_pointer_cast<JotArrayType>(type);
         auto element_type = llvm_type_from_jot_type(jot_array_type->get_element_type());
         auto size = jot_array_type->get_size();
         return llvm::ArrayType::get(element_type, size);
-    } else if (type_kind == TypeKind::Pointer) {
+    }
+
+    if (type_kind == TypeKind::Pointer) {
         auto jot_pointer_type = std::dynamic_pointer_cast<JotPointerType>(type);
         auto point_to_type = llvm_type_from_jot_type(jot_pointer_type->get_point_to());
         return llvm::PointerType::get(point_to_type, 0);
-    } else if (type_kind == TypeKind::Function) {
+    }
+
+    if (type_kind == TypeKind::Function) {
         auto jot_function_type = std::dynamic_pointer_cast<JotFunctionType>(type);
         auto parameters = jot_function_type->get_parameters();
         int parameters_size = parameters.size();
@@ -922,10 +928,17 @@ llvm::Type *JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
         auto return_type = llvm_type_from_jot_type(jot_function_type->get_return_type());
         auto function_type = llvm::FunctionType::get(return_type, arguments, false);
         return function_type;
-    } else if (type_kind == TypeKind::EnumerationElement) {
+    }
+
+    if (type_kind == TypeKind::EnumerationElement) {
         auto enum_element_type = std::dynamic_pointer_cast<JotEnumElementType>(type);
         return llvm_type_from_jot_type(enum_element_type->get_element_type());
     }
+
+    if (type_kind == TypeKind::Void) {
+        return llvm_void_type;
+    }
+
     jot::loge << "Compiler Internal error: Can't find LLVM Type for this Jot Type "
               << type->type_literal() << '\n';
     exit(1);

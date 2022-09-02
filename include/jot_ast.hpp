@@ -267,12 +267,14 @@ class WhileStatement : public Statement {
 
 class ReturnStatement : public Statement {
   public:
-    ReturnStatement(Token position, std::shared_ptr<Expression> value)
-        : position(position), value(value) {}
+    ReturnStatement(Token position, std::shared_ptr<Expression> value, bool contain_value)
+        : position(position), value(value), contain_value(contain_value) {}
 
     Token get_position() { return position; }
 
     std::shared_ptr<Expression> return_value() { return value; }
+
+    bool has_value() { return contain_value; }
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
@@ -281,6 +283,7 @@ class ReturnStatement : public Statement {
   private:
     Token position;
     std::shared_ptr<Expression> value;
+    bool contain_value;
 };
 
 class DeferStatement : public Statement {
