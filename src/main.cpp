@@ -10,7 +10,7 @@
 
 int execute_create_command(unused int argc, char **argv) {
     if (argc < 3) {
-        printf("Invalid number of arguments expect %i but got %i\n", 3, argc);
+        printf("Invalid number of arguments for create command expect %i but got %i\n", 3, argc);
         printf("Usage : %s create <project name>\n", argv[0]);
         return EXIT_FAILURE;
     }
@@ -39,6 +39,11 @@ int execute_create_command(unused int argc, char **argv) {
 }
 
 int execute_compile_command(unused int argc, char **argv) {
+    if (argc < 3) {
+        printf("Invalid number of arguments for `compile` command expect at last %i but got %i\n", 3, argc);
+        printf("Usage : %s compile <file> <options>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
     const char *source = argv[2];
     auto jot_context = std::make_shared<JotContext>();
     JotCompiler jot_compiler(jot_context);
@@ -46,6 +51,11 @@ int execute_compile_command(unused int argc, char **argv) {
 }
 
 int execute_check_command(unused int argc, char **argv) {
+    if (argc < 3) {
+        printf("Invalid number of arguments for `check` command expect %i but got %i\n", 3, argc);
+        printf("Usage : %s check <file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
     const char *source = argv[2];
     auto jot_context = std::make_shared<JotContext>();
     JotCompiler jot_compiler(jot_context);
