@@ -1,6 +1,7 @@
 #pragma once
 
 #include "jot_diagnostics.hpp"
+#include "jot_options.hpp"
 #include "jot_type.hpp"
 
 #include <memory>
@@ -24,6 +25,7 @@ class JotContext {
 
     void set_postfix_function(std::string &name);
 
+    JotOptions options;
     JotDiagnosticEngine diagnostics;
     std::unordered_map<std::string, std::shared_ptr<JotEnumType>> enumerations;
 

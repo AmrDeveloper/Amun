@@ -40,12 +40,16 @@ int execute_create_command(unused int argc, char **argv) {
 
 int execute_compile_command(unused int argc, char **argv) {
     if (argc < 3) {
-        printf("Invalid number of arguments for `compile` command expect at last %i but got %i\n", 3, argc);
+        printf("Invalid number of arguments for `compile` command expect at last %i but got %i\n",
+               3, argc);
         printf("Usage : %s compile <file> <options>\n", argv[0]);
         return EXIT_FAILURE;
     }
+
     const char *source = argv[2];
     auto jot_context = std::make_shared<JotContext>();
+    parse_compiler_options(&jot_context->options, argc, argv);
+
     JotCompiler jot_compiler(jot_context);
     return jot_compiler.compile_source_code(source);
 }
@@ -75,6 +79,9 @@ int execute_help_command(unused int argc, char **argv) {
     printf("    - check   <file>           : Check if the source code is valid.\n");
     printf("    - version                  : Print the current Jot version.\n");
     printf("    - help                     : Print how to use and list of commands.\n");
+    printf("Options:\n");
+    printf("    -o  <name>                 : Set the output exeutable name.\n");
+    printf("    -w                         : Enable reporting warns, disabled by default.\n");
     return EXIT_SUCCESS;
 }
 

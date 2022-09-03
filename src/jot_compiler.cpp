@@ -11,7 +11,8 @@ int JotCompiler::compile_source_code(const char *source_file) {
     JotTypeChecker type_checker(jot_context);
     type_checker.check_compilation_unit(compilation_unit);
 
-    if (should_report_warings and jot_context->diagnostics.get_warns_number() > 0) {
+    if (jot_context->options.should_report_warings and
+        jot_context->diagnostics.get_warns_number() > 0) {
         jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Warning);
     }
 
@@ -23,15 +24,15 @@ int JotCompiler::compile_source_code(const char *source_file) {
     JotLLVMBackend llvm_backend;
     auto llvm_ir_module = llvm_backend.compile(source_file, compilation_unit);
 
-    const char *ouputFileName = "output.ll";
     std::error_code error_code;
-    llvm::raw_fd_ostream output_stream(ouputFileName, error_code);
+    llvm::raw_fd_ostream output_stream(jot_context->options.executable_name, error_code);
     if (error_code.message() != "Success") {
         return EXIT_FAILURE;
     }
 
     llvm_ir_module->print(output_stream, nullptr);
-    std::cout << "File " << source_file << " Successfully compiled to " << ouputFileName << '\n';
+    std::cout << "File " << source_file << " Successfully compiled to "
+              << jot_context->options.executable_name << '\n';
     return EXIT_SUCCESS;
 }
 
@@ -41,7 +42,8 @@ int JotCompiler::check_source_code(const char *source_file) {
     JotTypeChecker type_checker(jot_context);
     type_checker.check_compilation_unit(compilation_unit);
 
-    if (should_report_warings and jot_context->diagnostics.get_warns_number() > 0) {
+    if (jot_context->options.should_report_warings and
+        jot_context->diagnostics.get_warns_number() > 0) {
         jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Warning);
     }
 
@@ -65,7 +67,8 @@ std::shared_ptr<CompilationUnit> JotCompiler::parse_source_code(const char *sour
 
     auto compilation_unit = parser.parse_compilation_unit();
 
-    if (should_report_warings and jot_context->diagnostics.get_warns_number() > 0) {
+    if (jot_context->options.should_report_warings and
+        jot_context->diagnostics.get_warns_number() > 0) {
         jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Warning);
     }
 
