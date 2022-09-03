@@ -1,0 +1,11 @@
+extern fun puts(s *char) int64;
+
+fun function_return_void() void {
+    puts("Hello, World");
+    return; 
+}
+
+fun main() int64 {
+    function_return_void();
+    return 0;
+}
