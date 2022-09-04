@@ -11,13 +11,18 @@ int JotCompiler::compile_source_code(const char *source_file) {
     JotTypeChecker type_checker(jot_context);
     type_checker.check_compilation_unit(compilation_unit);
 
-    if (jot_context->options.should_report_warings and
+    if (jot_context->options.should_report_warns and
         jot_context->diagnostics.get_warns_number() > 0) {
         jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Warning);
     }
 
     if (jot_context->diagnostics.get_errors_number() > 0) {
         jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Error);
+        exit(EXIT_FAILURE);
+    }
+
+    if (jot_context->options.convert_warns_to_errors and
+        jot_context->diagnostics.get_warns_number() > 0) {
         exit(EXIT_FAILURE);
     }
 
@@ -42,13 +47,18 @@ int JotCompiler::check_source_code(const char *source_file) {
     JotTypeChecker type_checker(jot_context);
     type_checker.check_compilation_unit(compilation_unit);
 
-    if (jot_context->options.should_report_warings and
+    if (jot_context->options.should_report_warns and
         jot_context->diagnostics.get_warns_number() > 0) {
         jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Warning);
     }
 
     if (jot_context->diagnostics.get_errors_number() > 0) {
         jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Error);
+        exit(EXIT_FAILURE);
+    }
+
+    if (jot_context->options.convert_warns_to_errors and
+        jot_context->diagnostics.get_warns_number() > 0) {
         exit(EXIT_FAILURE);
     }
 
@@ -67,13 +77,18 @@ std::shared_ptr<CompilationUnit> JotCompiler::parse_source_code(const char *sour
 
     auto compilation_unit = parser.parse_compilation_unit();
 
-    if (jot_context->options.should_report_warings and
+    if (jot_context->options.should_report_warns and
         jot_context->diagnostics.get_warns_number() > 0) {
         jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Warning);
     }
 
     if (jot_context->diagnostics.get_errors_number() > 0) {
         jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Error);
+        exit(EXIT_FAILURE);
+    }
+
+    if (jot_context->options.convert_warns_to_errors and
+        jot_context->diagnostics.get_warns_number() > 0) {
         exit(EXIT_FAILURE);
     }
 

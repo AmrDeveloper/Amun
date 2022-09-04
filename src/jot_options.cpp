@@ -25,7 +25,14 @@ void parse_compiler_options(JotOptions *options, int argc, char **argv) {
 
         // Enable reporting warns
         if (strcmp(argument, WARNINGS_FLAG) == 0) {
-            options->should_report_warings = true;
+            options->should_report_warns = true;
+            continue;
+        }
+
+        // Convert warns to errors
+        if (strcmp(argument, WARNS_TO_ERRORS_FLAG) == 0) {
+            options->convert_warns_to_errors = true;
+            options->should_report_warns = true;
             continue;
         }
 
