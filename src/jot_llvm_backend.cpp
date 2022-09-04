@@ -54,12 +54,13 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
     // Globals code generation block can be moved into other function to be clear and handle more
     // cases and to handle also soem compile time evaluations
     if (node->is_global()) {
-        auto global_variable = new llvm::GlobalVariable(
-            *llvm_module, llvm_type, true, llvm::GlobalValue::ExternalLinkage, 0, var_name.c_str());
-        global_variable->setAlignment(
-            llvm::MaybeAlign(llvm_module->getDataLayout().getTypeAllocSize(llvm_type)));
-        auto constant_value = llvm::dyn_cast<llvm::Constant>(llvm_node_value(value));
-        global_variable->setInitializer(constant_value);
+        auto constants_value = llvm::dyn_cast<llvm::Constant>(llvm_node_value(value));
+
+        auto global_variable = new llvm::GlobalVariable(*llvm_module, llvm_type, true,
+                                                        llvm::GlobalValue::ExternalLinkage,
+                                                        constants_value, var_name.c_str());
+
+        global_variable->setAlignment(llvm::MaybeAlign(0));
         return 0;
     }
 
@@ -437,17 +438,36 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
 
         // Update element value in Single dimention Array
         if (auto array_literal = std::dynamic_pointer_cast<LiteralExpression>(node_value)) {
-            auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_node_value(
-                alloca_inst_scope->lookup(array_literal->get_name().get_literal())));
-            auto ptr =
-                Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero_int32_value, index});
-            return Builder.CreateStore(right_value, ptr);
+            auto array = array_literal->accept(this);
+            if (array.type() == typeid(llvm::AllocaInst *)) {
+                auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_node_value(
+                    alloca_inst_scope->lookup(array_literal->get_name().get_literal())));
+                auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca,
+                                             {zero_int32_value, index});
+                return Builder.CreateStore(right_value, ptr);
+            }
+
+            if (array.type() == typeid(llvm::GlobalVariable *)) {
+                auto global_variable_array =
+                    llvm::dyn_cast<llvm::GlobalVariable>(llvm_node_value(array));
+                auto variable_constants_value = global_variable_array->getInitializer();
+
+                auto alloca = Builder.CreateAlloca(variable_constants_value->getType());
+                Builder.CreateStore(variable_constants_value, alloca);
+
+                auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca,
+                                             {zero_int32_value, index});
+
+                return Builder.CreateStore(right_value, ptr);
+            }
+
+            jot::loge << "Internal Compiler error: assign value index expression\n";
+            exit(1);
         }
 
         // Update element value in Multi dimentions Array
         if (auto sub_index_expression = std::dynamic_pointer_cast<IndexExpression>(node_value)) {
             auto array = llvm_node_value(node_value->accept(this));
-            auto element_type = llvm_type_from_jot_type(node->get_type_node());
             auto load_inst = dyn_cast<llvm::LoadInst>(array);
             auto ptr = Builder.CreateGEP(array->getType(), load_inst->getPointerOperand(),
                                          {zero_int32_value, index});
@@ -735,10 +755,30 @@ std::any JotLLVMBackend::visit(IndexExpression *node) {
 
     // One dimension Array Index Expression
     if (auto array_literal = std::dynamic_pointer_cast<LiteralExpression>(node_value)) {
-        auto alloca = llvm::dyn_cast<llvm::AllocaInst>(
-            llvm_node_value(alloca_inst_scope->lookup(array_literal->get_name().get_literal())));
-        auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero_int32_value, index});
-        return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
+        auto array = array_literal->accept(this);
+        if (array.type() == typeid(llvm::AllocaInst *)) {
+            auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_node_value(array));
+            auto ptr =
+                Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero_int32_value, index});
+            return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
+        }
+
+        if (array.type() == typeid(llvm::GlobalVariable *)) {
+            auto global_variable_array =
+                llvm::dyn_cast<llvm::GlobalVariable>(llvm_node_value(array));
+            auto variable_constants_value = global_variable_array->getInitializer();
+
+            auto alloca = Builder.CreateAlloca(variable_constants_value->getType(), nullptr);
+            Builder.CreateStore(variable_constants_value, alloca);
+
+            auto ptr =
+                Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero_int32_value, index});
+            return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
+        }
+
+        jot::loge << "Internal Compiler error: Index expression with literal must have alloca or "
+                     "global variable\n";
+        exit(1);
     }
 
     // Multidimensional Array Index Expression
@@ -775,6 +815,17 @@ std::any JotLLVMBackend::visit(NumberExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(ArrayExpression *node) {
+    if (node->is_constant()) {
+        auto arrayType =
+            llvm::dyn_cast<llvm::ArrayType>(llvm_type_from_jot_type(node->get_type_node()));
+        std::vector<llvm::Constant *> values;
+        for (auto &value : node->get_values()) {
+            values.push_back(
+                llvm::dyn_cast<llvm::Constant>(llvm_resolve_value(value->accept(this))));
+        }
+        return llvm::ConstantArray::get(arrayType, values);
+    }
+
     auto arrayType = llvm_type_from_jot_type(node->get_type_node());
     std::vector<llvm::Value *> values;
     for (auto &value : node->get_values()) {

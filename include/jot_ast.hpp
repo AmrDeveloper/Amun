@@ -740,7 +740,11 @@ class ArrayExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
-    bool is_constant() override { return false; }
+    bool is_constant() override {
+        if (values.size() == 0)
+            return true;
+        return values[0]->is_constant();
+    }
 
   private:
     Token position;

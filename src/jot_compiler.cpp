@@ -62,7 +62,7 @@ int JotCompiler::check_source_code(const char *source_file) {
         exit(EXIT_FAILURE);
     }
 
-    std::cout << "Source code in " << source_file << " is valid" << std::endl << std::endl;
+    std::cout << "Source code in " << source_file << " is valid" << std::endl;
     return EXIT_SUCCESS;
 }
 
