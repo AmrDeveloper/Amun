@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 extension = ".exe" if os == "nt" else ""
-executable = "./build/jot" + extension
+executable = "./build/bin/jot" + extension
 
 def collect_all_files(path):
     root = Path(path)
