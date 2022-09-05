@@ -56,7 +56,7 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
     if (node->is_global()) {
         auto constants_value = llvm::dyn_cast<llvm::Constant>(llvm_node_value(value));
 
-        auto global_variable = new llvm::GlobalVariable(*llvm_module, llvm_type, true,
+        auto global_variable = new llvm::GlobalVariable(*llvm_module, llvm_type, false,
                                                         llvm::GlobalValue::ExternalLinkage,
                                                         constants_value, var_name.c_str());
 
@@ -417,16 +417,27 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
         auto name = literal->get_name().get_literal();
         auto value = node->get_right()->accept(this);
 
+        /*
+        @Refactor: Un needed code, must delete it later
         if (value.type() == typeid(llvm::AllocaInst *)) {
             auto init_value = std::any_cast<llvm::AllocaInst *>(value);
             alloca_inst_scope->update(name, init_value);
             return Builder.CreateLoad(init_value->getAllocatedType(), init_value, name.c_str());
         }
+        */
 
-        llvm::Value *right_value = llvm_resolve_value(value);
-        auto alloc_inst = std::any_cast<llvm::AllocaInst *>(alloca_inst_scope->lookup(name));
-        alloca_inst_scope->update(name, alloc_inst);
-        return Builder.CreateStore(right_value, alloc_inst);
+        auto right_value = llvm_resolve_value(value);
+        auto left_value = node->get_left()->accept(this);
+        if (left_value.type() == typeid(llvm::AllocaInst *)) {
+            auto alloca = std::any_cast<llvm::AllocaInst *>(left_value);
+            alloca_inst_scope->update(name, alloca);
+            return Builder.CreateStore(right_value, alloca);
+        }
+
+        if (left_value.type() == typeid(llvm::GlobalVariable *)) {
+            auto global_variable = std::any_cast<llvm::GlobalVariable *>(left_value);
+            return Builder.CreateStore(right_value, global_variable);
+        }
     }
 
     // Assign value to n dimentions array position
@@ -450,13 +461,18 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
             if (array.type() == typeid(llvm::GlobalVariable *)) {
                 auto global_variable_array =
                     llvm::dyn_cast<llvm::GlobalVariable>(llvm_node_value(array));
-                auto variable_constants_value = global_variable_array->getInitializer();
+                // auto variable_constants_value = global_variable_array->getInitializer();
 
-                auto alloca = Builder.CreateAlloca(variable_constants_value->getType());
-                Builder.CreateStore(variable_constants_value, alloca);
+                // auto alloca = Builder.CreateAlloca(variable_constants_value->getType());
+                // auto store = Builder.CreateStore(variable_constants_value, alloca);
 
-                auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca,
-                                             {zero_int32_value, index});
+                auto ptr = Builder.CreateGEP(global_variable_array->getValueType(),
+                                             global_variable_array, {zero_int32_value, index});
+
+                /*
+                auto global_variable = std::any_cast<llvm::GlobalVariable *>(left_value);
+                return Builder.CreateStore(right_value, global_variable);
+                */
 
                 return Builder.CreateStore(right_value, ptr);
             }
@@ -766,13 +782,8 @@ std::any JotLLVMBackend::visit(IndexExpression *node) {
         if (array.type() == typeid(llvm::GlobalVariable *)) {
             auto global_variable_array =
                 llvm::dyn_cast<llvm::GlobalVariable>(llvm_node_value(array));
-            auto variable_constants_value = global_variable_array->getInitializer();
-
-            auto alloca = Builder.CreateAlloca(variable_constants_value->getType(), nullptr);
-            Builder.CreateStore(variable_constants_value, alloca);
-
-            auto ptr =
-                Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero_int32_value, index});
+            auto ptr = Builder.CreateGEP(global_variable_array->getValueType(),
+                                         global_variable_array, {zero_int32_value, index});
             return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
         }
 
