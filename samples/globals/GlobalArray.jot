@@ -1,0 +1,10 @@
+extern fun printf(format *char, value int64) int64;
+
+var array = [4, 5, 6];
+
+fun main() int64 {
+    printf("%d\n", array[0]);
+    printf("%d\n", array[1]);
+    printf("%d\n", array[2]);
+    return 0;
+}

@@ -1,0 +1,11 @@
+extern fun printf(format *char, value int64) int64;
+
+var x = 10;
+
+fun main() int64 {
+    var y = 20;
+    printf("X before update %d\n", x);
+    x = y;
+    printf("X After update %d\n", x);
+    return 0;
+}
