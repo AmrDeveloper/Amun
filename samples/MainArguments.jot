@@ -1,6 +1,12 @@
-extern fun printf(format *char, value int32) int64;
+extern fun printf(format *char, value *char) int64;
 
-fun main(argc int32, argv **char) int64 {
-    printf("Number of arguments is %d", argc);
+extern fun puts(s *char) int64;
+
+fun main(argc int64, argv **char) int64 {
+    var i = 0;
+    while i < argc {
+        printf("%s\n", argv[i]);
+        i += 1;
+    }
     return 0;
 }
