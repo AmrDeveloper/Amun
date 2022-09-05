@@ -1,0 +1,7 @@
+enum Numbers { ONE, TWO, THREE }
+
+var one : Numbers = Numbers::ONE;
+
+fun main() int64 {
+    return 0;
+}
