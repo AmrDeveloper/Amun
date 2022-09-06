@@ -95,6 +95,8 @@ class JotTypeChecker : public TreeVisitor {
 
     bool is_same_type(const std::shared_ptr<JotType> &left, const std::shared_ptr<JotType> &right);
 
+    bool check_number_limits(const char *literal, NumberKind kind);
+
     void check_parameters_types(TokenSpan location,
                                 std::vector<std::shared_ptr<Expression>> &arguments,
                                 std::vector<std::shared_ptr<JotType>> &parameters);

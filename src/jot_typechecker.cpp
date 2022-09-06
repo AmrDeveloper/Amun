@@ -4,7 +4,8 @@
 #include "../include/jot_type.hpp"
 
 #include <any>
-#include <memory>
+#include <cstdint>
+#include <limits>
 #include <string>
 
 void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> compilation_unit) {
@@ -531,7 +532,24 @@ std::any JotTypeChecker::visit(LiteralExpression *node) {
     }
 }
 
-std::any JotTypeChecker::visit(NumberExpression *node) { return node->get_type_node(); }
+std::any JotTypeChecker::visit(NumberExpression *node) {
+    auto number_type = std::dynamic_pointer_cast<JotNumberType>(node->get_type_node());
+    auto number_kind = number_type->get_kind();
+    auto number_literal = node->get_value().get_literal();
+
+    bool is_valid_range = check_number_limits(number_literal.c_str(), number_kind);
+    if (not is_valid_range) {
+        // TODO: Diagnostic message can be improved and provide more information
+        // for example `value x must be in range s .. e or you should change the type to y`
+        context->diagnostics.add_diagnostic_error(node->get_value().get_span(),
+                                                  "Number Value " + number_literal +
+                                                      " Can't be represented using type " +
+                                                      number_type->type_literal());
+        throw "Stop";
+    }
+
+    return number_type;
+}
 
 std::any JotTypeChecker::visit(ArrayExpression *node) {
     auto values = node->get_values();
@@ -658,6 +676,45 @@ void JotTypeChecker::check_parameters_types(TokenSpan location,
 bool JotTypeChecker::is_same_type(const std::shared_ptr<JotType> &left,
                                   const std::shared_ptr<JotType> &right) {
     return left->get_type_kind() == right->get_type_kind();
+}
+
+bool JotTypeChecker::check_number_limits(const char *literal, NumberKind kind) {
+    switch (kind) {
+    case NumberKind::Integer1: {
+        auto value = strtoll(literal, NULL, 0);
+        return value == 0 or value == 1;
+    }
+    case NumberKind::Integer8: {
+        auto value = strtoll(literal, NULL, 0);
+        return value >= std::numeric_limits<int8_t>::min() and
+               value <= std::numeric_limits<int8_t>::max();
+    }
+    case NumberKind::Integer16: {
+        auto value = strtoll(literal, NULL, 0);
+        return value >= std::numeric_limits<int16_t>::min() and
+               value <= std::numeric_limits<int16_t>::max();
+    }
+    case NumberKind::Integer32: {
+        auto value = strtoll(literal, NULL, 0);
+        return value >= std::numeric_limits<int32_t>::min() and
+               value <= std::numeric_limits<int32_t>::max();
+    }
+    case NumberKind::Integer64: {
+        auto value = strtoll(literal, NULL, 0);
+        return value >= std::numeric_limits<int64_t>::min() and
+               value <= std::numeric_limits<int64_t>::max();
+    }
+    case NumberKind::Float32: {
+        auto value = std::atof(literal);
+        return value >= std::numeric_limits<float>::min() and
+               value <= std::numeric_limits<float>::max();
+    }
+    case NumberKind::Float64: {
+        auto value = std::atof(literal);
+        return value >= std::numeric_limits<double>::min() and
+               value <= std::numeric_limits<double>::max();
+    }
+    }
 }
 
 void JotTypeChecker::push_new_scope() {
