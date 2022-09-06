@@ -172,6 +172,8 @@ Token JotTokenizer::consume_number() {
             advance();
     }
 
+    auto number_end_position = current_position;
+
     if (match('i')) {
         if (match('1'))
             kind = match('6') ? Integer16Type : Integer1Type;
@@ -192,7 +194,7 @@ Token JotTokenizer::consume_number() {
             return build_token(TokenKind::Invalid, "Invalid Float type");
     }
 
-    size_t len = current_position - start_position + 1;
+    size_t len = number_end_position - start_position + 1;
     auto literal = source_code.substr(start_position - 1, len);
     return build_token(kind, literal);
 }
