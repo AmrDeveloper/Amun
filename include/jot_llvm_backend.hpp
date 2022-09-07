@@ -153,6 +153,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Value *llvm_character_value(char character);
 
+    llvm::Value *llvm_type_default_value(std::shared_ptr<JotType> type);
+
     llvm::Type *llvm_type_from_jot_type(std::shared_ptr<JotType> type);
 
     llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function,

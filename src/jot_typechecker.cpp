@@ -31,38 +31,43 @@ std::any JotTypeChecker::visit(BlockStatement *node) {
 std::any JotTypeChecker::visit(FieldDeclaration *node) {
     auto left_type = node->get_type();
     auto right_value = node->get_value();
-    auto right_type = node_jot_type(right_value->accept(this));
 
-    if (node->is_global() and !right_value->is_constant()) {
-        context->diagnostics.add_diagnostic_error(
-            node->get_name().get_span(), "Initializer element is not a compile-time constant");
-        throw "Stop";
-    }
+    // If field has initalizer, check that initalizer type is matching the declaration type
+    // If declaration type is null, infier it using the rvalue type
+    if (right_value != nullptr) {
+        auto right_type = node_jot_type(right_value->accept(this));
 
-    bool is_left_none_type = is_none_type(left_type);
-    bool is_right_none_type = is_none_type(right_type);
-    if (is_left_none_type and is_right_none_type) {
-        context->diagnostics.add_diagnostic_error(
-            node->get_name().get_span(),
-            "Can't resolve field type when both rvalue and lvalue are unkown");
-        throw "Stop";
-    }
+        if (node->is_global() and !right_value->is_constant()) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_name().get_span(), "Initializer element is not a compile-time constant");
+            throw "Stop";
+        }
 
-    if (is_left_none_type) {
-        node->set_type(right_type);
-        left_type = right_type;
-    }
+        bool is_left_none_type = is_none_type(left_type);
+        bool is_right_none_type = is_none_type(right_type);
+        if (is_left_none_type and is_right_none_type) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_name().get_span(),
+                "Can't resolve field type when both rvalue and lvalue are unkown");
+            throw "Stop";
+        }
 
-    if (is_right_none_type) {
-        node->get_value()->set_type_node(left_type);
-        right_type = left_type;
-    }
+        if (is_left_none_type) {
+            node->set_type(right_type);
+            left_type = right_type;
+        }
 
-    if (not left_type->equals(right_type)) {
-        context->diagnostics.add_diagnostic_error(
-            node->get_name().get_span(), "Type missmatch expect " + left_type->type_literal() +
-                                             " but got " + right_type->type_literal());
-        throw "Stop";
+        if (is_right_none_type) {
+            node->get_value()->set_type_node(left_type);
+            right_type = left_type;
+        }
+
+        if (not left_type->equals(right_type)) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_name().get_span(), "Type missmatch expect " + left_type->type_literal() +
+                                                 " but got " + right_type->type_literal());
+            throw "Stop";
+        }
     }
 
     auto name = node->get_name().get_literal();
@@ -706,12 +711,12 @@ bool JotTypeChecker::check_number_limits(const char *literal, NumberKind kind) {
     }
     case NumberKind::Float32: {
         auto value = std::atof(literal);
-        return value >= std::numeric_limits<float>::min() and
+        return value >= -std::numeric_limits<float>::max() and
                value <= std::numeric_limits<float>::max();
     }
     case NumberKind::Float64: {
         auto value = std::atof(literal);
-        return value >= std::numeric_limits<double>::min() and
+        return value >= -std::numeric_limits<double>::max() and
                value <= std::numeric_limits<double>::max();
     }
     }

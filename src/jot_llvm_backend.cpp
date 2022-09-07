@@ -48,8 +48,16 @@ std::any JotLLVMBackend::visit(BlockStatement *node) {
 
 std::any JotLLVMBackend::visit(FieldDeclaration *node) {
     auto var_name = node->get_name().get_literal();
-    auto llvm_type = llvm_type_from_jot_type(node->get_type());
-    auto value = node->get_value()->accept(this);
+    auto field_type = node->get_type();
+    auto llvm_type = llvm_type_from_jot_type(field_type);
+
+    // if field has initalizer evaluate it, else initalize it with default value
+    std::any value;
+    if (node->get_value() == nullptr) {
+        value = llvm_type_default_value(field_type);
+    } else {
+        value = node->get_value()->accept(this);
+    }
 
     // Globals code generation block can be moved into other function to be clear and handle more
     // cases and to handle also soem compile time evaluations
@@ -948,6 +956,16 @@ llvm::Value *JotLLVMBackend::llvm_boolean_value(bool value) {
 
 llvm::Value *JotLLVMBackend::llvm_character_value(char character) {
     return llvm::ConstantInt::get(llvm_int8_type, character);
+}
+
+llvm::Value *JotLLVMBackend::llvm_type_default_value(std::shared_ptr<JotType> type) {
+    if (type->get_type_kind() == TypeKind::Number) {
+        auto number_type = std::dynamic_pointer_cast<JotNumberType>(type);
+        return llvm_number_value("0", number_type->get_kind());
+    }
+
+    jot::loge << "Jot currenly support only default values for numbers\n";
+    exit(1);
 }
 
 llvm::Type *JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> type) {
