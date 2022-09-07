@@ -928,7 +928,7 @@ llvm::Value *JotLLVMBackend::llvm_number_value(std::string value_litearl, Number
         return llvm::ConstantInt::get(llvm_int32_type, value);
     }
     case NumberKind::Integer64: {
-        auto value = std::stoi(value_litearl.c_str());
+        auto value = std::strtoll(value_litearl.c_str(), NULL, 0);
         return llvm::ConstantInt::get(llvm_int64_type, value);
     }
     case NumberKind::Float32: {
