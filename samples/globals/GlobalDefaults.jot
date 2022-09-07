@@ -1,0 +1,10 @@
+extern fun printf(format *char, value int64) int64;
+
+var x : int64;
+var y : int64;
+
+fun main() int64 {
+    printf("Global variable x default value is %d\n", x);
+    printf("Global variable y default value is %d\n", y);
+    return 0;
+}
