@@ -959,9 +959,24 @@ llvm::Value *JotLLVMBackend::llvm_character_value(char character) {
 }
 
 llvm::Value *JotLLVMBackend::llvm_type_default_value(std::shared_ptr<JotType> type) {
-    if (type->get_type_kind() == TypeKind::Number) {
+    auto type_kind = type->get_type_kind();
+
+    // Generate llvm value node for numeric types
+    if (type_kind == TypeKind::Number) {
         auto number_type = std::dynamic_pointer_cast<JotNumberType>(type);
         return llvm_number_value("0", number_type->get_kind());
+    }
+
+    // Generate llvm value node for n dimensions array, where n <= 1
+    if (type_kind == TypeKind::Array) {
+        auto array_type = std::dynamic_pointer_cast<JotArrayType>(type);
+        auto array_element_type = array_type->get_element_type();
+        auto element_default_type =
+            llvm::dyn_cast<llvm::Constant>(llvm_type_default_value(array_element_type));
+        auto array_size = array_type->get_size();
+        auto llvm_arrayType = llvm::dyn_cast<llvm::ArrayType>(llvm_type_from_jot_type(array_type));
+        std::vector<llvm::Constant *> values(array_size, element_default_type);
+        return llvm::ConstantArray::get(llvm_arrayType, values);
     }
 
     jot::loge << "Jot currenly support only default values for numbers\n";
