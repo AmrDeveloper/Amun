@@ -2,9 +2,13 @@ extern fun printf(format *char, value int64) int64;
 
 var x : int64;
 var y : int64;
+var array : [5]int64;
+var array2d : [5][5]int64;
 
 fun main() int64 {
     printf("Global variable x default value is %d\n", x);
     printf("Global variable y default value is %d\n", y);
+    printf("Global variable array[0] default value is %d\n", array[0]);
+    printf("Global variable array2d[0][0] default value is %d\n", array2d[0][0]);
     return 0;
 }
