@@ -9,7 +9,7 @@ A Statically typed, compiled general purpose low level programming language buil
 - Pointers
 - Arrays
 - Multi Dimensional Arrays
-- Enumeration
+- Strong Enumeration
 - Function Pointer
 - Local Variables
 - Global Variables
@@ -24,6 +24,7 @@ A Statically typed, compiled general purpose low level programming language buil
 - Standard C Headers as part of the Standard library
 - No implicit casting, every cast must be explicit to be clear
 - Defer Statement
+- Default initalization value for global and local variables
 
 ### Requirements for Developments
 - C++ Compiler (GCC or Clang) that support C++20
