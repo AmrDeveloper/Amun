@@ -506,40 +506,25 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
 std::any JotLLVMBackend::visit(BinaryExpression *node) {
     auto left = llvm_resolve_value(node->get_left()->accept(this));
     auto right = llvm_resolve_value(node->get_right()->accept(this));
-    if (not left || not right) {
-        return nullptr;
+    auto op = node->get_operator_token().get_kind();
+
+    // Binary Operations for integer types
+    if (left->getType()->isIntegerTy() and right->getType()->isIntegerTy()) {
+        return create_llvm_integers_bianry(op, left, right);
     }
 
-    switch (node->get_operator_token().get_kind()) {
-    case TokenKind::Plus: {
-        return Builder.CreateAdd(left, right, "addtemp");
+    // Binary Operations for floating point types
+    if (left->getType()->isFloatingPointTy() and right->getType()->isFloatingPointTy()) {
+        return create_llvm_floats_bianry(op, left, right);
     }
-    case TokenKind::Minus: {
-        return Builder.CreateSub(left, right, "subtmp");
-    }
-    case TokenKind::Star: {
-        return Builder.CreateMul(left, right, "multmp");
-    }
-    case TokenKind::Slash: {
-        return Builder.CreateUDiv(left, right, "divtmp");
-    }
-    case TokenKind::Percent: {
-        return Builder.CreateURem(left, right, "remtemp");
-    }
-    default: {
-        jot::loge << "Invalid binary operator\n";
-        exit(1);
-    }
-    }
+
+    jot::loge << "Binary Operators work only for Numeric types\n";
+    exit(1);
 }
 
 std::any JotLLVMBackend::visit(ShiftExpression *node) {
     auto left = llvm_resolve_value(node->get_left()->accept(this));
     auto right = llvm_resolve_value(node->get_right()->accept(this));
-    if (not left || not right) {
-        return nullptr;
-    }
-
     auto operator_kind = node->get_operator_token().get_kind();
 
     if (operator_kind == TokenKind::LeftShift) {
@@ -557,34 +542,22 @@ std::any JotLLVMBackend::visit(ShiftExpression *node) {
 std::any JotLLVMBackend::visit(ComparisonExpression *node) {
     auto left = llvm_resolve_value(node->get_left()->accept(this));
     auto right = llvm_resolve_value(node->get_right()->accept(this));
-    if (not left || not right) {
-        return nullptr;
+    auto op = node->get_operator_token().get_kind();
+
+    // Comparison Operations for integers types
+    if (left->getType()->isIntegerTy() and right->getType()->isIntegerTy()) {
+        return create_llvm_integers_comparison(op, left, right);
     }
 
-    switch (node->get_operator_token().get_kind()) {
-    case TokenKind::EqualEqual: {
-        return Builder.CreateICmpEQ(left, right);
+    // Comparison Operations for floating point types
+    if (left->getType()->isFloatingPointTy() and right->getType()->isFloatingPointTy()) {
+        return create_llvm_floats_comparison(op, left, right);
     }
-    case TokenKind::BangEqual: {
-        return Builder.CreateICmpNE(left, right);
-    }
-    case TokenKind::Greater: {
-        return Builder.CreateICmpUGT(left, right);
-    }
-    case TokenKind::GreaterEqual: {
-        return Builder.CreateICmpUGE(left, right);
-    }
-    case TokenKind::Smaller: {
-        return Builder.CreateICmpSLT(left, right);
-    }
-    case TokenKind::SmallerEqual: {
-        return Builder.CreateICmpSLE(left, right);
-    }
-    default: {
-        jot::loge << "Invalid Comparison operator\n";
-        exit(1);
-    }
-    }
+
+    // TODO: add support for more comparisons types such
+
+    jot::loge << "Binary Operators work only for Numeric types\n";
+    exit(1);
 }
 
 std::any JotLLVMBackend::visit(LogicalExpression *node) {
@@ -917,7 +890,7 @@ llvm::Value *JotLLVMBackend::llvm_resolve_value(std::any any_value) {
     return llvm_value;
 }
 
-llvm::Value *JotLLVMBackend::llvm_number_value(std::string value_litearl, NumberKind size) {
+inline llvm::Value *JotLLVMBackend::llvm_number_value(std::string value_litearl, NumberKind size) {
     switch (size) {
     case NumberKind::Integer1: {
         auto value = std::stoi(value_litearl.c_str());
@@ -950,11 +923,11 @@ llvm::Value *JotLLVMBackend::llvm_number_value(std::string value_litearl, Number
     }
 }
 
-llvm::Value *JotLLVMBackend::llvm_boolean_value(bool value) {
+inline llvm::Value *JotLLVMBackend::llvm_boolean_value(bool value) {
     return llvm::ConstantInt::get(llvm_int1_type, value);
 }
 
-llvm::Value *JotLLVMBackend::llvm_character_value(char character) {
+inline llvm::Value *JotLLVMBackend::llvm_character_value(char character) {
     return llvm::ConstantInt::get(llvm_int8_type, character);
 }
 
@@ -1019,6 +992,112 @@ llvm::Type *JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
     exit(1);
 }
 
+inline llvm::Value *JotLLVMBackend::create_llvm_integers_bianry(TokenKind op, llvm::Value *left,
+                                                                llvm::Value *right) {
+    switch (op) {
+    case TokenKind::Plus: {
+        return Builder.CreateAdd(left, right, "addtemp");
+    }
+    case TokenKind::Minus: {
+        return Builder.CreateSub(left, right, "subtmp");
+    }
+    case TokenKind::Star: {
+        return Builder.CreateMul(left, right, "multmp");
+    }
+    case TokenKind::Slash: {
+        return Builder.CreateUDiv(left, right, "divtmp");
+    }
+    case TokenKind::Percent: {
+        return Builder.CreateURem(left, right, "remtemp");
+    }
+    default: {
+        jot::loge << "Invalid binary operator for integers types\n";
+        exit(1);
+    }
+    }
+}
+
+inline llvm::Value *JotLLVMBackend::create_llvm_floats_bianry(TokenKind op, llvm::Value *left,
+                                                              llvm::Value *right) {
+    switch (op) {
+    case TokenKind::Plus: {
+        return Builder.CreateFAdd(left, right, "addtemp");
+    }
+    case TokenKind::Minus: {
+        return Builder.CreateFSub(left, right, "subtmp");
+    }
+    case TokenKind::Star: {
+        return Builder.CreateFMul(left, right, "multmp");
+    }
+    case TokenKind::Slash: {
+        return Builder.CreateFDiv(left, right, "divtmp");
+    }
+    case TokenKind::Percent: {
+        return Builder.CreateFRem(left, right, "remtemp");
+    }
+    default: {
+        jot::loge << "Invalid binary operator for floating point types\n";
+        exit(1);
+    }
+    }
+}
+
+inline llvm::Value *JotLLVMBackend::create_llvm_integers_comparison(TokenKind op, llvm::Value *left,
+                                                                    llvm::Value *right) {
+    switch (op) {
+    case TokenKind::EqualEqual: {
+        return Builder.CreateICmpEQ(left, right);
+    }
+    case TokenKind::BangEqual: {
+        return Builder.CreateICmpNE(left, right);
+    }
+    case TokenKind::Greater: {
+        return Builder.CreateICmpUGT(left, right);
+    }
+    case TokenKind::GreaterEqual: {
+        return Builder.CreateICmpUGE(left, right);
+    }
+    case TokenKind::Smaller: {
+        return Builder.CreateICmpSLT(left, right);
+    }
+    case TokenKind::SmallerEqual: {
+        return Builder.CreateICmpSLE(left, right);
+    }
+    default: {
+        jot::loge << "Invalid Comparison operator\n";
+        exit(1);
+    }
+    }
+}
+
+inline llvm::Value *JotLLVMBackend::create_llvm_floats_comparison(TokenKind op, llvm::Value *left,
+                                                                  llvm::Value *right) {
+    switch (op) {
+    case TokenKind::EqualEqual: {
+        return Builder.CreateFCmpOEQ(left, right);
+    }
+    case TokenKind::BangEqual: {
+        return Builder.CreateFCmpONE(left, right);
+    }
+    case TokenKind::Greater: {
+        return Builder.CreateFCmpOGT(left, right);
+    }
+    case TokenKind::GreaterEqual: {
+        return Builder.CreateFCmpOGE(left, right);
+    }
+    case TokenKind::Smaller: {
+        return Builder.CreateFCmpOLT(left, right);
+    }
+    case TokenKind::SmallerEqual: {
+        return Builder.CreateFCmpOLE(left, right);
+    }
+    default: {
+        jot::loge << "Invalid Comparison operator\n";
+        exit(1);
+    }
+    }
+}
+
 llvm::AllocaInst *JotLLVMBackend::create_entry_block_alloca(llvm::Function *function,
                                                             const std::string var_name,
                                                             llvm::Type *type) {
@@ -1039,7 +1118,7 @@ llvm::Function *JotLLVMBackend::lookup_function(std::string name) {
     return llvm_functions[name];
 }
 
-void JotLLVMBackend::execute_defer_calls() {
+inline void JotLLVMBackend::execute_defer_calls() {
     for (auto &defer_call : defer_calls_stack) {
         defer_call->generate_call();
     }
@@ -1047,10 +1126,10 @@ void JotLLVMBackend::execute_defer_calls() {
 
 void JotLLVMBackend::clear_defer_calls_stack() { defer_calls_stack.clear(); }
 
-void JotLLVMBackend::push_alloca_inst_scope() {
+inline void JotLLVMBackend::push_alloca_inst_scope() {
     alloca_inst_scope = std::make_shared<JotSymbolTable>(alloca_inst_scope);
 }
 
-void JotLLVMBackend::pop_alloca_inst_scope() {
+inline void JotLLVMBackend::pop_alloca_inst_scope() {
     alloca_inst_scope = alloca_inst_scope->get_parent_symbol_table();
 }

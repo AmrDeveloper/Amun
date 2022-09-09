@@ -157,6 +157,15 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Type *llvm_type_from_jot_type(std::shared_ptr<JotType> type);
 
+    llvm::Value *create_llvm_integers_bianry(TokenKind op, llvm::Value *left, llvm::Value *right);
+
+    llvm::Value *create_llvm_floats_bianry(TokenKind op, llvm::Value *left, llvm::Value *right);
+
+    llvm::Value *create_llvm_integers_comparison(TokenKind op, llvm::Value *left,
+                                                 llvm::Value *right);
+
+    llvm::Value *create_llvm_floats_comparison(TokenKind op, llvm::Value *left, llvm::Value *right);
+
     llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function,
                                                 const std::string var_name, llvm::Type *type);
 

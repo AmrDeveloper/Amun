@@ -6,6 +6,7 @@
 #include <any>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <string>
 
 void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> compilation_unit) {
@@ -260,19 +261,31 @@ std::any JotTypeChecker::visit(BinaryExpression *node) {
     auto left_type = node_jot_type(node->get_left()->accept(this));
     auto right_type = node_jot_type(node->get_right()->accept(this));
 
+    // Assert that right and left values are both numbers
     bool is_left_number = is_number_type(left_type);
     bool is_right_number = is_number_type(right_type);
+    bool is_the_same = left_type->equals(right_type);
     if (not is_left_number || not is_right_number) {
+
         if (not is_left_number) {
             context->diagnostics.add_diagnostic_error(node->get_operator_token().get_span(),
                                                       "Expected binary left to be number but got " +
                                                           left_type->type_literal());
         }
+
         if (not is_right_number) {
             context->diagnostics.add_diagnostic_error(
                 node->get_operator_token().get_span(),
                 "Expected binary right to be number but got " + left_type->type_literal());
         }
+
+        if (not is_the_same) {
+            context->diagnostics.add_diagnostic_error(node->get_operator_token().get_span(),
+                                                      "Binary Expression type missmatch " +
+                                                          left_type->type_literal() + " and " +
+                                                          right_type->type_literal());
+        }
+
         throw "Stop";
     }
 
@@ -316,6 +329,8 @@ std::any JotTypeChecker::visit(ShiftExpression *node) {
 std::any JotTypeChecker::visit(ComparisonExpression *node) {
     auto left_type = node_jot_type(node->get_left()->accept(this));
     auto right_type = node_jot_type(node->get_right()->accept(this));
+
+    // TODO: Add support for more comparison expressions
 
     bool is_left_number = is_number_type(left_type) or is_enum_element_type(left_type);
     bool is_right_number = is_number_type(right_type) or is_enum_element_type(right_type);
