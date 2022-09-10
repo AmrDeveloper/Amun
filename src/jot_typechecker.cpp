@@ -387,13 +387,15 @@ std::any JotTypeChecker::visit(LogicalExpression *node) {
     return node_jot_type(node->get_type_node());
 }
 
-std::any JotTypeChecker::visit(UnaryExpression *node) {
+std::any JotTypeChecker::visit(PrefixUnaryExpression *node) {
     auto operand_type = node_jot_type(node->get_right()->accept(this));
     auto unary_operator = node->get_operator_token().get_kind();
 
     if (unary_operator == TokenKind::Minus) {
-        if (is_number_type(operand_type))
+        if (is_number_type(operand_type)) {
+            node->set_type_node(operand_type);
             return operand_type;
+        }
         context->diagnostics.add_diagnostic_error(
             node->get_operator_token().get_span(),
             "Unary - operator require number as an right operand but got " +
@@ -402,8 +404,10 @@ std::any JotTypeChecker::visit(UnaryExpression *node) {
     }
 
     if (unary_operator == TokenKind::Bang) {
-        if (is_number_type(operand_type))
+        if (is_number_type(operand_type)) {
+            node->set_type_node(operand_type);
             return operand_type;
+        }
         context->diagnostics.add_diagnostic_error(
             node->get_operator_token().get_span(),
             "Unary - operator require boolean as an right operand but got " +
@@ -412,8 +416,10 @@ std::any JotTypeChecker::visit(UnaryExpression *node) {
     }
 
     if (unary_operator == TokenKind::Not) {
-        if (is_number_type(operand_type))
+        if (is_number_type(operand_type)) {
+            node->set_type_node(operand_type);
             return operand_type;
+        }
         context->diagnostics.add_diagnostic_error(
             node->get_operator_token().get_span(),
             "Unary ~ operator require number as an right operand but got " +
@@ -441,6 +447,18 @@ std::any JotTypeChecker::visit(UnaryExpression *node) {
             std::make_shared<JotPointerType>(operand_type->get_type_token(), operand_type);
         node->set_type_node(pointer_type);
         return pointer_type;
+    }
+
+    if (unary_operator == TokenKind::PlusPlus || unary_operator == TokenKind::MinusMinus) {
+        if (operand_type->get_type_kind() != TypeKind::Number) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_operator_token().get_span(),
+                "Unary ++ or -- expression expect variable to be number ttype but got " +
+                    operand_type->type_literal());
+            throw "Stop";
+        }
+        node->set_type_node(operand_type);
+        return operand_type;
     }
 
     context->diagnostics.add_diagnostic_error(node->get_operator_token().get_span(),

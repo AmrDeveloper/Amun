@@ -68,6 +68,9 @@ enum TokenKind {
     SlashEqual,
     PercentEqual,
 
+    PlusPlus,
+    MinusMinus,
+
     OpenParen,
     CloseParen,
     OpenBracket,
@@ -155,6 +158,9 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
     {TokenKind::StarEqual, "*="},
     {TokenKind::SlashEqual, "/="},
     {TokenKind::PercentEqual, "%="},
+
+    {TokenKind::PlusPlus, "++"},
+    {TokenKind::MinusMinus, "--"},
 
     {TokenKind::OpenParen, "("},
     {TokenKind::CloseParen, ")"},

@@ -118,7 +118,7 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(LogicalExpression *node) override;
 
-    std::any visit(UnaryExpression *node) override;
+    std::any visit(PrefixUnaryExpression *node) override;
 
     std::any visit(CallExpression *node) override;
 
@@ -165,6 +165,10 @@ class JotLLVMBackend : public TreeVisitor {
                                                  llvm::Value *right);
 
     llvm::Value *create_llvm_floats_comparison(TokenKind op, llvm::Value *left, llvm::Value *right);
+
+    llvm::Value *create_llvm_value_increment(std::shared_ptr<Expression> right, bool is_prefix);
+
+    llvm::Value *create_llvm_value_decrement(std::shared_ptr<Expression> right, bool is_prefix);
 
     llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function,
                                                 const std::string var_name, llvm::Type *type);

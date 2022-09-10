@@ -51,7 +51,7 @@ class BinaryExpression;
 class ShiftExpression;
 class ComparisonExpression;
 class LogicalExpression;
-class UnaryExpression;
+class PrefixUnaryExpression;
 class CallExpression;
 class CastExpression;
 class IndexExpression;
@@ -80,7 +80,7 @@ class ExpressionVisitor {
 
     virtual std::any visit(LogicalExpression *node) = 0;
 
-    virtual std::any visit(UnaryExpression *node) = 0;
+    virtual std::any visit(PrefixUnaryExpression *node) = 0;
 
     virtual std::any visit(CallExpression *node) = 0;
 

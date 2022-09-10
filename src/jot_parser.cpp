@@ -1,6 +1,7 @@
 #include "../include/jot_parser.hpp"
 #include "../include/jot_files.hpp"
 #include "../include/jot_logger.hpp"
+#include "jot_ast.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -712,10 +713,26 @@ std::shared_ptr<Expression> JotParser::parse_infix_call_expression() {
 
 std::shared_ptr<Expression> JotParser::parse_prefix_expression() {
     if (peek_current().is_unary_operator()) {
-        Token token = peek_and_advance_token();
+        auto token = peek_and_advance_token();
         auto right = parse_prefix_expression();
-        return std::make_shared<UnaryExpression>(token, right);
+        return std::make_shared<PrefixUnaryExpression>(token, right);
     }
+
+    if (is_current_kind(TokenKind::PlusPlus) or is_current_kind(TokenKind::MinusMinus)) {
+        auto token = peek_and_advance_token();
+        auto right = parse_prefix_expression();
+        auto ast_node_type = right->get_ast_node_type();
+        if ((ast_node_type == AstNodeType::LiteralExpr) or
+            (ast_node_type == AstNodeType::IndexExpr)) {
+            return std::make_shared<PrefixUnaryExpression>(token, right);
+        }
+
+        context->diagnostics.add_diagnostic_error(
+            token.get_span(),
+            "Unary ++ or -- expect right expression to be variable or index expression");
+        throw "Stop";
+    }
+
     return parse_prefix_call_expression();
 }
 

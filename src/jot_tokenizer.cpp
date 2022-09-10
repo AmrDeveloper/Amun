@@ -46,11 +46,29 @@ Token JotTokenizer::scan_next_token() {
     case '&': return build_token(match('&') ? TokenKind::LogicalAnd : TokenKind::And);
     case '=': return build_token(match('=') ? TokenKind::EqualEqual : TokenKind::Equal);
     case '!': return build_token(match('=') ? TokenKind::BangEqual : TokenKind::Bang);
-    case '+': return build_token(match('=') ? TokenKind::PlusEqual : TokenKind::Plus);
-    case '-': return build_token(match('=') ? TokenKind::MinusEqual : TokenKind::Minus);
     case '*': return build_token(match('=') ? TokenKind::StarEqual : TokenKind::Star);
     case '/': return build_token(match('=') ? TokenKind::SlashEqual : TokenKind::Slash);
     case '%': return build_token(match('=') ? TokenKind::PercentEqual : TokenKind::Percent);
+
+    case '+': {
+        if (match('='))
+            return build_token(TokenKind::PlusEqual);
+
+        if (match('+'))
+            return build_token(TokenKind::PlusPlus);
+
+        return build_token(TokenKind::Plus);
+    }
+
+    case '-': {
+        if (match('='))
+            return build_token(TokenKind::MinusEqual);
+
+        if (match('-'))
+            return build_token(TokenKind::MinusMinus);
+
+        return build_token(TokenKind::Minus);
+    }
 
     case '>': {
         if (match('='))

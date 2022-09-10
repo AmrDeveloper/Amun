@@ -581,38 +581,50 @@ std::any JotLLVMBackend::visit(LogicalExpression *node) {
     }
 }
 
-std::any JotLLVMBackend::visit(UnaryExpression *node) {
+std::any JotLLVMBackend::visit(PrefixUnaryExpression *node) {
+    auto operand = node->get_right();
     auto operator_kind = node->get_operator_token().get_kind();
 
+    // Unary - minus operator
     if (operator_kind == TokenKind::Minus) {
-        auto right = llvm_resolve_value(node->get_right()->accept(this));
+        auto right = llvm_resolve_value(operand->accept(this));
         return Builder.CreateNeg(right);
     }
 
     // Bang can be implemented as (value == false)
     if (operator_kind == TokenKind::Bang) {
-
-        auto right = llvm_resolve_value(node->get_right()->accept(this));
+        auto right = llvm_resolve_value(operand->accept(this));
         return Builder.CreateICmpEQ(right, false_value);
     }
 
-    // Pointer Dereference operator
+    // Pointer * Dereference operator
     if (operator_kind == TokenKind::Star) {
-        auto right = llvm_node_value(node->get_right()->accept(this));
+        auto right = llvm_node_value(operand->accept(this));
         return Builder.CreateLoad(right->getType()->getPointerElementType(), right);
     }
 
-    // Address of operator to return pointer of operand
+    // Address of operator (&) to return pointer of operand
     if (operator_kind == TokenKind::And) {
-        auto right = llvm_node_value(node->get_right()->accept(this));
+        auto right = llvm_node_value(operand->accept(this));
         auto ptr = Builder.CreateAlloca(right->getType(), nullptr);
         Builder.CreateStore(right, ptr);
         return ptr;
     }
 
+    // Unary ~ not operator
     if (operator_kind == TokenKind::Not) {
-        auto right2 = llvm_resolve_value(node->get_right()->accept(this));
-        return Builder.CreateNot(right2);
+        auto right = llvm_resolve_value(operand->accept(this));
+        return Builder.CreateNot(right);
+    }
+
+    // Unary prefix ++ operator, example (++x)
+    if (operator_kind == TokenKind::PlusPlus) {
+        return create_llvm_value_increment(operand, false);
+    }
+
+    // Unary prefix -- operator, example (--x)
+    if (operator_kind == TokenKind::MinusMinus) {
+        return create_llvm_value_decrement(operand, false);
     }
 
     jot::loge << "Invalid Unary operator\n";
@@ -1096,6 +1108,76 @@ inline llvm::Value *JotLLVMBackend::create_llvm_floats_comparison(TokenKind op, 
         exit(1);
     }
     }
+}
+
+inline llvm::Value *JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> operand,
+                                                                bool is_prefix) {
+    auto right = operand->accept(this);
+    auto number_type = std::dynamic_pointer_cast<JotNumberType>(operand->get_type_node());
+    auto constants_one = llvm_number_value("1", number_type->get_kind());
+
+    if (right.type() == typeid(llvm::LoadInst *)) {
+        auto current_value = std::any_cast<llvm::LoadInst *>(right);
+        auto new_value = create_llvm_integers_bianry(TokenKind::Plus, current_value, constants_one);
+        Builder.CreateStore(new_value, current_value->getPointerOperand());
+        return is_prefix ? current_value : new_value;
+    }
+
+    if (right.type() == typeid(llvm::AllocaInst *)) {
+        auto alloca = std::any_cast<llvm::AllocaInst *>(right);
+        auto current_value = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
+        auto new_value = create_llvm_integers_bianry(TokenKind::Plus, current_value, constants_one);
+        Builder.CreateStore(new_value, alloca);
+        return is_prefix ? current_value : new_value;
+    }
+
+    if (right.type() == typeid(llvm::GlobalVariable *)) {
+        auto global_variable = std::any_cast<llvm::GlobalVariable *>(right);
+        auto current_value = Builder.CreateLoad(global_variable->getValueType(), global_variable);
+        auto new_value = create_llvm_integers_bianry(TokenKind::Plus, current_value, constants_one);
+        Builder.CreateStore(new_value, global_variable);
+        return is_prefix ? current_value : new_value;
+    }
+
+    jot::loge << "Compiler Internal Error: Unary expression with non global or alloca type but got "
+              << right.type().name() << '\n';
+    exit(1);
+}
+
+inline llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> operand,
+                                                                bool is_prefix) {
+    auto right = operand->accept(this);
+    auto number_type = std::dynamic_pointer_cast<JotNumberType>(operand->get_type_node());
+    auto constants_one = llvm_number_value("1", number_type->get_kind());
+
+    if (right.type() == typeid(llvm::LoadInst *)) {
+        auto current_value = std::any_cast<llvm::LoadInst *>(right);
+        auto new_value =
+            create_llvm_integers_bianry(TokenKind::Minus, current_value, constants_one);
+        Builder.CreateStore(new_value, current_value->getPointerOperand());
+        return is_prefix ? current_value : new_value;
+    }
+
+    if (right.type() == typeid(llvm::AllocaInst *)) {
+        auto alloca = std::any_cast<llvm::AllocaInst *>(right);
+        auto current_value = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
+        auto new_value =
+            create_llvm_integers_bianry(TokenKind::Minus, current_value, constants_one);
+        Builder.CreateStore(new_value, alloca);
+        return is_prefix ? current_value : new_value;
+    }
+
+    if (right.type() == typeid(llvm::GlobalVariable *)) {
+        auto global_variable = std::any_cast<llvm::GlobalVariable *>(right);
+        auto current_value = Builder.CreateLoad(global_variable->getValueType(), global_variable);
+        auto new_value =
+            create_llvm_integers_bianry(TokenKind::Minus, current_value, constants_one);
+        Builder.CreateStore(new_value, global_variable);
+        return is_prefix ? current_value : new_value;
+    }
+
+    jot::loge << "Compiler Internal Error: Unary expression with non global or alloca type\n";
+    exit(1);
 }
 
 llvm::AllocaInst *JotLLVMBackend::create_entry_block_alloca(llvm::Function *function,
