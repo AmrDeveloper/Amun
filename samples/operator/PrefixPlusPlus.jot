@@ -1,0 +1,26 @@
+extern fun printf(format *char, value int64) int64;
+
+var global = 10;
+var global_array = [1, 2, 3];
+
+fun main() int64 {
+    printf("global = %d\n", global);
+    printf("++global = %d\n", ++global);
+    printf("++global = %d\n", ++global);
+    printf("global = %d\n", global);
+
+    var local = 10;
+    printf("local = %d\n", local);
+    printf("++local = %d\n", ++local);
+    printf("++local = %d\n", ++local);
+    printf("local = %d\n", local);
+
+    var local_array = [1, 2, 3];
+    printf("++local_array[0] = %d\n", ++local_array[0]);
+    printf("local_array[0] = %d\n", local_array[0]);
+
+    printf("++global_array[0] = %d\n", ++global_array[0]);
+    printf("global_array[0] = %d\n", global_array[0]);
+
+    return 0;
+}
