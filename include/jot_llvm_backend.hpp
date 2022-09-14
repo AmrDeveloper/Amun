@@ -120,6 +120,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(PrefixUnaryExpression *node) override;
 
+    std::any visit(PostfixUnaryExpression *node) override;
+
     std::any visit(CallExpression *node) override;
 
     std::any visit(CastExpression *node) override;

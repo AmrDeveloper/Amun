@@ -425,15 +425,6 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
         auto name = literal->get_name().get_literal();
         auto value = node->get_right()->accept(this);
 
-        /*
-        @Refactor: Un needed code, must delete it later
-        if (value.type() == typeid(llvm::AllocaInst *)) {
-            auto init_value = std::any_cast<llvm::AllocaInst *>(value);
-            alloca_inst_scope->update(name, init_value);
-            return Builder.CreateLoad(init_value->getAllocatedType(), init_value, name.c_str());
-        }
-        */
-
         auto right_value = llvm_resolve_value(value);
         auto left_value = node->get_left()->accept(this);
         if (left_value.type() == typeid(llvm::AllocaInst *)) {
@@ -619,15 +610,33 @@ std::any JotLLVMBackend::visit(PrefixUnaryExpression *node) {
 
     // Unary prefix ++ operator, example (++x)
     if (operator_kind == TokenKind::PlusPlus) {
-        return create_llvm_value_increment(operand, false);
+        return create_llvm_value_increment(operand, true);
     }
 
     // Unary prefix -- operator, example (--x)
     if (operator_kind == TokenKind::MinusMinus) {
+        return create_llvm_value_decrement(operand, true);
+    }
+
+    jot::loge << "Invalid Prefix Unary operator\n";
+    exit(1);
+}
+
+std::any JotLLVMBackend::visit(PostfixUnaryExpression *node) {
+    auto operand = node->get_right();
+    auto operator_kind = node->get_operator_token().get_kind();
+
+    // Unary postfix ++ operator, example (x++)
+    if (operator_kind == TokenKind::PlusPlus) {
+        return create_llvm_value_increment(operand, false);
+    }
+
+    // Unary postfix -- operator, example (x--)
+    if (operator_kind == TokenKind::MinusMinus) {
         return create_llvm_value_decrement(operand, false);
     }
 
-    jot::loge << "Invalid Unary operator\n";
+    jot::loge << "Invalid Postfix Unary operator\n";
     exit(1);
 }
 
@@ -1120,7 +1129,7 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<
         auto current_value = std::any_cast<llvm::LoadInst *>(right);
         auto new_value = create_llvm_integers_bianry(TokenKind::Plus, current_value, constants_one);
         Builder.CreateStore(new_value, current_value->getPointerOperand());
-        return is_prefix ? current_value : new_value;
+        return is_prefix ? new_value : current_value;
     }
 
     if (right.type() == typeid(llvm::AllocaInst *)) {
@@ -1128,7 +1137,7 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<
         auto current_value = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
         auto new_value = create_llvm_integers_bianry(TokenKind::Plus, current_value, constants_one);
         Builder.CreateStore(new_value, alloca);
-        return is_prefix ? current_value : new_value;
+        return is_prefix ? new_value : current_value;
     }
 
     if (right.type() == typeid(llvm::GlobalVariable *)) {
@@ -1136,7 +1145,7 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<
         auto current_value = Builder.CreateLoad(global_variable->getValueType(), global_variable);
         auto new_value = create_llvm_integers_bianry(TokenKind::Plus, current_value, constants_one);
         Builder.CreateStore(new_value, global_variable);
-        return is_prefix ? current_value : new_value;
+        return is_prefix ? new_value : current_value;
     }
 
     jot::loge << "Compiler Internal Error: Unary expression with non global or alloca type but got "
@@ -1155,7 +1164,7 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<
         auto new_value =
             create_llvm_integers_bianry(TokenKind::Minus, current_value, constants_one);
         Builder.CreateStore(new_value, current_value->getPointerOperand());
-        return is_prefix ? current_value : new_value;
+        return is_prefix ? new_value : current_value;
     }
 
     if (right.type() == typeid(llvm::AllocaInst *)) {
@@ -1164,7 +1173,7 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<
         auto new_value =
             create_llvm_integers_bianry(TokenKind::Minus, current_value, constants_one);
         Builder.CreateStore(new_value, alloca);
-        return is_prefix ? current_value : new_value;
+        return is_prefix ? new_value : current_value;
     }
 
     if (right.type() == typeid(llvm::GlobalVariable *)) {
@@ -1173,7 +1182,7 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<
         auto new_value =
             create_llvm_integers_bianry(TokenKind::Minus, current_value, constants_one);
         Builder.CreateStore(new_value, global_variable);
-        return is_prefix ? current_value : new_value;
+        return is_prefix ? new_value : current_value;
     }
 
     jot::loge << "Compiler Internal Error: Unary expression with non global or alloca type\n";

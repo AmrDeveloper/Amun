@@ -1,6 +1,7 @@
 #pragma once
 
 #include "jot_ast.hpp"
+
 #include <any>
 #include <memory>
 
@@ -52,6 +53,7 @@ class ShiftExpression;
 class ComparisonExpression;
 class LogicalExpression;
 class PrefixUnaryExpression;
+class PostfixUnaryExpression;
 class CallExpression;
 class CastExpression;
 class IndexExpression;
@@ -81,6 +83,8 @@ class ExpressionVisitor {
     virtual std::any visit(LogicalExpression *node) = 0;
 
     virtual std::any visit(PrefixUnaryExpression *node) = 0;
+
+    virtual std::any visit(PostfixUnaryExpression *node) = 0;
 
     virtual std::any visit(CallExpression *node) = 0;
 

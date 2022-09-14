@@ -37,6 +37,7 @@ enum class AstNodeType {
     ComparisonExpr,
     LogicalExpr,
     PrefixUnaryExpr,
+    PostfixUnaryExpr,
     CallExpr,
     CastExpr,
     IndexExpr,
@@ -600,6 +601,31 @@ class PrefixUnaryExpression : public Expression {
     bool is_constant() override { return right->is_constant(); }
 
     AstNodeType get_ast_node_type() override { return AstNodeType::PrefixUnaryExpr; }
+
+  private:
+    Token operator_token;
+    std::shared_ptr<Expression> right;
+    std::shared_ptr<JotType> type;
+};
+
+class PostfixUnaryExpression : public Expression {
+  public:
+    PostfixUnaryExpression(Token token, std::shared_ptr<Expression> right)
+        : operator_token(token), right(right), type(right->get_type_node()) {}
+
+    Token get_operator_token() { return operator_token; }
+
+    std::shared_ptr<Expression> get_right() { return right; }
+
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
+
+    std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return right->is_constant(); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::PostfixUnaryExpr; }
 
   private:
     Token operator_token;

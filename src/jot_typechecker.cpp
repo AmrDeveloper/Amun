@@ -467,6 +467,28 @@ std::any JotTypeChecker::visit(PrefixUnaryExpression *node) {
     throw "Stop";
 }
 
+std::any JotTypeChecker::visit(PostfixUnaryExpression *node) {
+    auto operand_type = node_jot_type(node->get_right()->accept(this));
+    auto unary_operator = node->get_operator_token().get_kind();
+
+    if (unary_operator == TokenKind::PlusPlus or unary_operator == TokenKind::MinusMinus) {
+        if (operand_type->get_type_kind() != TypeKind::Number) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_operator_token().get_span(),
+                "Unary ++ or -- expression expect variable to be number ttype but got " +
+                    operand_type->type_literal());
+            throw "Stop";
+        }
+        node->set_type_node(operand_type);
+        return operand_type;
+    }
+
+    context->diagnostics.add_diagnostic_error(node->get_operator_token().get_span(),
+                                              "Unsupported unary expression " +
+                                                  operand_type->type_literal());
+    throw "Stop";
+}
+
 std::any JotTypeChecker::visit(CallExpression *node) {
     if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee())) {
         auto name = literal->get_name().get_literal();

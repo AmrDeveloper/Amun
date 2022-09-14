@@ -766,6 +766,17 @@ std::shared_ptr<Expression> JotParser::parse_postfix_expression() {
             auto index = parse_expression();
             assert_kind(TokenKind::CloseBracket, "Expect ] after index value");
             expression = std::make_shared<IndexExpression>(position, expression, index);
+        } else if (is_current_kind(TokenKind::PlusPlus) or is_current_kind(TokenKind::MinusMinus)) {
+            auto token = peek_and_advance_token();
+            auto ast_node_type = expression->get_ast_node_type();
+            if ((ast_node_type == AstNodeType::LiteralExpr) or
+                (ast_node_type == AstNodeType::IndexExpr)) {
+                return std::make_shared<PostfixUnaryExpression>(token, expression);
+            }
+            context->diagnostics.add_diagnostic_error(
+                token.get_span(),
+                "Unary ++ or -- expect left expression to be variable or index expression");
+            throw "Stop";
         } else {
             break;
         }
