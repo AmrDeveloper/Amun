@@ -353,7 +353,7 @@ std::any JotLLVMBackend::visit(DeferStatement *node) {
     return 0;
 }
 
-std::any JotLLVMBackend::visit([[maybe_unused]] BreakStatement *node) {
+std::any JotLLVMBackend::visit(BreakStatement *node) {
     has_break_or_continue_statement = true;
 
     for (int i = 1; i < node->get_times(); i++) {
@@ -364,7 +364,7 @@ std::any JotLLVMBackend::visit([[maybe_unused]] BreakStatement *node) {
     return 0;
 }
 
-std::any JotLLVMBackend::visit([[maybe_unused]] ContinueStatement *node) {
+std::any JotLLVMBackend::visit(ContinueStatement *node) {
     has_break_or_continue_statement = true;
 
     for (int i = 1; i < node->get_times(); i++) {
