@@ -23,6 +23,7 @@ enum class AstNodeType {
     Enum,
     If,
     While,
+    Switch,
     Return,
     Defer,
     Break,
@@ -264,6 +265,33 @@ class WhileStatement : public Statement {
     Token position;
     std::shared_ptr<Expression> condition;
     std::shared_ptr<Statement> body;
+};
+
+class SwitchStatement : public Statement {
+  public:
+    SwitchStatement(Token position, std::shared_ptr<Expression> argument,
+                    std::vector<std::shared_ptr<ConditionalBlock>> branches,
+                    std::shared_ptr<Statement> default_branch)
+        : position(position), argument(argument), branches(branches),
+          default_branch(default_branch) {}
+
+    Token get_position() { return position; }
+
+    std::shared_ptr<Expression> get_argument() { return argument; }
+
+    std::vector<std::shared_ptr<ConditionalBlock>> get_branches() { return branches; }
+
+    std::shared_ptr<Statement> get_default_branch() { return default_branch; }
+
+    std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::Switch; }
+
+  private:
+    Token position;
+    std::shared_ptr<Expression> argument;
+    std::vector<std::shared_ptr<ConditionalBlock>> branches;
+    std::shared_ptr<Statement> default_branch;
 };
 
 class ReturnStatement : public Statement {

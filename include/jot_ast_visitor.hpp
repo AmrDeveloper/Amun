@@ -12,6 +12,7 @@ class FunctionDeclaration;
 class EnumDeclaration;
 class IfStatement;
 class WhileStatement;
+class SwitchStatement;
 class ReturnStatement;
 class DeferStatement;
 class BreakStatement;
@@ -33,6 +34,8 @@ class StatementVisitor {
     virtual std::any visit(IfStatement *node) = 0;
 
     virtual std::any visit(WhileStatement *node) = 0;
+
+    virtual std::any visit(SwitchStatement *node) = 0;
 
     virtual std::any visit(ReturnStatement *node) = 0;
 

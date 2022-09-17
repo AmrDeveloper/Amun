@@ -17,6 +17,7 @@ enum TokenKind {
     IfKeyword,
     ElseKeyword,
     WhileKeyword,
+    SwitchKeyword,
     CastKeyword,
     DeferKeyword,
 
@@ -71,6 +72,8 @@ enum TokenKind {
     PlusPlus,
     MinusMinus,
 
+    RightArrow,
+
     OpenParen,
     CloseParen,
     OpenBracket,
@@ -108,6 +111,7 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
     {TokenKind::IfKeyword, "If"},
     {TokenKind::ElseKeyword, "Else"},
     {TokenKind::WhileKeyword, "While"},
+    {TokenKind::SwitchKeyword, "Switch"},
     {TokenKind::CastKeyword, "Cast"},
     {TokenKind::DeferKeyword, "Defer"},
     {TokenKind::TrueKeyword, "True"},
@@ -162,6 +166,8 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
     {TokenKind::PlusPlus, "++"},
     {TokenKind::MinusMinus, "--"},
 
+    {TokenKind::RightArrow, "->"},
+
     {TokenKind::OpenParen, "("},
     {TokenKind::CloseParen, ")"},
     {TokenKind::OpenBracket, "["},
@@ -187,16 +193,27 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
 };
 
 static std::unordered_map<std::string, TokenKind> language_keywords = {
-    {"load", TokenKind::LoadKeyword},      {"import", TokenKind::ImportKeyword},
-    {"var", TokenKind::VarKeyword},        {"type", TokenKind::TypeKeyword},
-    {"fun", TokenKind::FunKeyword},        {"enum", TokenKind::EnumKeyword},
-    {"return", TokenKind::ReturnKeyword},  {"extern", TokenKind::ExternKeyword},
-    {"if", TokenKind::IfKeyword},          {"else", TokenKind::ElseKeyword},
-    {"while", TokenKind::WhileKeyword},    {"cast", TokenKind::CastKeyword},
-    {"defer", TokenKind::DeferKeyword},    {"true", TokenKind::TrueKeyword},
-    {"false", TokenKind::FalseKeyword},    {"null", TokenKind::NullKeyword},
-    {"break", TokenKind::BreakKeyword},    {"continue", TokenKind::ContinueKeyword},
-    {"prefix", TokenKind::PrefixKeyword},  {"infix", TokenKind::InfixKeyword},
+    {"load", TokenKind::LoadKeyword},
+    {"import", TokenKind::ImportKeyword},
+    {"var", TokenKind::VarKeyword},
+    {"type", TokenKind::TypeKeyword},
+    {"fun", TokenKind::FunKeyword},
+    {"enum", TokenKind::EnumKeyword},
+    {"return", TokenKind::ReturnKeyword},
+    {"extern", TokenKind::ExternKeyword},
+    {"if", TokenKind::IfKeyword},
+    {"else", TokenKind::ElseKeyword},
+    {"while", TokenKind::WhileKeyword},
+    {"switch", TokenKind::SwitchKeyword},
+    {"cast", TokenKind::CastKeyword},
+    {"defer", TokenKind::DeferKeyword},
+    {"true", TokenKind::TrueKeyword},
+    {"false", TokenKind::FalseKeyword},
+    {"null", TokenKind::NullKeyword},
+    {"break", TokenKind::BreakKeyword},
+    {"continue", TokenKind::ContinueKeyword},
+    {"prefix", TokenKind::PrefixKeyword},
+    {"infix", TokenKind::InfixKeyword},
     {"postfix", TokenKind::PostfixKeyword}};
 
 static std::unordered_set<TokenKind> unary_operators{

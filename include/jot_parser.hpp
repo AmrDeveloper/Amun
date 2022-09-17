@@ -68,6 +68,8 @@ class JotParser {
 
     std::shared_ptr<WhileStatement> parse_while_statement();
 
+    std::shared_ptr<SwitchStatement> parse_switch_statement();
+
     std::shared_ptr<BlockStatement> parse_block_statement();
 
     std::shared_ptr<ExpressionStatement> parse_expression_statement();

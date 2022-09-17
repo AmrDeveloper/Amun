@@ -31,6 +31,8 @@ class JotTypeChecker : public TreeVisitor {
 
     std::any visit(WhileStatement *node) override;
 
+    std::any visit(SwitchStatement *node) override;
+
     std::any visit(ReturnStatement *node) override;
 
     std::any visit(DeferStatement *node) override;

@@ -67,6 +67,9 @@ Token JotTokenizer::scan_next_token() {
         if (match('-'))
             return build_token(TokenKind::MinusMinus);
 
+        if (match('>'))
+            return build_token(TokenKind::RightArrow);
+
         return build_token(TokenKind::Minus);
     }
 

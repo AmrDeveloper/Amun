@@ -194,6 +194,9 @@ std::shared_ptr<Statement> JotParser::parse_statement() {
     case TokenKind::WhileKeyword: {
         return parse_while_statement();
     }
+    case TokenKind::SwitchKeyword: {
+        return parse_switch_statement();
+    }
     case TokenKind::ReturnKeyword: {
         return parse_return_statement();
     }
@@ -556,6 +559,39 @@ std::shared_ptr<WhileStatement> JotParser::parse_while_statement() {
 
     current_ast_scope = parent_node_scope;
     return std::make_shared<WhileStatement>(keyword, condition, body);
+}
+
+std::shared_ptr<SwitchStatement> JotParser::parse_switch_statement() {
+    auto keyword = consume_kind(TokenKind::SwitchKeyword, "Expect switch keyword.");
+    auto argument = parse_expression();
+    assert_kind(TokenKind::OpenBrace, "Expect { after switch value");
+
+    std::vector<std::shared_ptr<ConditionalBlock>> branches;
+    std::shared_ptr<Statement> default_branch = nullptr;
+    bool has_default_branch = false;
+    while (is_source_available() and !is_current_kind(TokenKind::CloseBrace)) {
+        if (is_current_kind(TokenKind::ElseKeyword)) {
+            if (has_default_branch) {
+                context->diagnostics.add_diagnostic_error(
+                    keyword.get_span(), "Switch statementscan't has more than one default branch");
+                throw "Stop";
+            }
+            advanced_token();
+            consume_kind(TokenKind::RightArrow,
+                         "Expect -> after else keyword in switch default branch");
+            default_branch = parse_statement();
+            has_default_branch = true;
+            continue;
+        }
+
+        auto value = parse_expression();
+        auto rightArrow = consume_kind(TokenKind::RightArrow, "Expect -> after branch value");
+        auto branch = parse_statement();
+        auto conditional_branch = std::make_shared<ConditionalBlock>(rightArrow, value, branch);
+        branches.push_back(conditional_branch);
+    }
+    assert_kind(TokenKind::CloseBrace, "Expect } after switch Statement last branch");
+    return std::make_shared<SwitchStatement>(keyword, argument, branches, default_branch);
 }
 
 std::shared_ptr<ExpressionStatement> JotParser::parse_expression_statement() {

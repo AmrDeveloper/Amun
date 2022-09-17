@@ -258,6 +258,50 @@ std::any JotLLVMBackend::visit(WhileStatement *node) {
     return 0;
 }
 
+std::any JotLLVMBackend::visit(SwitchStatement *node) {
+    auto current_function = Builder.GetInsertBlock()->getParent();
+    auto argument = node->get_argument();
+    auto llvm_value = llvm_resolve_value(argument->accept(this));
+    auto basic_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
+    auto switch_inst = Builder.CreateSwitch(llvm_value, basic_block);
+
+    auto branches = node->get_branches();
+    auto branches_size = branches.size();
+
+    for (size_t i = 0; i < branches_size; i++) {
+        auto branch = branches[i];
+
+        auto branch_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
+        Builder.SetInsertPoint(branch_block);
+
+        push_alloca_inst_scope();
+        branch->get_body()->accept(this);
+        pop_alloca_inst_scope();
+
+        Builder.CreateBr(basic_block);
+
+        auto value = llvm_node_value(branch->get_condition()->accept(this));
+        auto int_value = llvm::dyn_cast<llvm::ConstantInt>(value);
+        switch_inst->addCase(int_value, branch_block);
+    }
+
+    auto default_branch = node->get_default_branch();
+    if (default_branch) {
+        auto default_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
+        Builder.SetInsertPoint(default_block);
+
+        push_alloca_inst_scope();
+        default_branch->accept(this);
+        pop_alloca_inst_scope();
+
+        Builder.CreateBr(basic_block);
+        switch_inst->setDefaultDest(default_block);
+    }
+
+    Builder.SetInsertPoint(basic_block);
+    return 0;
+}
+
 std::any JotLLVMBackend::visit(ReturnStatement *node) {
     // Generate code for defer calls if there are any
     execute_defer_calls();
@@ -641,8 +685,8 @@ std::any JotLLVMBackend::visit(PostfixUnaryExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(CallExpression *node) {
-    // If callee is also a CallExpression this case when you have a function that return a function
-    // pointer and you call it for example function()();
+    // If callee is also a CallExpression this case when you have a function that return a
+    // function pointer and you call it for example function()();
     if (node->get_callee()->get_ast_node_type() == AstNodeType::CallExpr) {
         auto callee_function = llvm_node_value(node->get_callee()->accept(this));
         auto call_instruction = llvm::dyn_cast<llvm::CallInst>(callee_function);

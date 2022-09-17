@@ -8,6 +8,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <unordered_set>
 
 void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> compilation_unit) {
     auto statements = compilation_unit->get_tree_nodes();
@@ -171,6 +172,68 @@ std::any JotTypeChecker::visit(WhileStatement *node) {
     push_new_scope();
     node->get_body()->accept(this);
     pop_current_scope();
+    return 0;
+}
+
+std::any JotTypeChecker::visit(SwitchStatement *node) {
+    // Check that switch argument is integer type
+    auto argument = node_jot_type(node->get_argument()->accept(this));
+    if (not is_integer_type(argument)) {
+        context->diagnostics.add_diagnostic_error(
+            argument->get_type_position(),
+            "Switch argument type must be integer but found " + argument->type_literal());
+        throw "Stop";
+    }
+
+    // Check that all cases values are integers, and no duplication
+    std::unordered_set<std::string> cases_values;
+    for (auto &branch : node->get_branches()) {
+        auto value = branch->get_condition();
+        if (auto numeric_value =
+                std::dynamic_pointer_cast<NumberExpression>(branch->get_condition())) {
+            auto value_type =
+                std::dynamic_pointer_cast<JotNumberType>(numeric_value->get_type_node());
+
+            // Check that value type are integer
+            if (not value_type->is_integer()) {
+                context->diagnostics.add_diagnostic_error(
+                    branch->get_position().get_span(),
+                    "Switch case value must be an integer but found " +
+                        numeric_value->get_type_node()->type_literal());
+                throw "Stop";
+            }
+
+            // Check that all cases values are uniques
+            if (not cases_values.insert(numeric_value->get_value().get_literal()).second) {
+                context->diagnostics.add_diagnostic_error(
+                    branch->get_position().get_span(),
+                    "Switch can't has more than case with the same constants value");
+                throw "Stop";
+            }
+
+            // Check branch body inside new scope
+            push_new_scope();
+            branch->get_body()->accept(this);
+            pop_current_scope();
+
+            continue;
+        }
+
+        context->diagnostics.add_diagnostic_error(
+            branch->get_position().get_span(),
+            "Switch case value must be an integer but found non constants integer type");
+        throw "Stop";
+    }
+
+    // Check default branch body if exists inside new scope
+    auto default_branch = node->get_default_branch();
+    if (default_branch) {
+        auto body = default_branch;
+        push_new_scope();
+        default_branch->accept(this);
+        pop_current_scope();
+    }
+
     return 0;
 }
 
