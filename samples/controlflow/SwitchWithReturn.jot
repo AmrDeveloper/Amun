@@ -1,0 +1,23 @@
+extern fun printf(format *char, value int64) int64;
+
+fun main() int64 {
+    var x = 10;
+    switch x {
+        1 -> {
+            printf("Value is %d\n", x);
+            return 1;
+        }
+        10 -> {
+            printf("Value is %d\n", x);
+            return 0;
+        }
+        else -> {
+            printf("Default branch %d\n", x);
+            return -1;
+        }
+    }
+
+    // Unreachable code
+    printf("X After switch Value is %d\n", x);
+    return 0;
+}
