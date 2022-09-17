@@ -978,7 +978,7 @@ inline llvm::Value *JotLLVMBackend::llvm_character_value(char character) {
     return llvm::ConstantInt::get(llvm_int8_type, character);
 }
 
-llvm::Value *JotLLVMBackend::llvm_type_default_value(std::shared_ptr<JotType> type) {
+inline llvm::Value *JotLLVMBackend::llvm_type_default_value(std::shared_ptr<JotType> type) {
     // Return the default value for llvm type
     return llvm::Constant::getNullValue(llvm_type_from_jot_type(type));
 }
@@ -1215,9 +1215,9 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<
     exit(1);
 }
 
-llvm::AllocaInst *JotLLVMBackend::create_entry_block_alloca(llvm::Function *function,
-                                                            const std::string var_name,
-                                                            llvm::Type *type) {
+inline llvm::AllocaInst *JotLLVMBackend::create_entry_block_alloca(llvm::Function *function,
+                                                                   const std::string var_name,
+                                                                   llvm::Type *type) {
     llvm::IRBuilder<> builder_object(&function->getEntryBlock(), function->getEntryBlock().begin());
     return builder_object.CreateAlloca(type, 0, var_name.c_str());
 }
@@ -1287,7 +1287,7 @@ inline void JotLLVMBackend::execute_defer_calls() {
     }
 }
 
-void JotLLVMBackend::clear_defer_calls_stack() { defer_calls_stack.clear(); }
+inline void JotLLVMBackend::clear_defer_calls_stack() { defer_calls_stack.clear(); }
 
 inline void JotLLVMBackend::push_alloca_inst_scope() {
     alloca_inst_scope = std::make_shared<JotSymbolTable>(alloca_inst_scope);
