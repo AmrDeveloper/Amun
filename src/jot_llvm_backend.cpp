@@ -274,11 +274,24 @@ std::any JotLLVMBackend::visit(SwitchStatement *node) {
         auto branch_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
         Builder.SetInsertPoint(branch_block);
 
+        bool body_has_return_statement = false;
         push_alloca_inst_scope();
-        branch->get_body()->accept(this);
+        auto branch_body = branch->get_body();
+        if (branch_body->get_ast_node_type() == AstNodeType::Block) {
+            auto block = std::dynamic_pointer_cast<BlockStatement>(branch_body);
+            auto nodes = block->get_nodes();
+            if (not nodes.empty()) {
+                body_has_return_statement =
+                    nodes.back()->get_ast_node_type() == AstNodeType::Return;
+            }
+        } else {
+            body_has_return_statement = branch_body->get_ast_node_type() == AstNodeType::Return;
+        }
+        branch_body->accept(this);
         pop_alloca_inst_scope();
 
-        Builder.CreateBr(basic_block);
+        if (not body_has_return_statement)
+            Builder.CreateBr(basic_block);
 
         auto value = llvm_node_value(branch->get_condition()->accept(this));
         auto int_value = llvm::dyn_cast<llvm::ConstantInt>(value);
@@ -290,11 +303,24 @@ std::any JotLLVMBackend::visit(SwitchStatement *node) {
         auto default_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
         Builder.SetInsertPoint(default_block);
 
+        bool body_has_return_statement = false;
         push_alloca_inst_scope();
+        if (default_branch->get_ast_node_type() == AstNodeType::Block) {
+            auto block = std::dynamic_pointer_cast<BlockStatement>(default_branch);
+            auto nodes = block->get_nodes();
+            if (not nodes.empty()) {
+                body_has_return_statement =
+                    nodes.back()->get_ast_node_type() == AstNodeType::Return;
+            }
+        } else {
+            body_has_return_statement = default_branch->get_ast_node_type() == AstNodeType::Return;
+        }
         default_branch->accept(this);
         pop_alloca_inst_scope();
 
-        Builder.CreateBr(basic_block);
+        if (not body_has_return_statement)
+            Builder.CreateBr(basic_block);
+
         switch_inst->setDefaultDest(default_block);
     }
 
