@@ -1,0 +1,20 @@
+extern fun printf(format *char, value int64) int64;
+
+enum Op { Plus, Minus, Pow, Div}
+
+fun main() int64 {
+    var x = 10;
+    var y = 20;
+
+    var op = Op::Plus;
+    switch op {
+        Op::Plus -> printf("X + y is %d\n", x + y);
+        Op::Minus -> printf("x - y is %d\n", x - y);
+        Op::Pow -> printf("x * y is %d\n", x * y);
+        Op::Div -> printf("x / y is %d\n", x / y);
+        else -> printf("Default branch %d\n", x);
+    }
+
+    printf("X After switch Value is %d\n", x);
+    return 0;
+}
