@@ -178,37 +178,53 @@ std::any JotTypeChecker::visit(WhileStatement *node) {
 std::any JotTypeChecker::visit(SwitchStatement *node) {
     // Check that switch argument is integer type
     auto argument = node_jot_type(node->get_argument()->accept(this));
-    if (not is_integer_type(argument)) {
+    if ((not is_integer_type(argument)) and (not is_enum_element_type(argument))) {
         context->diagnostics.add_diagnostic_error(
             argument->get_type_position(),
-            "Switch argument type must be integer but found " + argument->type_literal());
+            "Switch argument type must be integer or enum element but found " +
+                argument->type_literal());
         throw "Stop";
     }
 
-    // Check that all cases values are integers, and no duplication
+    // Check that all cases values are integers or enum element, and no duplication
+    // TODO: Optimize set by replacing std::string by integers for fast comparing
     std::unordered_set<std::string> cases_values;
     for (auto &branch : node->get_cases()) {
         auto value = branch->get_value();
-        if (auto numeric_value =
-                std::dynamic_pointer_cast<NumberExpression>(branch->get_value())) {
-            auto value_type =
-                std::dynamic_pointer_cast<JotNumberType>(numeric_value->get_type_node());
+        auto value_node_type = value->get_ast_node_type();
+        if (value_node_type == AstNodeType::NumberExpr or
+            value_node_type == AstNodeType::EnumElementExpr) {
 
-            // Check that value type are integer
-            if (not value_type->is_integer()) {
-                context->diagnostics.add_diagnostic_error(
-                    branch->get_position().get_span(),
-                    "Switch case value must be an integer but found " +
-                        numeric_value->get_type_node()->type_literal());
-                throw "Stop";
+            // No need to check if it enum element,
+            // but if it number we need to assert that it integer
+            if (value_node_type == AstNodeType::NumberExpr) {
+                auto value_type = node_jot_type(value->accept(this));
+                auto numeric_type = std::dynamic_pointer_cast<JotNumberType>(value_type);
+                if (not numeric_type->is_integer()) {
+                    context->diagnostics.add_diagnostic_error(
+                        branch->get_position().get_span(),
+                        "Switch case value must be an integer but found " +
+                            numeric_type->type_literal());
+                    throw "Stop";
+                }
             }
 
             // Check that all cases values are uniques
-            if (not cases_values.insert(numeric_value->get_value().get_literal()).second) {
-                context->diagnostics.add_diagnostic_error(
-                    branch->get_position().get_span(),
-                    "Switch can't has more than case with the same constants value");
-                throw "Stop";
+            if (auto number = std::dynamic_pointer_cast<NumberExpression>(value)) {
+                if (not cases_values.insert(number->get_value().get_literal()).second) {
+                    context->diagnostics.add_diagnostic_error(
+                        branch->get_position().get_span(),
+                        "Switch can't has more than case with the same constants value");
+                    throw "Stop";
+                }
+            } else if (auto enum_element = std::dynamic_pointer_cast<EnumAccessExpression>(value)) {
+                auto enum_index_string = std::to_string(enum_element->get_enum_element_index());
+                if (not cases_values.insert(enum_index_string).second) {
+                    context->diagnostics.add_diagnostic_error(
+                        branch->get_position().get_span(),
+                        "Switch can't has more than case with the same constants value");
+                    throw "Stop";
+                }
             }
 
             // Check branch body inside new scope
@@ -219,6 +235,7 @@ std::any JotTypeChecker::visit(SwitchStatement *node) {
             continue;
         }
 
+        // Report Error if value is not number or enum element
         context->diagnostics.add_diagnostic_error(
             branch->get_position().get_span(),
             "Switch case value must be an integer but found non constants integer type");
