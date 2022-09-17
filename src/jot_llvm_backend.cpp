@@ -265,63 +265,19 @@ std::any JotLLVMBackend::visit(SwitchStatement *node) {
     auto basic_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
     auto switch_inst = Builder.CreateSwitch(llvm_value, basic_block);
 
-    auto branches = node->get_branches();
-    auto branches_size = branches.size();
+    auto switch_cases = node->get_cases();
+    auto switch_cases_size = switch_cases.size();
 
-    for (size_t i = 0; i < branches_size; i++) {
-        auto branch = branches[i];
-
-        auto branch_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
-        Builder.SetInsertPoint(branch_block);
-
-        bool body_has_return_statement = false;
-        push_alloca_inst_scope();
-        auto branch_body = branch->get_body();
-        if (branch_body->get_ast_node_type() == AstNodeType::Block) {
-            auto block = std::dynamic_pointer_cast<BlockStatement>(branch_body);
-            auto nodes = block->get_nodes();
-            if (not nodes.empty()) {
-                body_has_return_statement =
-                    nodes.back()->get_ast_node_type() == AstNodeType::Return;
-            }
-        } else {
-            body_has_return_statement = branch_body->get_ast_node_type() == AstNodeType::Return;
-        }
-        branch_body->accept(this);
-        pop_alloca_inst_scope();
-
-        if (not body_has_return_statement)
-            Builder.CreateBr(basic_block);
-
-        auto value = llvm_node_value(branch->get_condition()->accept(this));
-        auto int_value = llvm::dyn_cast<llvm::ConstantInt>(value);
-        switch_inst->addCase(int_value, branch_block);
+    // Generate code for each switch case
+    for (size_t i = 0; i < switch_cases_size; i++) {
+        auto switch_case = switch_cases[i];
+        create_switch_case_branch(switch_inst, current_function, basic_block, switch_case);
     }
 
-    auto default_branch = node->get_default_branch();
+    // Generate code for default cases is exists
+    auto default_branch = node->get_default_case();
     if (default_branch) {
-        auto default_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
-        Builder.SetInsertPoint(default_block);
-
-        bool body_has_return_statement = false;
-        push_alloca_inst_scope();
-        if (default_branch->get_ast_node_type() == AstNodeType::Block) {
-            auto block = std::dynamic_pointer_cast<BlockStatement>(default_branch);
-            auto nodes = block->get_nodes();
-            if (not nodes.empty()) {
-                body_has_return_statement =
-                    nodes.back()->get_ast_node_type() == AstNodeType::Return;
-            }
-        } else {
-            body_has_return_statement = default_branch->get_ast_node_type() == AstNodeType::Return;
-        }
-        default_branch->accept(this);
-        pop_alloca_inst_scope();
-
-        if (not body_has_return_statement)
-            Builder.CreateBr(basic_block);
-
-        switch_inst->setDefaultDest(default_block);
+        create_switch_case_branch(switch_inst, current_function, basic_block, default_branch);
     }
 
     Builder.SetInsertPoint(basic_block);
@@ -1264,6 +1220,52 @@ llvm::AllocaInst *JotLLVMBackend::create_entry_block_alloca(llvm::Function *func
                                                             llvm::Type *type) {
     llvm::IRBuilder<> builder_object(&function->getEntryBlock(), function->getEntryBlock().begin());
     return builder_object.CreateAlloca(type, 0, var_name.c_str());
+}
+
+void JotLLVMBackend::create_switch_case_branch(llvm::SwitchInst *switch_inst,
+                                               llvm::Function *current_function,
+                                               llvm::BasicBlock *basic_block,
+                                               std::shared_ptr<SwitchCase> switch_case) {
+    auto branch_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
+    Builder.SetInsertPoint(branch_block);
+
+    bool body_has_return_statement = false;
+
+    auto branch_body = switch_case->get_body();
+
+    // If switch body is block, check if the last node is return statement or not,
+    // if it not block, check if it return statement or not
+    if (branch_body->get_ast_node_type() == AstNodeType::Block) {
+        auto block = std::dynamic_pointer_cast<BlockStatement>(branch_body);
+        auto nodes = block->get_nodes();
+        if (not nodes.empty()) {
+            body_has_return_statement = nodes.back()->get_ast_node_type() == AstNodeType::Return;
+        }
+    } else {
+        body_has_return_statement = branch_body->get_ast_node_type() == AstNodeType::Return;
+    }
+
+    // Visit the case branch in sub scope
+    push_alloca_inst_scope();
+    branch_body->accept(this);
+    pop_alloca_inst_scope();
+
+    // Create branch only if current block hasn't return node
+    if (not body_has_return_statement) {
+        Builder.CreateBr(basic_block);
+    }
+
+    // Normal switch case branch with value and body
+    auto switch_case_value = switch_case->get_value();
+    if (switch_case_value) {
+        auto value = llvm_node_value(switch_case_value->accept(this));
+        auto integer_value = llvm::dyn_cast<llvm::ConstantInt>(value);
+        switch_inst->addCase(integer_value, branch_block);
+        return;
+    }
+
+    // Default switch case branch with body and no value
+    switch_inst->setDefaultDest(branch_block);
 }
 
 llvm::Function *JotLLVMBackend::lookup_function(std::string name) {

@@ -1,7 +1,6 @@
 #include "../include/jot_parser.hpp"
 #include "../include/jot_files.hpp"
 #include "../include/jot_logger.hpp"
-#include "jot_ast.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -566,8 +565,8 @@ std::shared_ptr<SwitchStatement> JotParser::parse_switch_statement() {
     auto argument = parse_expression();
     assert_kind(TokenKind::OpenBrace, "Expect { after switch value");
 
-    std::vector<std::shared_ptr<ConditionalBlock>> branches;
-    std::shared_ptr<Statement> default_branch = nullptr;
+    std::vector<std::shared_ptr<SwitchCase>> branches;
+    std::shared_ptr<SwitchCase> default_branch = nullptr;
     bool has_default_branch = false;
     while (is_source_available() and !is_current_kind(TokenKind::CloseBrace)) {
         if (is_current_kind(TokenKind::ElseKeyword)) {
@@ -576,10 +575,12 @@ std::shared_ptr<SwitchStatement> JotParser::parse_switch_statement() {
                     keyword.get_span(), "Switch statementscan't has more than one default branch");
                 throw "Stop";
             }
-            advanced_token();
+            auto else_keyword = consume_kind(TokenKind::ElseKeyword,
+                                             "Expect else keyword in switch default branch");
             consume_kind(TokenKind::RightArrow,
                          "Expect -> after else keyword in switch default branch");
-            default_branch = parse_statement();
+            auto default_body = parse_statement();
+            default_branch = std::make_shared<SwitchCase>(else_keyword, nullptr, default_body);
             has_default_branch = true;
             continue;
         }
@@ -587,7 +588,7 @@ std::shared_ptr<SwitchStatement> JotParser::parse_switch_statement() {
         auto value = parse_expression();
         auto rightArrow = consume_kind(TokenKind::RightArrow, "Expect -> after branch value");
         auto branch = parse_statement();
-        auto conditional_branch = std::make_shared<ConditionalBlock>(rightArrow, value, branch);
+        auto conditional_branch = std::make_shared<SwitchCase>(rightArrow, value, branch);
         branches.push_back(conditional_branch);
     }
     assert_kind(TokenKind::CloseBrace, "Expect } after switch Statement last branch");

@@ -177,6 +177,10 @@ class JotLLVMBackend : public TreeVisitor {
     llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function,
                                                 const std::string var_name, llvm::Type *type);
 
+    void create_switch_case_branch(llvm::SwitchInst *switch_inst, llvm::Function *current_function,
+                                   llvm::BasicBlock *basic_block,
+                                   std::shared_ptr<SwitchCase> switch_case);
+
     llvm::Function *lookup_function(std::string name);
 
     void execute_defer_calls();

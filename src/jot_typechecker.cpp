@@ -187,10 +187,10 @@ std::any JotTypeChecker::visit(SwitchStatement *node) {
 
     // Check that all cases values are integers, and no duplication
     std::unordered_set<std::string> cases_values;
-    for (auto &branch : node->get_branches()) {
-        auto value = branch->get_condition();
+    for (auto &branch : node->get_cases()) {
+        auto value = branch->get_value();
         if (auto numeric_value =
-                std::dynamic_pointer_cast<NumberExpression>(branch->get_condition())) {
+                std::dynamic_pointer_cast<NumberExpression>(branch->get_value())) {
             auto value_type =
                 std::dynamic_pointer_cast<JotNumberType>(numeric_value->get_type_node());
 
@@ -226,11 +226,11 @@ std::any JotTypeChecker::visit(SwitchStatement *node) {
     }
 
     // Check default branch body if exists inside new scope
-    auto default_branch = node->get_default_branch();
+    auto default_branch = node->get_default_case();
     if (default_branch) {
         auto body = default_branch;
         push_new_scope();
-        default_branch->accept(this);
+        default_branch->get_body()->accept(this);
         pop_current_scope();
     }
 

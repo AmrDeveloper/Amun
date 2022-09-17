@@ -267,21 +267,37 @@ class WhileStatement : public Statement {
     std::shared_ptr<Statement> body;
 };
 
+class SwitchCase {
+  public:
+    SwitchCase(Token position, std::shared_ptr<Expression> value, std::shared_ptr<Statement> body)
+        : position(position), value(value), body(body) {}
+
+    Token get_position() { return position; }
+
+    std::shared_ptr<Expression> get_value() { return value; }
+
+    std::shared_ptr<Statement> get_body() { return body; }
+
+  private:
+    Token position;
+    std::shared_ptr<Expression> value;
+    std::shared_ptr<Statement> body;
+};
+
 class SwitchStatement : public Statement {
   public:
     SwitchStatement(Token position, std::shared_ptr<Expression> argument,
-                    std::vector<std::shared_ptr<ConditionalBlock>> branches,
-                    std::shared_ptr<Statement> default_branch)
-        : position(position), argument(argument), branches(branches),
-          default_branch(default_branch) {}
+                    std::vector<std::shared_ptr<SwitchCase>> cases,
+                    std::shared_ptr<SwitchCase> default_case)
+        : position(position), argument(argument), cases(cases), default_case(default_case) {}
 
     Token get_position() { return position; }
 
     std::shared_ptr<Expression> get_argument() { return argument; }
 
-    std::vector<std::shared_ptr<ConditionalBlock>> get_branches() { return branches; }
+    std::vector<std::shared_ptr<SwitchCase>> get_cases() { return cases; }
 
-    std::shared_ptr<Statement> get_default_branch() { return default_branch; }
+    std::shared_ptr<SwitchCase> get_default_case() { return default_case; }
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
@@ -290,8 +306,8 @@ class SwitchStatement : public Statement {
   private:
     Token position;
     std::shared_ptr<Expression> argument;
-    std::vector<std::shared_ptr<ConditionalBlock>> branches;
-    std::shared_ptr<Statement> default_branch;
+    std::vector<std::shared_ptr<SwitchCase>> cases;
+    std::shared_ptr<SwitchCase> default_case;
 };
 
 class ReturnStatement : public Statement {
