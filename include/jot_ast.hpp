@@ -269,18 +269,19 @@ class WhileStatement : public Statement {
 
 class SwitchCase {
   public:
-    SwitchCase(Token position, std::shared_ptr<Expression> value, std::shared_ptr<Statement> body)
-        : position(position), value(value), body(body) {}
+    SwitchCase(Token position, std::vector<std::shared_ptr<Expression>> values,
+               std::shared_ptr<Statement> body)
+        : position(position), values(values), body(body) {}
 
     Token get_position() { return position; }
 
-    std::shared_ptr<Expression> get_value() { return value; }
+    std::vector<std::shared_ptr<Expression>> get_values() { return values; }
 
     std::shared_ptr<Statement> get_body() { return body; }
 
   private:
     Token position;
-    std::shared_ptr<Expression> value;
+    std::vector<std::shared_ptr<Expression>> values;
     std::shared_ptr<Statement> body;
 };
 

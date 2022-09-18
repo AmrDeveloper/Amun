@@ -1256,11 +1256,14 @@ void JotLLVMBackend::create_switch_case_branch(llvm::SwitchInst *switch_inst,
     }
 
     // Normal switch case branch with value and body
-    auto switch_case_value = switch_case->get_value();
-    if (switch_case_value) {
-        auto value = llvm_node_value(switch_case_value->accept(this));
-        auto integer_value = llvm::dyn_cast<llvm::ConstantInt>(value);
-        switch_inst->addCase(integer_value, branch_block);
+    auto switch_case_values = switch_case->get_values();
+    if (not switch_case_values.empty()) {
+        // Map all values for this case with single branch block
+        for (auto &switch_case_value : switch_case_values) {
+            auto value = llvm_node_value(switch_case_value->accept(this));
+            auto integer_value = llvm::dyn_cast<llvm::ConstantInt>(value);
+            switch_inst->addCase(integer_value, branch_block);
+        }
         return;
     }
 

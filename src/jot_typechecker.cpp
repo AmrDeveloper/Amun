@@ -190,56 +190,61 @@ std::any JotTypeChecker::visit(SwitchStatement *node) {
     // TODO: Optimize set by replacing std::string by integers for fast comparing
     std::unordered_set<std::string> cases_values;
     for (auto &branch : node->get_cases()) {
-        auto value = branch->get_value();
-        auto value_node_type = value->get_ast_node_type();
-        if (value_node_type == AstNodeType::NumberExpr or
-            value_node_type == AstNodeType::EnumElementExpr) {
+        auto values = branch->get_values();
+        // Check each value of this case
+        for (auto &value : values) {
+            auto value_node_type = value->get_ast_node_type();
+            if (value_node_type == AstNodeType::NumberExpr or
+                value_node_type == AstNodeType::EnumElementExpr) {
 
-            // No need to check if it enum element,
-            // but if it number we need to assert that it integer
-            if (value_node_type == AstNodeType::NumberExpr) {
-                auto value_type = node_jot_type(value->accept(this));
-                auto numeric_type = std::dynamic_pointer_cast<JotNumberType>(value_type);
-                if (not numeric_type->is_integer()) {
-                    context->diagnostics.add_diagnostic_error(
-                        branch->get_position().get_span(),
-                        "Switch case value must be an integer but found " +
-                            numeric_type->type_literal());
-                    throw "Stop";
+                // No need to check if it enum element,
+                // but if it number we need to assert that it integer
+                if (value_node_type == AstNodeType::NumberExpr) {
+                    auto value_type = node_jot_type(value->accept(this));
+                    auto numeric_type = std::dynamic_pointer_cast<JotNumberType>(value_type);
+                    if (not numeric_type->is_integer()) {
+                        context->diagnostics.add_diagnostic_error(
+                            branch->get_position().get_span(),
+                            "Switch case value must be an integer but found " +
+                                numeric_type->type_literal());
+                        throw "Stop";
+                    }
                 }
+
+                // Check that all cases values are uniques
+                if (auto number = std::dynamic_pointer_cast<NumberExpression>(value)) {
+                    if (not cases_values.insert(number->get_value().get_literal()).second) {
+                        context->diagnostics.add_diagnostic_error(
+                            branch->get_position().get_span(),
+                            "Switch can't has more than case with the same constants value");
+                        throw "Stop";
+                    }
+                } else if (auto enum_element =
+                               std::dynamic_pointer_cast<EnumAccessExpression>(value)) {
+                    auto enum_index_string = std::to_string(enum_element->get_enum_element_index());
+                    if (not cases_values.insert(enum_index_string).second) {
+                        context->diagnostics.add_diagnostic_error(
+                            branch->get_position().get_span(),
+                            "Switch can't has more than case with the same constants value");
+                        throw "Stop";
+                    }
+                }
+
+                // This value is valid, so continue to the next one
+                continue;
             }
 
-            // Check that all cases values are uniques
-            if (auto number = std::dynamic_pointer_cast<NumberExpression>(value)) {
-                if (not cases_values.insert(number->get_value().get_literal()).second) {
-                    context->diagnostics.add_diagnostic_error(
-                        branch->get_position().get_span(),
-                        "Switch can't has more than case with the same constants value");
-                    throw "Stop";
-                }
-            } else if (auto enum_element = std::dynamic_pointer_cast<EnumAccessExpression>(value)) {
-                auto enum_index_string = std::to_string(enum_element->get_enum_element_index());
-                if (not cases_values.insert(enum_index_string).second) {
-                    context->diagnostics.add_diagnostic_error(
-                        branch->get_position().get_span(),
-                        "Switch can't has more than case with the same constants value");
-                    throw "Stop";
-                }
-            }
-
-            // Check branch body inside new scope
-            push_new_scope();
-            branch->get_body()->accept(this);
-            pop_current_scope();
-
-            continue;
+            // Report Error if value is not number or enum element
+            context->diagnostics.add_diagnostic_error(
+                branch->get_position().get_span(),
+                "Switch case value must be an integer but found non constants integer type");
+            throw "Stop";
         }
 
-        // Report Error if value is not number or enum element
-        context->diagnostics.add_diagnostic_error(
-            branch->get_position().get_span(),
-            "Switch case value must be an integer but found non constants integer type");
-        throw "Stop";
+        // Check the branch body once inside new scope
+        push_new_scope();
+        branch->get_body()->accept(this);
+        pop_current_scope();
     }
 
     // Check default branch body if exists inside new scope

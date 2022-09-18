@@ -565,10 +565,11 @@ std::shared_ptr<SwitchStatement> JotParser::parse_switch_statement() {
     auto argument = parse_expression();
     assert_kind(TokenKind::OpenBrace, "Expect { after switch value");
 
-    std::vector<std::shared_ptr<SwitchCase>> branches;
+    std::vector<std::shared_ptr<SwitchCase>> switch_cases;
     std::shared_ptr<SwitchCase> default_branch = nullptr;
     bool has_default_branch = false;
     while (is_source_available() and !is_current_kind(TokenKind::CloseBrace)) {
+        std::vector<std::shared_ptr<Expression>> values;
         if (is_current_kind(TokenKind::ElseKeyword)) {
             if (has_default_branch) {
                 context->diagnostics.add_diagnostic_error(
@@ -580,19 +581,26 @@ std::shared_ptr<SwitchStatement> JotParser::parse_switch_statement() {
             consume_kind(TokenKind::RightArrow,
                          "Expect -> after else keyword in switch default branch");
             auto default_body = parse_statement();
-            default_branch = std::make_shared<SwitchCase>(else_keyword, nullptr, default_body);
+            default_branch = std::make_shared<SwitchCase>(else_keyword, values, default_body);
             has_default_branch = true;
             continue;
         }
 
-        auto value = parse_expression();
+        // Parse all values for this case V1, V2, ..., Vn ->
+        while (is_source_available() and !is_current_kind(TokenKind::RightArrow)) {
+            auto value = parse_expression();
+            values.push_back(value);
+            if (is_current_kind(TokenKind::Comma)) {
+                advanced_token();
+            }
+        }
         auto rightArrow = consume_kind(TokenKind::RightArrow, "Expect -> after branch value");
         auto branch = parse_statement();
-        auto conditional_branch = std::make_shared<SwitchCase>(rightArrow, value, branch);
-        branches.push_back(conditional_branch);
+        auto switch_case = std::make_shared<SwitchCase>(rightArrow, values, branch);
+        switch_cases.push_back(switch_case);
     }
     assert_kind(TokenKind::CloseBrace, "Expect } after switch Statement last branch");
-    return std::make_shared<SwitchStatement>(keyword, argument, branches, default_branch);
+    return std::make_shared<SwitchStatement>(keyword, argument, switch_cases, default_branch);
 }
 
 std::shared_ptr<ExpressionStatement> JotParser::parse_expression_statement() {
