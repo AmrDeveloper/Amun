@@ -117,7 +117,7 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
 std::any JotLLVMBackend::visit(FunctionPrototype *node) {
     auto parameters = node->get_parameters();
     int parameters_size = parameters.size();
-    std::vector<llvm::Type *> arguments(parameters.size());
+    std::vector<llvm::Type *> arguments(parameters_size);
     for (int i = 0; i < parameters_size; i++) {
         arguments[i] = llvm_type_from_jot_type(parameters[i]->get_type());
     }
@@ -337,9 +337,10 @@ std::any JotLLVMBackend::visit(DeferStatement *node) {
             auto loaded = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
             auto function_type = llvm_type_from_jot_type(call_expression->get_type_node());
             if (auto function_pointer = llvm::dyn_cast<llvm::FunctionType>(function_type)) {
-                std::vector<llvm::Value *> arguments_values;
                 auto arguments = call_expression->get_arguments();
                 size_t arguments_size = arguments.size();
+                std::vector<llvm::Value *> arguments_values;
+                arguments_values.reserve(arguments_size);
                 for (size_t i = 0; i < arguments_size; i++) {
                     auto value = llvm_node_value(arguments[i]->accept(this));
                     if (function_pointer->getParamType(i) == value->getType()) {
@@ -361,6 +362,7 @@ std::any JotLLVMBackend::visit(DeferStatement *node) {
     auto arguments_size = function->arg_size();
     auto arguments = call_expression->get_arguments();
     std::vector<llvm::Value *> arguments_values;
+    arguments_values.reserve(arguments_size);
     for (size_t i = 0; i < arguments_size; i++) {
         auto value = llvm_node_value(arguments[i]->accept(this));
         if (function->getArg(i)->getType() == value->getType()) {
@@ -677,9 +679,10 @@ std::any JotLLVMBackend::visit(CallExpression *node) {
         auto return_ptr_type = callee_function_type->getReturnType()->getPointerElementType();
         auto function_pointer_type = llvm::dyn_cast<llvm::FunctionType>(return_ptr_type);
 
-        std::vector<llvm::Value *> arguments_values;
         auto arguments = node->get_arguments();
         size_t arguments_size = arguments.size();
+        std::vector<llvm::Value *> arguments_values;
+        arguments_values.reserve(arguments_size);
         for (size_t i = 0; i < arguments_size; i++) {
             auto value = llvm_node_value(arguments[i]->accept(this));
             if (function_pointer_type->getParamType(i) == value->getType()) {
@@ -702,9 +705,10 @@ std::any JotLLVMBackend::visit(CallExpression *node) {
             auto loaded = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
             auto function_type = llvm_type_from_jot_type(node->get_type_node());
             if (auto function_pointer = llvm::dyn_cast<llvm::FunctionType>(function_type)) {
-                std::vector<llvm::Value *> arguments_values;
                 auto arguments = node->get_arguments();
                 size_t arguments_size = arguments.size();
+                std::vector<llvm::Value *> arguments_values;
+                arguments_values.reserve(arguments_size);
                 for (size_t i = 0; i < arguments_size; i++) {
                     auto value = llvm_node_value(arguments[i]->accept(this));
                     if (function_pointer->getParamType(i) == value->getType()) {
@@ -724,6 +728,7 @@ std::any JotLLVMBackend::visit(CallExpression *node) {
     auto arguments = node->get_arguments();
     size_t arguments_size = function->arg_size();
     std::vector<llvm::Value *> arguments_values;
+    arguments_values.reserve(arguments_size);
     for (size_t i = 0; i < arguments_size; i++) {
         auto value = llvm_node_value(arguments[i]->accept(this));
         if (function->getArg(i)->getType() == value->getType()) {
@@ -854,11 +859,14 @@ std::any JotLLVMBackend::visit(NumberExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(ArrayExpression *node) {
+    auto node_values = node->get_values();
+    auto size = node_values.size();
     if (node->is_constant()) {
         auto arrayType =
             llvm::dyn_cast<llvm::ArrayType>(llvm_type_from_jot_type(node->get_type_node()));
         std::vector<llvm::Constant *> values;
-        for (auto &value : node->get_values()) {
+        values.reserve(size);
+        for (auto &value : node_values) {
             values.push_back(
                 llvm::dyn_cast<llvm::Constant>(llvm_resolve_value(value->accept(this))));
         }
@@ -867,11 +875,12 @@ std::any JotLLVMBackend::visit(ArrayExpression *node) {
 
     auto arrayType = llvm_type_from_jot_type(node->get_type_node());
     std::vector<llvm::Value *> values;
-    for (auto &value : node->get_values()) {
+    values.reserve(size);
+    for (auto &value : node_values) {
         values.push_back(llvm_resolve_value(value->accept(this)));
     }
     auto alloca = Builder.CreateAlloca(arrayType);
-    for (size_t i = 0; i < values.size(); i++) {
+    for (size_t i = 0; i < size; i++) {
         auto index = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, i, true));
         auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero_int32_value, index});
 
@@ -1016,7 +1025,7 @@ llvm::Type *JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
         auto jot_function_type = std::dynamic_pointer_cast<JotFunctionType>(type);
         auto parameters = jot_function_type->get_parameters();
         int parameters_size = parameters.size();
-        std::vector<llvm::Type *> arguments(parameters.size());
+        std::vector<llvm::Type *> arguments(parameters_size);
         for (int i = 0; i < parameters_size; i++) {
             arguments[i] = llvm_type_from_jot_type(parameters[i]);
         }
