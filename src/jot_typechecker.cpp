@@ -668,6 +668,12 @@ std::any JotTypeChecker::visit(LiteralExpression *node) {
         auto value = symbol_table->lookup(name);
         auto type = node_jot_type(value);
         node->set_type(type);
+
+        // TODO: Must optimized later and to be more accurate
+        if (type->get_type_kind() == TypeKind::Number ||
+            type->get_type_kind() == TypeKind::EnumerationElement) {
+            node->set_constant(true);
+        }
         return type;
     } else {
         context->diagnostics.add_diagnostic_error(node->get_name().get_span(),

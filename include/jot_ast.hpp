@@ -861,13 +861,16 @@ class LiteralExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
-    bool is_constant() override { return false; }
+    void set_constant(bool is_constants) { constants = is_constants; }
+
+    bool is_constant() override { return constants; }
 
     AstNodeType get_ast_node_type() override { return AstNodeType::LiteralExpr; }
 
   private:
     Token name;
     std::shared_ptr<JotType> type;
+    bool constants = false;
 };
 
 class NumberExpression : public Expression {

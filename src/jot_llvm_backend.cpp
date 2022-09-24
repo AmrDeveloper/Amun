@@ -2,6 +2,7 @@
 #include "../include/jot_ast_visitor.hpp"
 #include "../include/jot_logger.hpp"
 #include "../include/jot_type.hpp"
+#include "jot_ast.hpp"
 
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constant.h>
@@ -62,7 +63,8 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
     // Globals code generation block can be moved into other function to be clear and handle more
     // cases and to handle also soem compile time evaluations
     if (node->is_global()) {
-        auto constants_value = llvm::dyn_cast<llvm::Constant>(llvm_node_value(value));
+        auto initalize_value = llvm_resolve_value(value);
+        auto constants_value = llvm::dyn_cast<llvm::Constant>(initalize_value);
 
         auto global_variable = new llvm::GlobalVariable(*llvm_module, llvm_type, false,
                                                         llvm::GlobalValue::ExternalLinkage,
@@ -527,6 +529,20 @@ std::any JotLLVMBackend::visit(BinaryExpression *node) {
     auto right = llvm_resolve_value(node->get_right()->accept(this));
     auto op = node->get_operator_token().get_kind();
 
+    if (auto right_field = std::dynamic_pointer_cast<FieldDeclaration>(node->get_right())) {
+        if (right_field->is_global() && left->getType()->isIntegerTy()) {
+            jot::loge << "Here we can resolve it bro\n";
+            return zero_int32_value;
+        }
+    }
+
+    if (auto right_field = std::dynamic_pointer_cast<FieldDeclaration>(node->get_left())) {
+        if (right_field->is_global() && right->getType()->isIntegerTy()) {
+            jot::loge << "Here we can resolve it bro\n";
+            return zero_int32_value;
+        }
+    }
+
     // Binary Operations for integer types
     if (left->getType()->isIntegerTy() and right->getType()->isIntegerTy()) {
         return create_llvm_integers_bianry(op, left, right);
@@ -941,7 +957,7 @@ llvm::Value *JotLLVMBackend::llvm_resolve_value(std::any any_value) {
         return Builder.CreateLoad(alloca->getAllocatedType(), alloca);
     }
     if (auto variable = llvm::dyn_cast<llvm::GlobalVariable>(llvm_value)) {
-        return Builder.CreateLoad(variable->getValueType(), variable);
+        return variable->getInitializer();
     }
     return llvm_value;
 }
