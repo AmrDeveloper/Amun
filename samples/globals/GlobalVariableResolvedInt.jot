@@ -1,0 +1,17 @@
+extern fun printf(format *char, value int64) int64;
+
+// Those Global Variables values are calculated at compile time
+var a = 10;
+var b = a;               // 10
+var c = a + 10;          // 10 + 10 -> 20
+var d = a + c;           // 10 + (10 + 10) -> 30
+var e = a + b + c + d;   // 10 + 10 + (10 + 10) + (10 + 20) -> 70 
+
+fun main() int64 {
+    printf("a = %d\n", a);
+    printf("b = %d\n", b);
+    printf("c = %d\n", c);
+    printf("d = %d\n", d);
+    printf("e = %d\n", e);
+    return 0;
+}
