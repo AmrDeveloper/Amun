@@ -3,8 +3,8 @@ extern fun printf(format *char, value int64) int64;
 var array = [[4], [5], [6]];
 
 fun main() int64 {
-    printf("array[0] before update %d\n", array[0][0]);
+    printf("array[0][0] before update %d\n", array[0][0]);
     array[0][0] = 20;
-    printf("array[0] before update %d\n", array[0][0]);
+    printf("array[0][0] before update %d\n", array[0][0]);
     return 0;
 }
