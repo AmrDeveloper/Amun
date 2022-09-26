@@ -5,6 +5,7 @@
 #include "jot_symboltable.hpp"
 #include "jot_type.hpp"
 
+#include <llvm/IR/Constant.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
@@ -173,6 +174,10 @@ class JotLLVMBackend : public TreeVisitor {
     llvm::Value *create_llvm_value_increment(std::shared_ptr<Expression> right, bool is_prefix);
 
     llvm::Value *create_llvm_value_decrement(std::shared_ptr<Expression> right, bool is_prefix);
+
+    llvm::Constant *resolve_global_expression(FieldDeclaration *expression);
+
+    llvm::Constant *resolve_global_index_expression(std::shared_ptr<IndexExpression> expression);
 
     llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function,
                                                 const std::string var_name, llvm::Type *type);

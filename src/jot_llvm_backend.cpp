@@ -2,8 +2,8 @@
 #include "../include/jot_ast_visitor.hpp"
 #include "../include/jot_logger.hpp"
 #include "../include/jot_type.hpp"
-#include "jot_ast.hpp"
 
+#include <llvm/ADT/ArrayRef.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/Constants.h>
@@ -18,6 +18,7 @@
 
 #include <any>
 #include <memory>
+#include <string>
 
 std::unique_ptr<llvm::Module>
 JotLLVMBackend::compile(std::string module_name,
@@ -52,26 +53,24 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
     auto field_type = node->get_type();
     auto llvm_type = llvm_type_from_jot_type(field_type);
 
-    // if field has initalizer evaluate it, else initalize it with default value
-    std::any value;
-    if (node->get_value() == nullptr) {
-        value = llvm_type_default_value(field_type);
-    } else {
-        value = node->get_value()->accept(this);
-    }
-
     // Globals code generation block can be moved into other function to be clear and handle more
     // cases and to handle also soem compile time evaluations
     if (node->is_global()) {
-        auto initalize_value = llvm_resolve_value(value);
-        auto constants_value = llvm::dyn_cast<llvm::Constant>(initalize_value);
-
+        auto constants_value = resolve_global_expression(node);
         auto global_variable = new llvm::GlobalVariable(*llvm_module, llvm_type, false,
                                                         llvm::GlobalValue::ExternalLinkage,
                                                         constants_value, var_name.c_str());
 
         global_variable->setAlignment(llvm::MaybeAlign(0));
         return 0;
+    }
+
+    // if field has initalizer evaluate it, else initalize it with default value
+    std::any value;
+    if (node->get_value() == nullptr) {
+        value = llvm_type_default_value(field_type);
+    } else {
+        value = node->get_value()->accept(this);
     }
 
     auto current_function = Builder.GetInsertBlock()->getParent();
@@ -589,7 +588,7 @@ std::any JotLLVMBackend::visit(ComparisonExpression *node) {
         return create_llvm_floats_comparison(op, left, right);
     }
 
-    // TODO: add support for more comparisons types such
+    // TODO: add support for more comparisons types
 
     jot::loge << "Binary Operators work only for Numeric types\n";
     exit(1);
@@ -821,19 +820,45 @@ std::any JotLLVMBackend::visit(IndexExpression *node) {
     // One dimension Array Index Expression
     if (auto array_literal = std::dynamic_pointer_cast<LiteralExpression>(node_value)) {
         auto array = array_literal->accept(this);
+
         if (array.type() == typeid(llvm::AllocaInst *)) {
             auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_node_value(array));
-            auto ptr =
-                Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero_int32_value, index});
+            llvm::ArrayRef<llvm::Value *> indexes = {zero_int32_value, index};
+            auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, indexes);
             return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
         }
 
         if (array.type() == typeid(llvm::GlobalVariable *)) {
             auto global_variable_array =
                 llvm::dyn_cast<llvm::GlobalVariable>(llvm_node_value(array));
-            auto ptr = Builder.CreateGEP(global_variable_array->getValueType(),
-                                         global_variable_array, {zero_int32_value, index});
-            return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
+
+            auto local_insert_block = Builder.GetInsertBlock();
+
+            // Its local
+            if (local_insert_block) {
+                auto ptr = Builder.CreateGEP(global_variable_array->getValueType(),
+                                             global_variable_array, {zero_int32_value, index});
+                return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
+            }
+
+            // Resolve index expression for constants array
+            auto initalizer = global_variable_array->getInitializer();
+            auto constants_index = llvm::dyn_cast<llvm::ConstantInt>(index);
+
+            // Index expression for array with constants data types such as integers, floats
+            if (auto data_array = llvm::dyn_cast<llvm::ConstantDataArray>(initalizer)) {
+                return data_array->getElementAsConstant(constants_index->getLimitedValue());
+            }
+
+            // Index expression for array with non constants data types
+            if (auto constants_array = llvm::dyn_cast<llvm::ConstantArray>(initalizer)) {
+                return constants_array->getAggregateElement(constants_index);
+            }
+
+            // Index Expression for array that initalized with default values
+            if (auto constants_array = llvm::dyn_cast<llvm::Constant>(initalizer)) {
+                return constants_array->getAggregateElement(constants_index);
+            }
         }
 
         jot::loge << "Internal Compiler error: Index expression with literal must have alloca or "
@@ -844,10 +869,16 @@ std::any JotLLVMBackend::visit(IndexExpression *node) {
     // Multidimensional Array Index Expression
     if (auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node_value)) {
         auto array = llvm_node_value(node_value->accept(this));
-        auto load_inst = dyn_cast<llvm::LoadInst>(array);
-        auto ptr = Builder.CreateGEP(array->getType(), load_inst->getPointerOperand(),
-                                     {zero_int32_value, index});
-        return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
+        if (auto load_inst = dyn_cast<llvm::LoadInst>(array)) {
+            auto ptr = Builder.CreateGEP(array->getType(), load_inst->getPointerOperand(),
+                                         {zero_int32_value, index});
+            return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
+        }
+
+        if (auto constants_array = llvm::dyn_cast<llvm::Constant>(array)) {
+            auto constants_index = llvm::dyn_cast<llvm::ConstantInt>(index);
+            return constants_array->getAggregateElement(constants_index);
+        }
     }
 
     jot::loge << "Internal compiler error: Invalid Index expression \n";
@@ -936,6 +967,8 @@ llvm::Value *JotLLVMBackend::llvm_node_value(std::any any_value) {
         return std::any_cast<llvm::AllocaInst *>(any_value);
     } else if (any_value.type() == typeid(llvm::Constant *)) {
         return std::any_cast<llvm::Constant *>(any_value);
+    } else if (any_value.type() == typeid(llvm::ConstantInt *)) {
+        return std::any_cast<llvm::ConstantInt *>(any_value);
     } else if (any_value.type() == typeid(llvm::LoadInst *)) {
         return std::any_cast<llvm::LoadInst *>(any_value);
     } else if (any_value.type() == typeid(llvm::PHINode *)) {
@@ -953,12 +986,16 @@ llvm::Value *JotLLVMBackend::llvm_node_value(std::any any_value) {
 
 llvm::Value *JotLLVMBackend::llvm_resolve_value(std::any any_value) {
     auto llvm_value = llvm_node_value(any_value);
+
     if (auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_value)) {
         return Builder.CreateLoad(alloca->getAllocatedType(), alloca);
     }
+
     if (auto variable = llvm::dyn_cast<llvm::GlobalVariable>(llvm_value)) {
         return variable->getInitializer();
+        // return Builder.CreateLoad(variable->getValueType(), variable);
     }
+
     return llvm_value;
 }
 
@@ -1236,8 +1273,70 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<
         return is_prefix ? new_value : current_value;
     }
 
-    jot::loge << "Compiler Internal Error: Unary expression with non global or alloca type\n";
+    jot::loge << "Compiler Internal Error: Unary expression with non global or alloca type "
+              << right.type().name() << '\n';
     exit(1);
+}
+
+llvm::Constant *JotLLVMBackend::resolve_global_expression(FieldDeclaration *node) {
+    auto var_name = node->get_name().get_literal();
+    auto field_type = node->get_type();
+    auto value = node->get_value();
+
+    // If there are no value, return default value
+    if (value == nullptr) {
+        return llvm::dyn_cast<llvm::Constant>(llvm_type_default_value(field_type));
+    }
+
+    // If right value is index expression resolve it and return constants value
+    if (value->get_ast_node_type() == AstNodeType::IndexExpr) {
+        auto index_expression = std::dynamic_pointer_cast<IndexExpression>(value);
+        return resolve_global_index_expression(index_expression);
+    }
+
+    // Resolve non index constants value
+    auto llvm_value = llvm_resolve_value(node->get_value()->accept(this));
+    return llvm::dyn_cast<llvm::Constant>(llvm_value);
+}
+
+llvm::Constant *
+JotLLVMBackend::resolve_global_index_expression(std::shared_ptr<IndexExpression> expression) {
+    auto llvm_array = llvm_node_value(expression->get_value()->accept(this));
+    auto index_value = expression->get_index()->accept(this);
+    auto constants_index = llvm::dyn_cast<llvm::ConstantInt>(llvm_node_value(index_value));
+
+    if (auto global_variable_array = llvm::dyn_cast<llvm::GlobalVariable>(llvm_array)) {
+        auto initalizer = global_variable_array->getInitializer();
+
+        // Index expression for array with constants data types such as integers, floats
+        if (auto data_array = llvm::dyn_cast<llvm::ConstantDataArray>(initalizer)) {
+            return data_array->getElementAsConstant(constants_index->getLimitedValue());
+        }
+
+        // Index expression for array with non constants data types
+        if (auto constants_array = llvm::dyn_cast<llvm::ConstantArray>(initalizer)) {
+            return constants_array->getAggregateElement(constants_index);
+        }
+
+        if (auto constants_array = llvm::dyn_cast<llvm::Constant>(initalizer)) {
+            return constants_array->getAggregateElement(constants_index);
+        }
+    }
+
+    if (auto data_array = llvm::dyn_cast<llvm::ConstantDataArray>(llvm_array)) {
+        return data_array->getElementAsConstant(constants_index->getLimitedValue());
+    }
+
+    if (auto constants_array = llvm::dyn_cast<llvm::ConstantArray>(llvm_array)) {
+        return constants_array->getAggregateElement(constants_index);
+    }
+
+    if (auto constants_array = llvm::dyn_cast<llvm::Constant>(llvm_array)) {
+        return constants_array->getAggregateElement(constants_index);
+    }
+
+    jot::loge << "Internal compiler error: invalid type in resolve_global_index_expression\n";
+    exit(EXIT_FAILURE);
 }
 
 inline llvm::AllocaInst *JotLLVMBackend::create_entry_block_alloca(llvm::Function *function,

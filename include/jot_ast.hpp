@@ -752,7 +752,10 @@ class IndexExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
-    bool is_constant() override { return false; }
+    bool is_constant() override {
+        // TODO: Should be calculated depend if value and index are constants
+        return true;
+    }
 
     AstNodeType get_ast_node_type() override { return AstNodeType::IndexExpr; }
 
