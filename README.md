@@ -26,6 +26,7 @@ A Statically typed, compiled general purpose low level programming language buil
 - No implicit casting, every cast must be explicit to be clear
 - Defer Statement
 - Default initalization value for global and local variables
+- Resolving Constants Index, If Expressions at Compile time
 
 ### Requirements for Developments
 - C++ Compiler (GCC or Clang) that support C++20
