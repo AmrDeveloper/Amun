@@ -56,7 +56,7 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
     // Globals code generation block can be moved into other function to be clear and handle more
     // cases and to handle also soem compile time evaluations
     if (node->is_global()) {
-        auto constants_value = resolve_global_expression(node);
+        auto constants_value = resolve_constant_expression(node);
         auto global_variable = new llvm::GlobalVariable(*llvm_module, llvm_type, false,
                                                         llvm::GlobalValue::ExternalLinkage,
                                                         constants_value, var_name.c_str());
@@ -1278,7 +1278,7 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<
     exit(1);
 }
 
-llvm::Constant *JotLLVMBackend::resolve_global_expression(FieldDeclaration *node) {
+llvm::Constant *JotLLVMBackend::resolve_constant_expression(FieldDeclaration *node) {
     auto value = node->get_value();
     auto field_type = node->get_type();
 
@@ -1290,13 +1290,13 @@ llvm::Constant *JotLLVMBackend::resolve_global_expression(FieldDeclaration *node
     // If right value is index expression resolve it and return constant value
     if (value->get_ast_node_type() == AstNodeType::IndexExpr) {
         auto index_expression = std::dynamic_pointer_cast<IndexExpression>(value);
-        return resolve_global_index_expression(index_expression);
+        return resolve_constant_index_expression(index_expression);
     }
 
     // If right value is if expression, resolve it to constant value
     if (value->get_ast_node_type() == AstNodeType::IfExpr) {
         auto if_expression = std::dynamic_pointer_cast<IfExpression>(value);
-        return resolve_global_if_expression(if_expression);
+        return resolve_constant_if_expression(if_expression);
     }
 
     // Resolve non index constants value
@@ -1305,7 +1305,7 @@ llvm::Constant *JotLLVMBackend::resolve_global_expression(FieldDeclaration *node
 }
 
 llvm::Constant *
-JotLLVMBackend::resolve_global_index_expression(std::shared_ptr<IndexExpression> expression) {
+JotLLVMBackend::resolve_constant_index_expression(std::shared_ptr<IndexExpression> expression) {
     auto llvm_array = llvm_node_value(expression->get_value()->accept(this));
     auto index_value = expression->get_index()->accept(this);
     auto constants_index = llvm::dyn_cast<llvm::ConstantInt>(llvm_node_value(index_value));
@@ -1345,7 +1345,7 @@ JotLLVMBackend::resolve_global_index_expression(std::shared_ptr<IndexExpression>
 }
 
 llvm::Constant *
-JotLLVMBackend::resolve_global_if_expression(std::shared_ptr<IfExpression> expression) {
+JotLLVMBackend::resolve_constant_if_expression(std::shared_ptr<IfExpression> expression) {
     auto condition = llvm_resolve_value(expression->get_condition()->accept(this));
     auto constant_condition = llvm::dyn_cast<llvm::Constant>(condition);
     if (constant_condition->isZeroValue()) {

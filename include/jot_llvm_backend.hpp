@@ -175,11 +175,11 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Value *create_llvm_value_decrement(std::shared_ptr<Expression> right, bool is_prefix);
 
-    llvm::Constant *resolve_global_expression(FieldDeclaration *expression);
+    llvm::Constant *resolve_constant_expression(FieldDeclaration *expression);
 
-    llvm::Constant *resolve_global_index_expression(std::shared_ptr<IndexExpression> expression);
+    llvm::Constant *resolve_constant_index_expression(std::shared_ptr<IndexExpression> expression);
 
-    llvm::Constant *resolve_global_if_expression(std::shared_ptr<IfExpression> expression);
+    llvm::Constant *resolve_constant_if_expression(std::shared_ptr<IfExpression> expression);
 
     llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function,
                                                 const std::string var_name, llvm::Type *type);
