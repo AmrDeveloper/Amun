@@ -179,6 +179,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Constant *resolve_global_index_expression(std::shared_ptr<IndexExpression> expression);
 
+    llvm::Constant *resolve_global_if_expression(std::shared_ptr<IfExpression> expression);
+
     llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function,
                                                 const std::string var_name, llvm::Type *type);
 

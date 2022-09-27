@@ -1279,19 +1279,24 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<
 }
 
 llvm::Constant *JotLLVMBackend::resolve_global_expression(FieldDeclaration *node) {
-    auto var_name = node->get_name().get_literal();
-    auto field_type = node->get_type();
     auto value = node->get_value();
+    auto field_type = node->get_type();
 
     // If there are no value, return default value
     if (value == nullptr) {
         return llvm::dyn_cast<llvm::Constant>(llvm_type_default_value(field_type));
     }
 
-    // If right value is index expression resolve it and return constants value
+    // If right value is index expression resolve it and return constant value
     if (value->get_ast_node_type() == AstNodeType::IndexExpr) {
         auto index_expression = std::dynamic_pointer_cast<IndexExpression>(value);
         return resolve_global_index_expression(index_expression);
+    }
+
+    // If right value is if expression, resolve it to constant value
+    if (value->get_ast_node_type() == AstNodeType::IfExpr) {
+        auto if_expression = std::dynamic_pointer_cast<IfExpression>(value);
+        return resolve_global_if_expression(if_expression);
     }
 
     // Resolve non index constants value
@@ -1337,6 +1342,18 @@ JotLLVMBackend::resolve_global_index_expression(std::shared_ptr<IndexExpression>
 
     jot::loge << "Internal compiler error: invalid type in resolve_global_index_expression\n";
     exit(EXIT_FAILURE);
+}
+
+llvm::Constant *
+JotLLVMBackend::resolve_global_if_expression(std::shared_ptr<IfExpression> expression) {
+    auto condition = llvm_resolve_value(expression->get_condition()->accept(this));
+    auto constant_condition = llvm::dyn_cast<llvm::Constant>(condition);
+    if (constant_condition->isZeroValue()) {
+        return llvm::dyn_cast<llvm::Constant>(
+            llvm_resolve_value(expression->get_else_value()->accept(this)));
+    }
+    return llvm::dyn_cast<llvm::Constant>(
+        llvm_resolve_value(expression->get_if_value()->accept(this)));
 }
 
 inline llvm::AllocaInst *JotLLVMBackend::create_entry_block_alloca(llvm::Function *function,

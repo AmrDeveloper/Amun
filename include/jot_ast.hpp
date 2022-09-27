@@ -433,7 +433,7 @@ class IfExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
-    bool is_constant() override { return false; }
+    bool is_constant() override { return condition->is_constant() && if_expression->is_constant() && else_expression->is_constant(); }
 
     AstNodeType get_ast_node_type() override { return AstNodeType::IfExpr; }
 
