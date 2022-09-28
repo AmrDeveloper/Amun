@@ -410,6 +410,11 @@ std::any JotLLVMBackend::visit(ExpressionStatement *node) {
 }
 
 std::any JotLLVMBackend::visit(IfExpression *node) {
+    // If it constant, we can resolve it at Compile time
+    if (node->is_constant()) {
+        return resolve_constant_if_expression(std::make_shared<IfExpression>(*node));
+    }
+
     auto function = Builder.GetInsertBlock()->getParent();
 
     auto condition = llvm_node_value(node->get_condition()->accept(this));

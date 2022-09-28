@@ -310,6 +310,14 @@ std::any JotTypeChecker::visit(ExpressionStatement *node) {
 }
 
 std::any JotTypeChecker::visit(IfExpression *node) {
+    auto condition = node_jot_type(node->get_condition()->accept(this));
+    if (not is_number_type(condition)) {
+        context->diagnostics.add_diagnostic_error(
+            condition->get_type_position(),
+            "If Expression condition mush be a number but got " + condition->type_literal());
+        throw "Stop";
+    }
+
     auto if_value = node_jot_type(node->get_if_value()->accept(this));
     auto else_value = node_jot_type(node->get_else_value()->accept(this));
     if (not if_value->equals(else_value)) {
