@@ -1,0 +1,14 @@
+extern fun printf(format *char, value int64) int64;
+
+// Resolve Constants Nested If Expression at Compile time
+var condition1 = true;
+var condition2 = false;
+var value = if (condition1) 
+                if (condition2) 10 else 11 
+            else 
+                12;
+
+fun main() int64 {
+    printf("%d\n", value);
+    return 0;
+}
