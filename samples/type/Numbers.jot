@@ -6,6 +6,7 @@ fun main() int64 {
     var short : int16 = 1i16;
     var integer : int32 = 1i32;
     var long : int64 = 1i64;
+    var hex : int64 = 0xfff;
 
     // Floating pointers
     var float : float32 = 10.0f32;
