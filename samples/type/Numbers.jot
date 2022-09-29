@@ -7,6 +7,7 @@ fun main() int64 {
     var integer : int32 = 1i32;
     var long : int64 = 1i64;
     var hex : int64 = 0xfff;
+    var binary : int64 = 0o110;
 
     // Floating pointers
     var float : float32 = 10.0f32;
