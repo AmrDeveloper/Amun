@@ -22,6 +22,8 @@ class JotTokenizer {
 
     Token consume_number();
 
+    Token consume_hex_number();
+
     Token consume_string();
 
     Token consume_character();
@@ -50,11 +52,15 @@ class JotTokenizer {
 
     bool is_digit(char);
 
+    bool is_hex_digit(char);
+
     bool is_alpha(char);
 
     bool is_alpha_num(char);
 
     int8_t hex_to_int(char c);
+
+    int64_t hex_to_decimal(const std::string &hex);
 
     bool is_source_available();
 
