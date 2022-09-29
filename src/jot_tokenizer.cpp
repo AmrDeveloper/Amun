@@ -152,9 +152,12 @@ Token JotTokenizer::scan_next_token() {
     case '\'': return consume_character();
 
     case '0': {
-        if (match('x')) {
+        if (match('x'))
             return consume_hex_number();
-        }
+
+        if (match('o'))
+            return consume_binary_number();
+
         return consume_number();
     }
 
@@ -237,6 +240,22 @@ Token JotTokenizer::consume_hex_number() {
 
     if (decimal_value == -1) {
         return build_token(TokenKind::Invalid, "Out of range hex value");
+    }
+
+    return build_token(TokenKind::Integer, std::to_string(decimal_value));
+}
+
+Token JotTokenizer::consume_binary_number() {
+    while (is_binary_digit(peek())) {
+        advance();
+    }
+
+    size_t len = current_position - start_position - 1;
+    auto literal = source_code.substr(start_position + 1, len);
+    auto decimal_value = binary_to_decimal(literal);
+
+    if (decimal_value == -1) {
+        return build_token(TokenKind::Invalid, "Out of range binary value");
     }
 
     return build_token(TokenKind::Integer, std::to_string(decimal_value));
@@ -439,6 +458,8 @@ bool JotTokenizer::is_hex_digit(char c) {
     return is_digit(c) || ('F' >= c && c >= 'A') || ('f' >= c && c >= 'a');
 }
 
+bool JotTokenizer::is_binary_digit(char c) { return '1' == c || '0' == c; }
+
 bool JotTokenizer::is_alpha(char c) {
     if ('z' >= c && c >= 'a')
         return true;
@@ -454,6 +475,14 @@ int8_t JotTokenizer::hex_to_int(char c) {
 int64_t JotTokenizer::hex_to_decimal(const std::string &hex) {
     try {
         return std::stol(hex, nullptr, 16);
+    } catch (...) {
+        return -1;
+    }
+}
+
+int64_t JotTokenizer::binary_to_decimal(const std::string &binary) {
+    try {
+        return std::stol(binary, nullptr, 2);
     } catch (...) {
         return -1;
     }
