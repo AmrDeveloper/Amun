@@ -433,7 +433,10 @@ class IfExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
-    bool is_constant() override { return condition->is_constant() && if_expression->is_constant() && else_expression->is_constant(); }
+    bool is_constant() override {
+        return condition->is_constant() && if_expression->is_constant() &&
+               else_expression->is_constant();
+    }
 
     AstNodeType get_ast_node_type() override { return AstNodeType::IfExpr; }
 
@@ -754,7 +757,7 @@ class IndexExpression : public Expression {
 
     bool is_constant() override {
         // TODO: Should be calculated depend if value and index are constants
-        return true;
+        return index->is_constant();
     }
 
     AstNodeType get_ast_node_type() override { return AstNodeType::IndexExpr; }
@@ -802,6 +805,14 @@ class ArrayExpression : public Expression {
         auto element_type =
             size == 0 ? std::make_shared<JotNoneType>(position) : values[0]->get_type_node();
         type = std::make_shared<JotArrayType>(element_type, size);
+
+        // Check if all values of array are constant or not
+        for (auto &value : values) {
+            if (not value->is_constant()) {
+                is_constants_array = false;
+                break;
+            }
+        }
     }
 
     Token get_position() { return position; }
@@ -814,16 +825,13 @@ class ArrayExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
-    bool is_constant() override {
-        if (values.size() == 0)
-            return true;
-        return values[0]->is_constant();
-    }
+    bool is_constant() override { return is_constants_array; }
 
   private:
     Token position;
     std::vector<std::shared_ptr<Expression>> values;
     std::shared_ptr<JotType> type;
+    bool is_constants_array = true;
 };
 
 class StringExpression : public Expression {
