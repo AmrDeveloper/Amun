@@ -331,6 +331,49 @@ std::any JotTypeChecker::visit(IfExpression *node) {
     return if_value;
 }
 
+std::any JotTypeChecker::visit(SwitchExpression *node) {
+    auto argument = node_jot_type(node->get_argument()->accept(this));
+    auto cases = node->get_switch_cases();
+    auto cases_size = cases.size();
+    for (size_t i = 0; i < cases_size; i++) {
+        auto case_expression = cases[i];
+        auto case_type = node_jot_type(case_expression->accept(this));
+        if (not argument->equals(case_type)) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_position().get_span(),
+                "Switch case type must be the same type of argument type " +
+                    argument->type_literal() + " but got " + case_type->type_literal() +
+                    " in case number " + std::to_string(i + 1));
+            throw "Stop";
+        }
+    }
+
+    auto values = node->get_switch_cases_values();
+    auto expected_type = node_jot_type(values[0]->accept(this));
+    for (size_t i = 1; i < cases_size; i++) {
+        auto case_value = node_jot_type(values[i]->accept(this));
+        if (not expected_type->equals(case_value)) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_position().get_span(), "Switch cases must be the same time but got " +
+                                                     expected_type->type_literal() + " and " +
+                                                     case_value->type_literal());
+            throw "Stop";
+        }
+    }
+
+    auto default_value_type = node_jot_type(node->get_default_case_value()->accept(this));
+    if (not expected_type->equals(default_value_type)) {
+        context->diagnostics.add_diagnostic_error(
+            node->get_position().get_span(),
+            "Switch case default values must be the same type of other cases expect " +
+                expected_type->type_literal() + " but got " + default_value_type->type_literal());
+        throw "Stop";
+    }
+
+    node->set_type_node(expected_type);
+    return expected_type;
+}
+
 std::any JotTypeChecker::visit(GroupExpression *node) {
     return node->get_expression()->accept(this);
 }

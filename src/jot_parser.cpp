@@ -886,6 +886,9 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
     case TokenKind::IfKeyword: {
         return parse_if_expression();
     }
+    case TokenKind::SwitchKeyword: {
+        return parse_switch_expression();
+    }
     case TokenKind::CastKeyword: {
         return parse_cast_expression();
     }
@@ -918,6 +921,52 @@ std::shared_ptr<IfExpression> JotParser::parse_if_expression() {
         consume_kind(TokenKind::ElseKeyword, "Expect `else` keyword after then value.");
     auto else_value = parse_expression();
     return std::make_shared<IfExpression>(if_token, else_token, condition, then_value, else_value);
+}
+
+std::shared_ptr<SwitchExpression> JotParser::parse_switch_expression() {
+    auto keyword = consume_kind(TokenKind::SwitchKeyword, "Expect switch keyword.");
+    auto argument = parse_expression();
+    assert_kind(TokenKind::OpenBrace, "Expect { after switch value");
+    std::vector<std::shared_ptr<Expression>> cases;
+    std::vector<std::shared_ptr<Expression>> values;
+    std::shared_ptr<Expression> default_value;
+    bool has_default_branch = false;
+    while (is_source_available() and !is_current_kind(TokenKind::CloseBrace)) {
+        if (is_current_kind(TokenKind::ElseKeyword)) {
+            if (has_default_branch) {
+                context->diagnostics.add_diagnostic_error(
+                    keyword.get_span(), "Switch expression can't has more than one default branch");
+                throw "Stop";
+            }
+            assert_kind(TokenKind::ElseKeyword, "Expect else keyword in switch default branch");
+            assert_kind(TokenKind::RightArrow,
+                        "Expect -> after else keyword in switch default branch");
+            default_value = parse_expression();
+            assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after switch case value");
+            has_default_branch = true;
+            continue;
+        }
+
+        cases.push_back(parse_expression());
+        auto rightArrow = consume_kind(TokenKind::RightArrow, "Expect -> after branch value");
+        values.push_back(parse_expression());
+        assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after switch case value");
+    }
+
+    if (not has_default_branch) {
+        context->diagnostics.add_diagnostic_error(keyword.get_span(),
+                                                  "Switch expression must has a default case");
+        throw "Stop";
+    }
+
+    if (cases.empty()) {
+        context->diagnostics.add_diagnostic_error(
+            keyword.get_span(), "Switch expression must has at last one case and default case");
+        throw "Stop";
+    }
+
+    assert_kind(TokenKind::CloseBrace, "Expect } after switch Statement last branch");
+    return std::make_shared<SwitchExpression>(keyword, argument, cases, values, default_value);
 }
 
 std::shared_ptr<GroupExpression> JotParser::parse_group_expression() {

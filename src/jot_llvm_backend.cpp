@@ -321,6 +321,9 @@ std::any JotLLVMBackend::visit(ReturnStatement *node) {
         auto variable = std::any_cast<llvm::GlobalVariable *>(value);
         auto value = Builder.CreateLoad(variable->getValueType(), variable);
         return Builder.CreateRet(value);
+    } else if (value.type() == typeid(llvm::PHINode *)) {
+        auto phi = std::any_cast<llvm::PHINode *>(value);
+        return Builder.CreateRet(phi);
     } else {
         jot::loge << "Un expected return type " << value.type().name() << '\n';
     }
@@ -411,7 +414,7 @@ std::any JotLLVMBackend::visit(ExpressionStatement *node) {
 
 std::any JotLLVMBackend::visit(IfExpression *node) {
     // If it constant, we can resolve it at Compile time
-    if (node->is_constant()) {
+    if (is_global_block() && node->is_constant()) {
         return resolve_constant_if_expression(std::make_shared<IfExpression>(*node));
     }
 
@@ -446,6 +449,86 @@ std::any JotLLVMBackend::visit(IfExpression *node) {
     pn->addIncoming(else_value, elseBB);
 
     return pn;
+}
+
+std::any JotLLVMBackend::visit(SwitchExpression *node) {
+    // Resolve the argument condition
+    // In each branch check the equlity between argument and case
+    // If they are equal conditional jump to the final branch, else jump to the next branch
+    // If the current branch is default case branch, perform un conditional jump to final branch
+
+    auto cases = node->get_switch_cases();
+    auto values = node->get_switch_cases_values();
+
+    // The number of cases that has a value (not default case)
+    auto cases_size = cases.size();
+
+    // The number of all values (cases and default case values)
+    auto values_size = cases_size + 1;
+
+    // The value type for all cases values
+    auto value_type = llvm_type_from_jot_type(node->get_type_node());
+
+    auto function = Builder.GetInsertBlock()->getParent();
+
+    auto argument = llvm_resolve_value(node->get_argument()->accept(this));
+
+    // Create basic blocks that match the number of cases even the default case
+    std::vector<llvm::BasicBlock *> llvm_branches(values_size);
+    for (size_t i = 0; i < values_size; i++) {
+        llvm_branches[i] = llvm::BasicBlock::Create(llvm_context);
+    }
+
+    // Resolve all values before creating any branch or jumps
+    std::vector<llvm::Value *> llvm_values(values_size);
+    for (size_t i = 0; i < cases_size; i++) {
+        llvm_values[i] = llvm_resolve_value(values[i]->accept(this));
+    }
+
+    // Resolve the default value
+    llvm_values[cases_size] = llvm_resolve_value(node->get_default_case_value()->accept(this));
+
+    // Merge branch is the branch which contains the phi node used as a destination
+    // if current case has the same value as argument valeu
+    // or no case match the argument value so default branch will perfrom jump to it
+    auto merge_branch = llvm::BasicBlock::Create(llvm_context);
+
+    // Un conditional jump to the first block and make it the current insert point
+    auto first_branch = llvm_branches[0];
+    Builder.CreateBr(first_branch);
+    function->getBasicBlockList().push_back(first_branch);
+    Builder.SetInsertPoint(first_branch);
+
+    for (size_t i = 1; i < values_size; i++) {
+        auto current_branch = llvm_branches[i];
+
+        // Compare the argument value with current case
+        auto case_value = llvm_node_value(cases[i - 1]->accept(this));
+        auto condition = Builder.CreateICmpEQ(argument, case_value);
+
+        // Jump to the merge block if current case equal to argument,
+        // else jump to next branch (case)
+        Builder.CreateCondBr(condition, merge_branch, current_branch);
+
+        // condition first then branch
+        function->getBasicBlockList().push_back(current_branch);
+        Builder.SetInsertPoint(current_branch);
+    }
+
+    // Un conditional jump from the default branch to the merge branch
+    Builder.CreateBr(merge_branch);
+
+    // Insert the merge branch and make it the insert point to generate the phi node
+    function->getBasicBlockList().push_back(merge_branch);
+    Builder.SetInsertPoint(merge_branch);
+
+    // Create A phi nodes with all resolved values and their basic blocks
+    auto phi_node = Builder.CreatePHI(value_type, values_size);
+    for (size_t i = 0; i < values_size; i++) {
+        phi_node->addIncoming(llvm_values[i], llvm_branches[i]);
+    }
+
+    return phi_node;
 }
 
 std::any JotLLVMBackend::visit(GroupExpression *node) {
@@ -998,7 +1081,6 @@ llvm::Value *JotLLVMBackend::llvm_resolve_value(std::any any_value) {
 
     if (auto variable = llvm::dyn_cast<llvm::GlobalVariable>(llvm_value)) {
         return variable->getInitializer();
-        // return Builder.CreateLoad(variable->getValueType(), variable);
     }
 
     return llvm_value;
@@ -1429,6 +1511,8 @@ llvm::Function *JotLLVMBackend::lookup_function(std::string name) {
 
     return llvm_functions[name];
 }
+
+inline bool JotLLVMBackend::is_global_block() { return Builder.GetInsertBlock() == nullptr; }
 
 inline void JotLLVMBackend::execute_defer_calls() {
     for (auto &defer_call : defer_calls_stack) {

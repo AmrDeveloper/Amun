@@ -93,6 +93,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(IfStatement *node) override;
 
+    std::any visit(SwitchExpression *node) override;
+
     std::any visit(WhileStatement *node) override;
 
     std::any visit(SwitchStatement *node) override;
@@ -189,6 +191,8 @@ class JotLLVMBackend : public TreeVisitor {
                                    std::shared_ptr<SwitchCase> switch_case);
 
     llvm::Function *lookup_function(std::string name);
+
+    bool is_global_block();
 
     void execute_defer_calls();
 

@@ -112,6 +112,8 @@ class JotParser {
 
     std::shared_ptr<IfExpression> parse_if_expression();
 
+    std::shared_ptr<SwitchExpression> parse_switch_expression();
+
     std::shared_ptr<GroupExpression> parse_group_expression();
 
     std::shared_ptr<ArrayExpression> parse_array_expression();

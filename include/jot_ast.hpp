@@ -31,6 +31,7 @@ enum class AstNodeType {
     Expression,
 
     IfExpr,
+    SwitchExpr,
     GroupExpr,
     AssignExpr,
     BinaryExpr,
@@ -446,6 +447,48 @@ class IfExpression : public Expression {
     std::shared_ptr<Expression> condition;
     std::shared_ptr<Expression> if_expression;
     std::shared_ptr<Expression> else_expression;
+    std::shared_ptr<JotType> type;
+};
+
+class SwitchExpression : public Expression {
+  public:
+    SwitchExpression(Token switch_token, std::shared_ptr<Expression> argument,
+                     std::vector<std::shared_ptr<Expression>> switch_cases,
+                     std::vector<std::shared_ptr<Expression>> switch_cases_values,
+                     std::shared_ptr<Expression> default_value)
+        : switch_token(switch_token), argument(argument), switch_cases(switch_cases),
+          switch_cases_values(switch_cases_values), default_value(default_value) {
+        type = switch_cases_values[0]->get_type_node();
+    }
+
+    Token get_position() { return switch_token; }
+
+    std::shared_ptr<Expression> get_argument() { return argument; }
+
+    std::vector<std::shared_ptr<Expression>> get_switch_cases() { return switch_cases; }
+
+    std::vector<std::shared_ptr<Expression>> get_switch_cases_values() {
+        return switch_cases_values;
+    }
+
+    std::shared_ptr<Expression> get_default_case_value() { return default_value; }
+
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
+
+    std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return false; }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::SwitchExpr; }
+
+  private:
+    Token switch_token;
+    std::shared_ptr<Expression> argument;
+    std::vector<std::shared_ptr<Expression>> switch_cases;
+    std::vector<std::shared_ptr<Expression>> switch_cases_values;
+    std::shared_ptr<Expression> default_value;
     std::shared_ptr<JotType> type;
 };
 

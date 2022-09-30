@@ -49,6 +49,7 @@ class StatementVisitor {
 };
 
 class IfExpression;
+class SwitchExpression;
 class GroupExpression;
 class AssignExpression;
 class BinaryExpression;
@@ -72,6 +73,8 @@ class NullExpression;
 class ExpressionVisitor {
   public:
     virtual std::any visit(IfExpression *node) = 0;
+
+    virtual std::any visit(SwitchExpression *node) = 0;
 
     virtual std::any visit(GroupExpression *node) = 0;
 
