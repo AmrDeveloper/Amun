@@ -1,0 +1,32 @@
+extern fun printf(format *char, value int64) int64;
+
+enum Op { PLUS, MINUS, POW, DIV }
+
+fun switch_expr_return(x int64, y int64, op Op) int64 {
+    return switch op {
+        Op::PLUS -> x + y;
+        Op::MINUS -> x - y;
+        Op::POW -> x * y;
+        Op::DIV -> x / y;
+        else -> -1;
+    };
+}
+
+fun main() int64 {
+    var x = 10;
+    var y = 5;
+
+    var plus = switch_expr_return(x, y, Op::PLUS);
+    printf("x + y = %d\n", plus);
+
+    var minus = switch_expr_return(x, y, Op::MINUS);
+    printf("x - y = %d\n", minus);
+
+    var pow = switch_expr_return(x, y, Op::POW);
+    printf("x * y = %d\n", pow);
+
+    var div = switch_expr_return(x, y, Op::DIV);
+    printf("x / y = %d\n", div);
+
+    return 0;
+}
