@@ -947,10 +947,21 @@ std::shared_ptr<SwitchExpression> JotParser::parse_switch_expression() {
             continue;
         }
 
-        cases.push_back(parse_expression());
-        auto rightArrow = consume_kind(TokenKind::RightArrow, "Expect -> after branch value");
-        values.push_back(parse_expression());
-        assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after switch case value");
+        auto case_expression = parse_expression();
+        auto case_node_type = case_expression->get_ast_node_type();
+        if (case_node_type == AstNodeType::NumberExpr ||
+            case_node_type == AstNodeType::EnumElementExpr) {
+            cases.push_back(case_expression);
+            auto rightArrow = consume_kind(TokenKind::RightArrow, "Expect -> after branch value");
+            values.push_back(parse_expression());
+            assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after switch case value");
+            continue;
+        }
+
+        // Assert that case node type must be valid type
+        context->diagnostics.add_diagnostic_error(
+            keyword.get_span(), "Switch expression case must be integer or enum element");
+        throw "Stop";
     }
 
     if (not has_default_branch) {
