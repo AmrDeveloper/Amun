@@ -154,7 +154,7 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Value *llvm_resolve_value(std::any any_value);
 
-    llvm::Value *llvm_number_value(std::string value_litearl, NumberKind size);
+    llvm::Value *llvm_number_value(const std::string &value_litearl, NumberKind size);
 
     llvm::Value *llvm_boolean_value(bool value);
 
@@ -182,6 +182,8 @@ class JotLLVMBackend : public TreeVisitor {
     llvm::Constant *resolve_constant_index_expression(std::shared_ptr<IndexExpression> expression);
 
     llvm::Constant *resolve_constant_if_expression(std::shared_ptr<IfExpression> expression);
+
+    llvm::Constant *resolve_constant_string_expression(const std::string &literal);
 
     llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function,
                                                 const std::string var_name, llvm::Type *type);

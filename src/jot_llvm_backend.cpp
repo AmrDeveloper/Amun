@@ -1030,7 +1030,7 @@ std::any JotLLVMBackend::visit(ArrayExpression *node) {
 
 std::any JotLLVMBackend::visit(StringExpression *node) {
     std::string literal = node->get_value().get_literal();
-    return Builder.CreateGlobalStringPtr(literal);
+    return resolve_constant_string_expression(literal);
 }
 
 std::any JotLLVMBackend::visit(CharacterExpression *node) {
@@ -1086,7 +1086,8 @@ llvm::Value *JotLLVMBackend::llvm_resolve_value(std::any any_value) {
     return llvm_value;
 }
 
-inline llvm::Value *JotLLVMBackend::llvm_number_value(std::string value_litearl, NumberKind size) {
+inline llvm::Value *JotLLVMBackend::llvm_number_value(const std::string &value_litearl,
+                                                      NumberKind size) {
     switch (size) {
     case NumberKind::Integer1: {
         auto value = std::stoi(value_litearl.c_str());
@@ -1441,6 +1442,22 @@ JotLLVMBackend::resolve_constant_if_expression(std::shared_ptr<IfExpression> exp
     }
     return llvm::dyn_cast<llvm::Constant>(
         llvm_resolve_value(expression->get_if_value()->accept(this)));
+}
+
+llvm::Constant *JotLLVMBackend::resolve_constant_string_expression(const std::string &literal) {
+    auto size = literal.size();
+    auto length = size + 1;
+    std::vector<llvm::Constant *> characters(length);
+    for (unsigned int i = 0; i < size; i++) {
+        characters[i] = llvm::ConstantInt::get(llvm_int8_type, literal[i]);
+    }
+    // Add '\0' at the end of string literal
+    characters[size] = llvm::ConstantInt::get(llvm_int8_type, 0);
+    auto array_type = llvm::ArrayType::get(llvm_int8_type, length);
+    auto init = llvm::ConstantArray::get(array_type, characters);
+    auto variable = new llvm::GlobalVariable(*llvm_module, init->getType(), true,
+                                             llvm::GlobalVariable::ExternalLinkage, init, literal);
+    return llvm::ConstantExpr::getBitCast(variable, llvm_int8_type->getPointerTo());
 }
 
 inline llvm::AllocaInst *JotLLVMBackend::create_entry_block_alloca(llvm::Function *function,
