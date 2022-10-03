@@ -1,0 +1,10 @@
+extern fun puts(s *char) int64;
+extern fun putchar(c int8) int32;
+
+var message = "Hello, World!";
+
+fun main() int64 {
+    puts(message);
+    putchar(message[0]);
+    return 0;
+}

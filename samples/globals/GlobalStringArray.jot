@@ -1,0 +1,26 @@
+extern fun puts(s *char) int64;
+extern fun putchar(c int8) int32;
+
+var numbers = ["One", "Two"];
+var one = numbers[0];
+var two = numbers[1];
+
+fun main() int64 {
+    puts(numbers[0]);
+    putchar(numbers[0][0]);
+    putchar('\n');
+
+    puts(numbers[1]);
+    putchar(numbers[1][0]);
+    putchar('\n');
+
+    puts(one);
+    putchar(one[0]);
+    putchar('\n');
+
+    puts(two);
+    putchar(two[0]);
+    putchar('\n');
+
+    return 0;
+}
