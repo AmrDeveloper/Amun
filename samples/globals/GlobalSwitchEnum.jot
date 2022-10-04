@@ -1,0 +1,17 @@
+extern fun printf(format *char, value int64) int64;
+
+// Resolve constants global Switch expression with enum at compile time
+
+enum Build { DEBUG, RELEASE }
+
+var build_type = Build::RELEASE;
+
+var isDebug = switch build_type {
+    Build::DEBUG -> 1;
+    else -> 0;
+};
+
+fun main() int64 {
+    printf("%d\n", isDebug);
+    return 0;
+}
