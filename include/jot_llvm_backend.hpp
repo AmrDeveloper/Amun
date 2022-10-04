@@ -183,6 +183,9 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Constant *resolve_constant_if_expression(std::shared_ptr<IfExpression> expression);
 
+    llvm::Constant *
+    resolve_constant_switch_expression(std::shared_ptr<SwitchExpression> expression);
+
     llvm::Constant *resolve_constant_string_expression(const std::string &literal);
 
     llvm::AllocaInst *create_entry_block_alloca(llvm::Function *function,

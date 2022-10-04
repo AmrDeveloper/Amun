@@ -479,7 +479,22 @@ class SwitchExpression : public Expression {
 
     std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
 
-    bool is_constant() override { return false; }
+    bool is_constant() override {
+        if (argument->is_constant()) {
+            for (auto &switch_case : switch_cases) {
+                if (not switch_case->is_constant()) {
+                    return false;
+                }
+            }
+
+            for (auto &switch_value : switch_cases_values) {
+                if (not switch_value->is_constant()) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 
     AstNodeType get_ast_node_type() override { return AstNodeType::SwitchExpr; }
 

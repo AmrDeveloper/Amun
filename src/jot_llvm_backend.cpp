@@ -452,6 +452,11 @@ std::any JotLLVMBackend::visit(IfExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(SwitchExpression *node) {
+    // If it constant, we can resolve it at Compile time
+    if (is_global_block() && node->is_constant()) {
+        return resolve_constant_switch_expression(std::make_shared<SwitchExpression>(*node));
+    }
+
     // Resolve the argument condition
     // In each branch check the equlity between argument and case
     // If they are equal conditional jump to the final branch, else jump to the next branch
@@ -1442,6 +1447,25 @@ JotLLVMBackend::resolve_constant_if_expression(std::shared_ptr<IfExpression> exp
     }
     return llvm::dyn_cast<llvm::Constant>(
         llvm_resolve_value(expression->get_if_value()->accept(this)));
+}
+
+llvm::Constant *
+JotLLVMBackend::resolve_constant_switch_expression(std::shared_ptr<SwitchExpression> expression) {
+    auto argument = llvm_resolve_value(expression->get_argument()->accept(this));
+    auto constant_argument = llvm::dyn_cast<llvm::Constant>(argument);
+    auto switch_cases = expression->get_switch_cases();
+    auto cases_size = switch_cases.size();
+    for (size_t i = 0; i < cases_size; i++) {
+        auto switch_case = switch_cases[i];
+        auto case_value = llvm_resolve_value(switch_case->accept(this));
+        auto constant_case = llvm::dyn_cast<llvm::Constant>(case_value);
+        if (constant_argument == constant_case) {
+            auto value = llvm_resolve_value(expression->get_switch_cases_values()[i]->accept(this));
+            return llvm::dyn_cast<llvm::Constant>(value);
+        }
+    }
+    auto default_value = llvm_resolve_value(expression->get_default_case_value()->accept(this));
+    return llvm::dyn_cast<llvm::Constant>(default_value);
 }
 
 llvm::Constant *JotLLVMBackend::resolve_constant_string_expression(const std::string &literal) {
