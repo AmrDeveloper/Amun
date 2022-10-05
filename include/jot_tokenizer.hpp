@@ -62,6 +62,8 @@ class JotTokenizer {
 
     static bool is_alpha_num(char);
 
+    static bool is_underscore(char);
+
     static int8_t hex_to_int(char c);
 
     static int64_t hex_to_decimal(const std::string &);
