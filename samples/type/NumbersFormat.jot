@@ -1,0 +1,11 @@
+fun main() int64 {
+    // Integers
+    var long : int64 = 1_000_000_i64;
+    var hex : int64 = 0x_fff_fff;
+    var binary : int64 = 0o_110_001;
+
+    // Floating pointers
+    var float : float32 = 10_000.0_1_f32;
+    var double : float64 = 10_000.0_1_f64;
+    return 1;
+}
