@@ -13,10 +13,10 @@
 #include <llvm/IR/Type.h>
 
 #include <any>
-#include <map>
 #include <memory>
 #include <stack>
 #include <vector>
+#include <unordered_map>
 
 class DeferCall {
   public:
@@ -209,8 +209,9 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::unique_ptr<llvm::Module> llvm_module;
 
-    std::map<std::string, std::shared_ptr<FunctionPrototype>> functions_table;
-    std::map<std::string, llvm::Function *> llvm_functions;
+    std::unordered_map<std::string, std::shared_ptr<FunctionPrototype>> functions_table;
+    std::unordered_map<std::string, llvm::Function *> llvm_functions;
+    std::unordered_map<std::string, llvm::Constant *> constants_string_pool;
 
     std::vector<std::shared_ptr<DeferCall>> defer_calls_stack;
     std::stack<llvm::BasicBlock *> break_blocks_stack;

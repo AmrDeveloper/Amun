@@ -989,7 +989,7 @@ std::any JotLLVMBackend::visit(LiteralExpression *node) {
     auto alloca_inst = alloca_inst_scope->lookup(name);
     if (alloca_inst.type() != typeid(nullptr))
         return alloca_inst;
-    // If it not in alloca inst table, maybe it global variable
+    // If it not in alloca inst table,a maybe it global variable
     return llvm_module->getNamedGlobal(name);
 }
 
@@ -1469,6 +1469,11 @@ JotLLVMBackend::resolve_constant_switch_expression(std::shared_ptr<SwitchExpress
 }
 
 llvm::Constant *JotLLVMBackend::resolve_constant_string_expression(const std::string &literal) {
+    // Resolve constants string from string pool if it generated before
+    if (constants_string_pool.count(literal)) {
+        return constants_string_pool[literal];
+    }
+
     auto size = literal.size();
     auto length = size + 1;
     std::vector<llvm::Constant *> characters(length);
@@ -1481,7 +1486,10 @@ llvm::Constant *JotLLVMBackend::resolve_constant_string_expression(const std::st
     auto init = llvm::ConstantArray::get(array_type, characters);
     auto variable = new llvm::GlobalVariable(*llvm_module, init->getType(), true,
                                              llvm::GlobalVariable::ExternalLinkage, init, literal);
-    return llvm::ConstantExpr::getBitCast(variable, llvm_int8_type->getPointerTo());
+    auto string = llvm::ConstantExpr::getBitCast(variable, llvm_int8_type->getPointerTo());
+    // define the constants string in the constants pool
+    constants_string_pool[literal] = string;
+    return string;
 }
 
 inline llvm::AllocaInst *JotLLVMBackend::create_entry_block_alloca(llvm::Function *function,
