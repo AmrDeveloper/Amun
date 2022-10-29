@@ -953,7 +953,8 @@ std::shared_ptr<SwitchExpression> JotParser::parse_switch_expression() {
                     advanced_token();
                 } else {
                     context->diagnostics.add_diagnostic_error(
-                        current_token->get_span(), "In Switch expression can't use `,` with no value before it");
+                        current_token->get_span(),
+                        "In Switch expression can't use `,` with no value before it");
                     throw "Stop";
                 }
             }
