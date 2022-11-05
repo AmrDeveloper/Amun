@@ -379,7 +379,21 @@ std::any JotTypeChecker::visit(GroupExpression *node) {
 }
 
 std::any JotTypeChecker::visit(AssignExpression *node) {
-    auto left_type = node_jot_type(node->get_left()->accept(this));
+    auto left_node = node->get_left();
+    auto left_type = node_jot_type(left_node->accept(this));
+
+    // Make sure to report error if use want to modify string literal using index expression
+    if (left_node->get_ast_node_type() == AstNodeType::IndexExpr) {
+        auto index_expression = std::dynamic_pointer_cast<IndexExpression>(left_node);
+        auto value_type = index_expression->get_value()->get_type_node();
+        if (value_type->type_literal() == "*Int8") {
+            context->diagnostics.add_diagnostic_error(
+                index_expression->get_position().get_span(),
+                "String literal are readonly can't modify it using [i]");
+            throw "Stop";
+        }
+    }
+
     auto right_type = node_jot_type(node->get_right()->accept(this));
 
     if (not left_type->equals(right_type)) {
