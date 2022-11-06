@@ -1,0 +1,13 @@
+extern fun printf(format *char, value int64) int64;
+
+fun main() int64 {
+    printf("Int64 size %d Byte\n", type_size(int64));
+    printf("Int32 size %d Byte\n", type_size(int32));
+    printf("Int16 size %d Byte\n", type_size(int16));
+    printf("Int8 size %d Byte\n", type_size(int8));
+    printf("Char size %d Byte\n", type_size(char));
+
+    printf("Float64 size %d Byte\n", type_size(float64));
+    printf("Float32 size %d Byte\n", type_size(float32));
+    return 0;
+}
