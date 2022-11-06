@@ -42,6 +42,7 @@ enum class AstNodeType {
     PostfixUnaryExpr,
     CallExpr,
     CastExpr,
+    TypeSizeExpr,
     IndexExpr,
     EnumElementExpr,
     ArrayExpr,
@@ -791,6 +792,33 @@ class CastExpression : public Expression {
     Token position;
     std::shared_ptr<JotType> type;
     std::shared_ptr<Expression> value;
+};
+
+class TypeSizeExpression : public Expression {
+  public:
+    TypeSizeExpression(Token position, std::shared_ptr<JotType> type)
+        : position(position), type(type) {
+        node_type = std::make_shared<JotNumberType>(position, NumberKind::Integer64);
+    }
+
+    Token get_position() { return position; }
+
+    std::shared_ptr<JotType> get_type_node() override { return node_type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { node_type = new_type; }
+
+    std::shared_ptr<JotType> get_type() { return type; }
+
+    std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return true; }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::TypeSizeExpr; }
+
+  private:
+    Token position;
+    std::shared_ptr<JotType> type;
+    std::shared_ptr<JotType> node_type;
 };
 
 class IndexExpression : public Expression {

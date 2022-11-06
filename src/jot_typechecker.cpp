@@ -699,6 +699,8 @@ std::any JotTypeChecker::visit(CastExpression *node) {
     return cast_result_type;
 }
 
+std::any JotTypeChecker::visit(TypeSizeExpression *node) { return node->get_type_node(); }
+
 std::any JotTypeChecker::visit(IndexExpression *node) {
     auto callee_type = node_jot_type(node->get_value()->accept(this));
     if (callee_type->get_type_kind() == TypeKind::Array) {

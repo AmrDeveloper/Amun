@@ -60,6 +60,7 @@ class PrefixUnaryExpression;
 class PostfixUnaryExpression;
 class CallExpression;
 class CastExpression;
+class TypeSizeExpression;
 class IndexExpression;
 class EnumAccessExpression;
 class LiteralExpression;
@@ -95,6 +96,8 @@ class ExpressionVisitor {
     virtual std::any visit(CallExpression *node) = 0;
 
     virtual std::any visit(CastExpression *node) = 0;
+
+    virtual std::any visit(TypeSizeExpression *node) = 0;
 
     virtual std::any visit(IndexExpression *node) = 0;
 

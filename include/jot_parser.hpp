@@ -120,6 +120,8 @@ class JotParser {
 
     std::shared_ptr<CastExpression> parse_cast_expression();
 
+    std::shared_ptr<TypeSizeExpression> parse_type_size_expression();
+
     std::shared_ptr<JotType> parse_type();
 
     std::shared_ptr<JotType> parse_type_with_prefix();

@@ -892,6 +892,9 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression() {
     case TokenKind::CastKeyword: {
         return parse_cast_expression();
     }
+    case TokenKind::TypeSizeKeyword: {
+        return parse_type_size_expression();
+    }
     default: {
         context->diagnostics.add_diagnostic_error(peek_current().get_span(),
                                                   "Unexpected or unsupported expression");
@@ -1024,6 +1027,14 @@ std::shared_ptr<CastExpression> JotParser::parse_cast_expression() {
     assert_kind(TokenKind::CloseParen, "Expect `)` after cast type");
     auto expression = parse_expression();
     return std::make_shared<CastExpression>(cast_token, cast_to_type, expression);
+}
+
+std::shared_ptr<TypeSizeExpression> JotParser::parse_type_size_expression() {
+    auto token = consume_kind(TokenKind::TypeSizeKeyword, "Expect type_size keyword");
+    assert_kind(TokenKind::OpenParen, "Expect `(` after cast keyword");
+    auto type = parse_type();
+    assert_kind(TokenKind::CloseParen, "Expect `)` after cast type");
+    return std::make_shared<TypeSizeExpression>(token, type);
 }
 
 std::shared_ptr<JotType> JotParser::parse_type() { return parse_type_with_prefix(); }

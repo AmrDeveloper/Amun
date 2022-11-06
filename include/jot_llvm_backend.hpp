@@ -15,8 +15,8 @@
 #include <any>
 #include <memory>
 #include <stack>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 class DeferCall {
   public:
@@ -130,6 +130,8 @@ class JotLLVMBackend : public TreeVisitor {
     std::any visit(CallExpression *node) override;
 
     std::any visit(CastExpression *node) override;
+
+    std::any visit(TypeSizeExpression *node) override;
 
     std::any visit(IndexExpression *node) override;
 
