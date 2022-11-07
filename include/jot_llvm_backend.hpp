@@ -133,6 +133,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(TypeSizeExpression *node) override;
 
+    std::any visit(ValueSizeExpression *node) override;
+
     std::any visit(IndexExpression *node) override;
 
     std::any visit(EnumAccessExpression *node) override;

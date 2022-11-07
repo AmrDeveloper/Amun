@@ -905,6 +905,13 @@ std::any JotLLVMBackend::visit(TypeSizeExpression *node) {
     return type_size;
 }
 
+std::any JotLLVMBackend::visit(ValueSizeExpression *node) {
+    auto llvm_type = llvm_type_from_jot_type(node->get_value()->get_type_node());
+    auto type_alloc_size = llvm_module->getDataLayout().getTypeAllocSize(llvm_type);
+    auto type_size = llvm::ConstantInt::get(llvm_int64_type, type_alloc_size);
+    return type_size;
+}
+
 std::any JotLLVMBackend::visit(IndexExpression *node) {
     auto index = llvm_resolve_value(node->get_index()->accept(this));
     auto node_value = node->get_value();
