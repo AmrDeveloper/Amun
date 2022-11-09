@@ -1,6 +1,6 @@
 extern fun printf(format *char, varargs) int64;
 
 fun main() int64 {
-    printf("Hello, World!\n");
+    printf("Hello String %s and Integers %ld and %ld\n", "Jot", 10, 20);
     return 0;
 }
