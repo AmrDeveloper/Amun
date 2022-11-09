@@ -35,6 +35,8 @@ enum TokenKind {
     FalseKeyword,
     NullKeyword,
 
+    VarargsKeyword,
+
     Dot,
     Comma,
     Colon,
@@ -131,6 +133,8 @@ static std::unordered_map<TokenKind, const char *> token_kind_literal = {
     {TokenKind::TypeSizeKeyword, "TypeSize"},
     {TokenKind::ValueSizeKeyword, "ValueSize"},
 
+    {TokenKind::VarargsKeyword, "Varargs"},
+
     {TokenKind::Dot, "Dot ."},
     {TokenKind::Comma, "Comma ,"},
     {TokenKind::Colon, "Colon :"},
@@ -221,6 +225,7 @@ static std::unordered_map<std::string, TokenKind> language_keywords = {
     {"prefix", TokenKind::PrefixKeyword},
     {"infix", TokenKind::InfixKeyword},
     {"postfix", TokenKind::PostfixKeyword},
+    {"varargs", TokenKind::VarargsKeyword},
     {"type_size", TokenKind::TypeSizeKeyword},
     {"value_size", TokenKind::ValueSizeKeyword}};
 

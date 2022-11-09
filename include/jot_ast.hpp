@@ -149,9 +149,9 @@ class FunctionPrototype : public Statement {
   public:
     FunctionPrototype(Token name, std::vector<std::shared_ptr<Parameter>> parameters,
                       std::shared_ptr<JotType> return_type, FunctionCallKind call_kind,
-                      bool external)
+                      bool external, bool varargs)
         : name(name), parameters(parameters), return_type(return_type), call_kind(call_kind),
-          external(external) {}
+          external(external), varargs(varargs) {}
 
     Token get_name() { return name; }
 
@@ -165,6 +165,8 @@ class FunctionPrototype : public Statement {
 
     bool is_external() { return external; }
 
+    bool has_varargs() { return varargs; }
+
     AstNodeType get_ast_node_type() override { return AstNodeType::Prototype; }
 
   private:
@@ -173,6 +175,7 @@ class FunctionPrototype : public Statement {
     std::shared_ptr<JotType> return_type;
     FunctionCallKind call_kind;
     bool external;
+    bool varargs;
 };
 
 class FunctionDeclaration : public Statement {

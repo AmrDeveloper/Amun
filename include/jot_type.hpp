@@ -137,8 +137,8 @@ class JotArrayType : public JotType {
 class JotFunctionType : public JotType {
   public:
     JotFunctionType(Token name, std::vector<std::shared_ptr<JotType>> parameters,
-                    std::shared_ptr<JotType> return_type)
-        : name(name), parameters(parameters), return_type(return_type) {}
+                    std::shared_ptr<JotType> return_type, bool varargs = false)
+        : name(name), parameters(parameters), return_type(return_type), varargs(varargs) {}
 
     std::vector<std::shared_ptr<JotType>> get_parameters() { return parameters; }
 
@@ -168,10 +168,13 @@ class JotFunctionType : public JotType {
 
     bool castable(const std::shared_ptr<JotType> &other) override;
 
+    bool has_varargs() { return varargs; }
+
   private:
     Token name;
     std::vector<std::shared_ptr<JotType>> parameters;
     std::shared_ptr<JotType> return_type;
+    bool varargs;
 };
 
 class JotEnumType : public JotType {

@@ -90,7 +90,8 @@ std::any JotTypeChecker::visit(FunctionPrototype *node) {
         parameters.push_back(parameter->get_type());
     }
     auto return_type = node->get_return_type();
-    auto function_type = std::make_shared<JotFunctionType>(name, parameters, return_type);
+    auto function_type =
+        std::make_shared<JotFunctionType>(name, parameters, return_type, node->has_varargs());
     bool is_first_defined = symbol_table->define(name.get_literal(), function_type);
     if (not is_first_defined) {
         context->diagnostics.add_diagnostic_error(node->get_name().get_span(),
@@ -654,7 +655,8 @@ std::any JotTypeChecker::visit(CallExpression *node) {
                 node->set_type_node(type);
                 auto parameters = type->get_parameters();
                 auto arguments = node->get_arguments();
-                check_parameters_types(node->get_position().get_span(), arguments, parameters);
+                check_parameters_types(node->get_position().get_span(), arguments, parameters,
+                                       type->has_varargs());
                 return type->get_return_type();
             } else {
                 context->diagnostics.add_diagnostic_error(
@@ -676,7 +678,8 @@ std::any JotTypeChecker::visit(CallExpression *node) {
         node->set_type_node(function_type);
         auto parameters = function_type->get_parameters();
         auto arguments = node->get_arguments();
-        check_parameters_types(node->get_position().get_span(), arguments, parameters);
+        check_parameters_types(node->get_position().get_span(), arguments, parameters,
+                               function_type->has_varargs());
         return function_type->get_return_type();
     }
 
@@ -868,11 +871,21 @@ bool JotTypeChecker::is_none_type(const std::shared_ptr<JotType> &type) {
 
 void JotTypeChecker::check_parameters_types(TokenSpan location,
                                             std::vector<std::shared_ptr<Expression>> &arguments,
-                                            std::vector<std::shared_ptr<JotType>> &parameters) {
-    if (parameters.size() != arguments.size()) {
+                                            std::vector<std::shared_ptr<JotType>> &parameters,
+                                            bool has_varargs) {
+    // If hasent varargs, parameters and arguments must be the same size
+    if (not has_varargs && arguments.size() != parameters.size()) {
         context->diagnostics.add_diagnostic_error(
             location, "Invalid number of arguments, expect " + std::to_string(parameters.size()) +
                           " but got " + std::to_string(arguments.size()));
+        throw "Stop";
+    }
+
+    if (has_varargs && parameters.size() > arguments.size()) {
+        context->diagnostics.add_diagnostic_error(
+            location, "Invalid number of arguments, expect at last" +
+                          std::to_string(parameters.size()) + " but got " +
+                          std::to_string(arguments.size()));
         throw "Stop";
     }
 
@@ -881,8 +894,8 @@ void JotTypeChecker::check_parameters_types(TokenSpan location,
         arguments_types.push_back(node_jot_type(argument->accept(this)));
     }
 
-    size_t arguments_size = arguments_types.size();
-    for (size_t i = 0; i < arguments_size; i++) {
+    size_t parameters_size = parameters.size();
+    for (size_t i = 0; i < parameters_size; i++) {
         if (not parameters[i]->equals(arguments_types[i])) {
             context->diagnostics.add_diagnostic_error(
                 location, "Argument type didn't match parameter type expect " +

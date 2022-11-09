@@ -244,13 +244,28 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
     assert_kind(TokenKind::FunKeyword, "Expect function keyword.");
     Token name = consume_kind(TokenKind::Symbol, "Expect identifier as function name.");
 
+    bool has_varargs = false;
     std::vector<std::shared_ptr<Parameter>> parameters;
     if (is_current_kind(TokenKind::OpenParen)) {
         advanced_token();
         while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
-            parameters.push_back(parse_parameter());
-            if (is_current_kind(TokenKind::Comma))
+            if (has_varargs) {
+                context->diagnostics.add_diagnostic_error(
+                    previous_token->get_span(),
+                    "Varargs must be the last parameter in the function");
+                throw "Stop";
+            }
+
+            if (is_current_kind(TokenKind::VarargsKeyword)) {
                 advanced_token();
+                has_varargs = true;
+                continue;
+            }
+
+            parameters.push_back(parse_parameter());
+            if (is_current_kind(TokenKind::Comma)) {
+                advanced_token();
+            }
         }
         assert_kind(TokenKind::CloseParen, "Expect ) after function parameters.");
     }
@@ -291,7 +306,7 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
     if (is_external)
         assert_kind(TokenKind::Semicolon, "Expect ; after external function declaration");
     return std::make_shared<FunctionPrototype>(name, parameters, return_type,
-                                               FunctionCallKind::Normal, is_external);
+                                               FunctionCallKind::Normal, is_external, has_varargs);
 }
 
 std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(FunctionCallKind kind) {
@@ -1108,6 +1123,14 @@ std::shared_ptr<JotType> JotParser::parse_primary_type() {
     if (is_current_kind(TokenKind::Symbol)) {
         return parse_identifier_type();
     }
+
+    // Show helpful diagnostic error message for varargs case
+    if (is_current_kind(TokenKind::VarargsKeyword)) {
+        context->diagnostics.add_diagnostic_error(
+            peek_current().get_span(), "Varargs not supported as function pointer parameter");
+        throw "Stop";
+    }
+
     context->diagnostics.add_diagnostic_error(peek_current().get_span(), "Expected symbol as type");
     throw "Stop";
 }

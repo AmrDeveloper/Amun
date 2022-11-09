@@ -109,7 +109,8 @@ class JotTypeChecker : public TreeVisitor {
 
     void check_parameters_types(TokenSpan location,
                                 std::vector<std::shared_ptr<Expression>> &arguments,
-                                std::vector<std::shared_ptr<JotType>> &parameters);
+                                std::vector<std::shared_ptr<JotType>> &parameters,
+                                bool has_varargs);
 
     void push_new_scope();
 

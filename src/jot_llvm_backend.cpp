@@ -117,14 +117,14 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
 
 std::any JotLLVMBackend::visit(FunctionPrototype *node) {
     auto parameters = node->get_parameters();
-    int parameters_size = parameters.size();
+    size_t parameters_size = parameters.size();
     std::vector<llvm::Type *> arguments(parameters_size);
     for (int i = 0; i < parameters_size; i++) {
         arguments[i] = llvm_type_from_jot_type(parameters[i]->get_type());
     }
 
     auto return_type = llvm_type_from_jot_type(node->get_return_type());
-    auto function_type = llvm::FunctionType::get(return_type, arguments, false);
+    auto function_type = llvm::FunctionType::get(return_type, arguments, node->has_varargs());
     auto function_name = node->get_name().get_literal();
     auto linkage = node->is_external() || function_name == "main" ? llvm::Function::ExternalLinkage
                                                                   : llvm::Function::InternalLinkage;
@@ -133,6 +133,10 @@ std::any JotLLVMBackend::visit(FunctionPrototype *node) {
 
     unsigned index = 0;
     for (auto &argument : function->args()) {
+        if (index >= parameters_size) {
+            // Varargs case
+            break;
+        }
         argument.setName(parameters[index++]->get_name().get_literal());
     }
 
@@ -834,19 +838,28 @@ std::any JotLLVMBackend::visit(CallExpression *node) {
     }
 
     auto arguments = node->get_arguments();
-    size_t arguments_size = function->arg_size();
+    auto arguments_size = arguments.size();
+    auto parameter_size = function->arg_size();
     std::vector<llvm::Value *> arguments_values;
     arguments_values.reserve(arguments_size);
     for (size_t i = 0; i < arguments_size; i++) {
         auto value = llvm_node_value(arguments[i]->accept(this));
+
+        // This condition work only if this function has varargs flag
+        if (i >= parameter_size) {
+            arguments_values.push_back(value);
+            continue;
+        }
+
         if (function->getArg(i)->getType() == value->getType()) {
             arguments_values.push_back(value);
-        } else {
-            // Load the constants first and then pass it to the arguments values
-            auto expected_type = function->getArg(i)->getType();
-            auto loaded_value = Builder.CreateLoad(expected_type, value);
-            arguments_values.push_back(loaded_value);
+            continue;
         }
+
+        // Load the constants first and then pass it to the arguments values
+        auto expected_type = function->getArg(i)->getType();
+        auto loaded_value = Builder.CreateLoad(expected_type, value);
+        arguments_values.push_back(loaded_value);
     }
     return Builder.CreateCall(function, arguments_values);
 }
