@@ -13,6 +13,7 @@ enum TypeKind {
     Pointer,
     Function,
     Array,
+    Structure,
     Enumeration,
     EnumerationElement,
     None,
@@ -175,6 +176,33 @@ class JotFunctionType : public JotType {
     std::vector<std::shared_ptr<JotType>> parameters;
     std::shared_ptr<JotType> return_type;
     bool varargs;
+};
+
+class JotStructType : public JotType {
+  public:
+    JotStructType(Token name, std::vector<Token> names, std::vector<std::shared_ptr<JotType>> types)
+        : name(name), fields_names(names), fields_types(types) {}
+
+    Token get_type_token() override { return name; }
+
+    std::vector<Token> get_fields_names() { return fields_names; }
+
+    std::vector<std::shared_ptr<JotType>> get_fields_types() { return fields_types; }
+
+    std::string type_literal() override { return "struct"; }
+
+    TypeKind get_type_kind() override { return TypeKind::Structure; }
+
+    TokenSpan get_type_position() override { return name.get_span(); }
+
+    bool equals(const std::shared_ptr<JotType> &other) override;
+
+    bool castable(const std::shared_ptr<JotType> &other) override;
+
+  private:
+    Token name;
+    std::vector<Token> fields_names;
+    std::vector<std::shared_ptr<JotType>> fields_types;
 };
 
 class JotEnumType : public JotType {

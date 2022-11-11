@@ -25,6 +25,8 @@ class JotTypeChecker : public TreeVisitor {
 
     std::any visit(FunctionDeclaration *node) override;
 
+    std::any visit(StructDeclaration *node) override;
+
     std::any visit(EnumDeclaration *node) override;
 
     std::any visit(IfStatement *node) override;

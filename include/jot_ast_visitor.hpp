@@ -1,7 +1,5 @@
 #pragma once
 
-#include "jot_ast.hpp"
-
 #include <any>
 #include <memory>
 
@@ -9,6 +7,7 @@ class BlockStatement;
 class FieldDeclaration;
 class FunctionPrototype;
 class FunctionDeclaration;
+class StructDeclaration;
 class EnumDeclaration;
 class IfStatement;
 class WhileStatement;
@@ -28,6 +27,8 @@ class StatementVisitor {
     virtual std::any visit(FunctionPrototype *node) = 0;
 
     virtual std::any visit(FunctionDeclaration *node) = 0;
+
+    virtual std::any visit(StructDeclaration *node) = 0;
 
     virtual std::any visit(EnumDeclaration *node) = 0;
 

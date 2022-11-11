@@ -60,6 +60,15 @@ bool JotFunctionType::equals(const std::shared_ptr<JotType> &other) {
 
 bool JotFunctionType::castable(const std::shared_ptr<JotType> &other) { return false; }
 
+bool JotStructType::equals(const std::shared_ptr<JotType> &other) {
+    if (auto other_struct = std::dynamic_pointer_cast<JotStructType>(other)) {
+        return name.get_literal() == other->type_literal();
+    }
+    return false;
+}
+
+bool JotStructType::castable(const std::shared_ptr<JotType> &other) { return false; }
+
 bool JotEnumType::equals(const std::shared_ptr<JotType> &other) { return false; }
 
 bool JotEnumType::castable(const std::shared_ptr<JotType> &other) { return false; }

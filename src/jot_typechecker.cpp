@@ -118,6 +118,8 @@ std::any JotTypeChecker::visit(FunctionDeclaration *node) {
     return function_type;
 }
 
+std::any JotTypeChecker::visit(StructDeclaration *node) { return nullptr; }
+
 std::any JotTypeChecker::visit(EnumDeclaration *node) {
     auto name = node->get_name().get_literal();
     auto enum_type = std::dynamic_pointer_cast<JotEnumType>(node->get_enum_type());

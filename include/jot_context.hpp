@@ -27,6 +27,7 @@ class JotContext {
 
     JotOptions options;
     JotDiagnosticEngine diagnostics;
+    std::unordered_map<std::string, std::shared_ptr<JotStructType>> structures;
     std::unordered_map<std::string, std::shared_ptr<JotEnumType>> enumerations;
 
   private:

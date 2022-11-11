@@ -20,6 +20,7 @@ enum class AstNodeType {
     Field,
     Prototype,
     Function,
+    Struct,
     Enum,
     If,
     While,
@@ -195,6 +196,20 @@ class FunctionDeclaration : public Statement {
   private:
     std::shared_ptr<FunctionPrototype> prototype;
     std::shared_ptr<Statement> body;
+};
+
+class StructDeclaration : public Statement {
+  public:
+    StructDeclaration(std::shared_ptr<JotStructType> struct_type) : struct_type(struct_type) {}
+
+    std::shared_ptr<JotStructType> get_struct_name() { return struct_type; }
+
+    std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::Struct; }
+
+  private:
+    std::shared_ptr<JotStructType> struct_type;
 };
 
 class EnumDeclaration : public Statement {

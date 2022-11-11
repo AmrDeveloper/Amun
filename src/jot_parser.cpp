@@ -1,6 +1,7 @@
 #include "../include/jot_parser.hpp"
 #include "../include/jot_files.hpp"
 #include "../include/jot_logger.hpp"
+#include "jot_ast_visitor.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -171,6 +172,9 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement() {
     case TokenKind::VarKeyword: {
         return parse_field_declaration(true);
     }
+    case TokenKind::StructKeyword: {
+        return parse_structure_declaration();
+    }
     case TokenKind::EnumKeyword: {
         return parse_enum_declaration();
     }
@@ -333,6 +337,25 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(Funct
     context->diagnostics.add_diagnostic_error(peek_current().get_span(),
                                               "Invalid function declaration body");
     throw "Stop";
+}
+
+std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration() {
+    auto struct_token = consume_kind(TokenKind::StructKeyword, "Expect struct keyword");
+    auto struct_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
+    std::vector<Token> fields_names;
+    std::vector<std::shared_ptr<JotType>> fields_types;
+    assert_kind(TokenKind::OpenBrace, "Expect { after struct name");
+    while (is_source_available() && !is_current_kind(TokenKind::CloseBrace)) {
+        auto field_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
+        fields_names.push_back(field_name);
+        auto field_type = parse_type();
+        fields_types.push_back(field_type);
+        assert_kind(TokenKind::Semicolon, "Expect ; at the end of struct field declaration");
+    }
+    assert_kind(TokenKind::CloseBrace, "Expect } in the end of struct declaration");
+    auto structure_type = std::make_shared<JotStructType>(struct_name, fields_names, fields_types);
+    context->structures[struct_name.get_literal()] = structure_type;
+    return std::make_shared<StructDeclaration>(structure_type);
 }
 
 std::shared_ptr<EnumDeclaration> JotParser::parse_enum_declaration() {
@@ -1171,6 +1194,11 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type() {
         return std::make_shared<JotVoidType>(symbol_token);
     }
 
+    // Check if this type is structure type
+    if (context->structures.count(type_literal)) {
+        return context->structures[type_literal];
+    }
+
     // Check if this type is enumeration type
     if (context->enumerations.count(type_literal)) {
         auto enum_type = context->enumerations[type_literal];
@@ -1180,8 +1208,7 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type() {
         return enum_element_type;
     }
 
-    // TODO: Check if this type is Structure type
-
+    // This type is not permitive, structure or enumerations
     context->diagnostics.add_diagnostic_error(peek_current().get_span(),
                                               "Unexpected identifier type");
     throw "Stop";

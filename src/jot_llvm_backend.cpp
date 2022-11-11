@@ -173,6 +173,8 @@ std::any JotLLVMBackend::visit(FunctionDeclaration *node) {
     return function;
 }
 
+std::any JotLLVMBackend::visit([[maybe_unused]] StructDeclaration *node) { return 0; }
+
 std::any JotLLVMBackend::visit([[maybe_unused]] EnumDeclaration *node) {
     // Enumeration type is only compile time type, no need to generate any IR for it
     return 0;
@@ -1205,6 +1207,26 @@ llvm::Type *JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
         auto return_type = llvm_type_from_jot_type(jot_function_type->get_return_type());
         auto function_type = llvm::FunctionType::get(return_type, arguments, false);
         return function_type;
+    }
+
+    if (type_kind == TypeKind::Structure) {
+        auto struct_type = std::dynamic_pointer_cast<JotStructType>(type);
+        auto struct_name = struct_type->get_type_token().get_literal();
+        if (structures_types_map.count(struct_name)) {
+            return structures_types_map[struct_name];
+        }
+        auto struct_llvm_type = llvm::StructType::create(llvm_context);
+        struct_llvm_type->setName(struct_name);
+        auto fields = struct_type->get_fields_types();
+        std::vector<llvm::Type *> struct_fields;
+        struct_fields.reserve(fields.size());
+        for (auto &field : fields) {
+            struct_fields.push_back(llvm_type_from_jot_type(field));
+        }
+        auto declare_with_padding = false;
+        struct_llvm_type->setBody(struct_fields, declare_with_padding);
+        structures_types_map[struct_name] = struct_llvm_type;
+        return struct_llvm_type;
     }
 
     if (type_kind == TypeKind::EnumerationElement) {

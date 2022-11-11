@@ -52,6 +52,8 @@ class JotParser {
 
     std::shared_ptr<FunctionDeclaration> parse_function_declaration(FunctionCallKind kind);
 
+    std::shared_ptr<StructDeclaration> parse_structure_declaration();
+
     std::shared_ptr<EnumDeclaration> parse_enum_declaration();
 
     std::shared_ptr<Parameter> parse_parameter();

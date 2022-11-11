@@ -89,6 +89,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(FunctionDeclaration *node) override;
 
+    std::any visit(StructDeclaration *node) override;
+
     std::any visit(EnumDeclaration *node) override;
 
     std::any visit(IfStatement *node) override;
@@ -216,6 +218,7 @@ class JotLLVMBackend : public TreeVisitor {
     std::unordered_map<std::string, std::shared_ptr<FunctionPrototype>> functions_table;
     std::unordered_map<std::string, llvm::Function *> llvm_functions;
     std::unordered_map<std::string, llvm::Constant *> constants_string_pool;
+    std::unordered_map<std::string, llvm::Type *> structures_types_map;
 
     std::vector<std::shared_ptr<DeferCall>> defer_calls_stack;
     std::stack<llvm::BasicBlock *> break_blocks_stack;
