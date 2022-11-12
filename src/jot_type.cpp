@@ -23,6 +23,12 @@ bool JotPointerType::castable(const std::shared_ptr<JotType> &other) {
     if (this->get_point_to()->get_type_kind() == TypeKind::Void) {
         return true;
     }
+
+    // Any pointer type can be casted to *void
+    if (auto other_ptr = std::dynamic_pointer_cast<JotPointerType>(other)) {
+        return other_ptr->get_point_to()->get_type_kind() == TypeKind::Void;
+    }
+
     return false;
 }
 
@@ -67,7 +73,13 @@ bool JotStructType::equals(const std::shared_ptr<JotType> &other) {
     return false;
 }
 
-bool JotStructType::castable(const std::shared_ptr<JotType> &other) { return false; }
+bool JotStructType::castable(const std::shared_ptr<JotType> &other) {
+    // For now allow only casting to *void
+    if (auto other_ptr = std::dynamic_pointer_cast<JotPointerType>(other)) {
+        return other_ptr->get_point_to()->get_type_kind() == TypeKind::Void;
+    }
+    return false;
+}
 
 bool JotEnumType::equals(const std::shared_ptr<JotType> &other) { return false; }
 
