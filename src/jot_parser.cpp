@@ -348,6 +348,12 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration() {
     assert_kind(TokenKind::OpenBrace, "Expect { after struct name");
     while (is_source_available() && !is_current_kind(TokenKind::CloseBrace)) {
         auto field_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
+        if (fields_names.contains(field_name.get_literal())) {
+            context->diagnostics.add_diagnostic_error(field_name.get_span(),
+                                                      "There is already struct member with name " +
+                                                          field_name.get_literal());
+            throw "Stop";
+        }
         fields_names[field_name.get_literal()] = field_index++;
         auto field_type = parse_type();
         fields_types.push_back(field_type);
