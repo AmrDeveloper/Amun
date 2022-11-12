@@ -33,6 +33,7 @@ std::any JotTypeChecker::visit(BlockStatement *node) {
 std::any JotTypeChecker::visit(FieldDeclaration *node) {
     auto left_type = node->get_type();
     auto right_value = node->get_value();
+    auto name = node->get_name().get_literal();
 
     // If field has initalizer, check that initalizer type is matching the declaration type
     // If declaration type is null, infier it using the rvalue type
@@ -47,6 +48,7 @@ std::any JotTypeChecker::visit(FieldDeclaration *node) {
 
         bool is_left_none_type = is_none_type(left_type);
         bool is_right_none_type = is_none_type(right_type);
+
         if (is_left_none_type and is_right_none_type) {
             context->diagnostics.add_diagnostic_error(
                 node->get_name().get_span(),
@@ -72,14 +74,12 @@ std::any JotTypeChecker::visit(FieldDeclaration *node) {
         }
     }
 
-    auto name = node->get_name().get_literal();
     bool is_first_defined = symbol_table->define(name, left_type);
     if (not is_first_defined) {
         context->diagnostics.add_diagnostic_error(
             node->get_name().get_span(), "Field " + name + " is defined twice in the same scope");
         throw "Stop";
     }
-
     return 0;
 }
 
@@ -118,7 +118,11 @@ std::any JotTypeChecker::visit(FunctionDeclaration *node) {
     return function_type;
 }
 
-std::any JotTypeChecker::visit(StructDeclaration *node) { return nullptr; }
+std::any JotTypeChecker::visit(StructDeclaration *node) {
+    auto struct_type = node->get_struct_type();
+    symbol_table->define(struct_type->get_type_token().get_literal(), struct_type);
+    return nullptr;
+}
 
 std::any JotTypeChecker::visit(EnumDeclaration *node) {
     auto name = node->get_name().get_literal();
@@ -691,6 +695,41 @@ std::any JotTypeChecker::visit(CallExpression *node) {
     throw "Stop";
 }
 
+std::any JotTypeChecker::visit(DotExpression *node) {
+    auto callee = node->get_callee()->accept(this);
+    auto callee_type = node_jot_type(callee);
+    if (callee_type->get_type_kind() == TypeKind::Structure) {
+        auto struct_type = std::dynamic_pointer_cast<JotStructType>(callee_type);
+        auto field_name = node->get_field_name().get_literal();
+        int index = -1;
+        bool found = false;
+        for (auto &field : struct_type->get_fields_names()) {
+            index++;
+            if (field.get_literal() == field_name) {
+                found = true;
+                break;
+            }
+        }
+
+        if (not found) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_position().get_span(), "Can't find a field with name " + field_name +
+                                                     " in struct " +
+                                                     struct_type->get_type_token().get_literal());
+            throw "Stop";
+        }
+
+        auto field_type = struct_type->get_fields_types().at(index);
+        node->set_type_node(field_type);
+        node->field_index = index;
+        return field_type;
+    }
+
+    context->diagnostics.add_diagnostic_error(node->get_position().get_span(),
+                                              "Dot expression expect struct type as lvalue");
+    throw "Stop";
+}
+
 std::any JotTypeChecker::visit(CastExpression *node) {
     auto value = node->get_value();
     auto value_type = node_jot_type(value->accept(this));
@@ -778,7 +817,7 @@ std::any JotTypeChecker::visit(NumberExpression *node) {
 
 std::any JotTypeChecker::visit(ArrayExpression *node) {
     auto values = node->get_values();
-    for (int i = 1; i < values.size(); i++) {
+    for (size_t i = 1; i < values.size(); i++) {
         if (not values[i]->get_type_node()->equals(values[i - 1]->get_type_node())) {
             context->diagnostics.add_diagnostic_error(
                 node->get_position().get_span(), "Array elements with index " +
@@ -810,6 +849,9 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type) {
     }
     if (any_type.type() == typeid(std::shared_ptr<JotArrayType>)) {
         return std::any_cast<std::shared_ptr<JotArrayType>>(any_type);
+    }
+    if (any_type.type() == typeid(std::shared_ptr<JotStructType>)) {
+        return std::any_cast<std::shared_ptr<JotStructType>>(any_type);
     }
     if (any_type.type() == typeid(std::shared_ptr<JotEnumType>)) {
         return std::any_cast<std::shared_ptr<JotEnumType>>(any_type);
@@ -858,16 +900,24 @@ bool JotTypeChecker::is_pointer_type(const std::shared_ptr<JotType> &type) {
 }
 
 bool JotTypeChecker::is_none_type(const std::shared_ptr<JotType> &type) {
-    if (type->get_type_kind() == TypeKind::None)
+    if (type == nullptr) {
         return true;
+    }
+
+    if (type->get_type_kind() == TypeKind::None) {
+        return true;
+    }
+
     if (type->get_type_kind() == TypeKind::Array) {
         auto array_type = std::dynamic_pointer_cast<JotArrayType>(type);
         return array_type->get_element_type()->get_type_kind() == TypeKind::None;
     }
+
     if (type->get_type_kind() == TypeKind::Pointer) {
         auto array_type = std::dynamic_pointer_cast<JotPointerType>(type);
         return array_type->get_point_to()->get_type_kind() == TypeKind::None;
     }
+
     return false;
 }
 

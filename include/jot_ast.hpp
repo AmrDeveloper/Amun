@@ -42,6 +42,7 @@ enum class AstNodeType {
     PrefixUnaryExpr,
     PostfixUnaryExpr,
     CallExpr,
+    DotExpr,
     CastExpr,
     TypeSizeExpr,
     IndexExpr,
@@ -202,7 +203,7 @@ class StructDeclaration : public Statement {
   public:
     StructDeclaration(std::shared_ptr<JotStructType> struct_type) : struct_type(struct_type) {}
 
-    std::shared_ptr<JotStructType> get_struct_name() { return struct_type; }
+    std::shared_ptr<JotStructType> get_struct_type() { return struct_type; }
 
     std::any accept(StatementVisitor *visitor) override { return visitor->visit(this); }
 
@@ -784,6 +785,36 @@ class CallExpression : public Expression {
     Token position;
     std::shared_ptr<Expression> callee;
     std::vector<std::shared_ptr<Expression>> arguments;
+    std::shared_ptr<JotType> type;
+};
+
+class DotExpression : public Expression {
+  public:
+    DotExpression(Token dot_token, std::shared_ptr<Expression> callee, Token field_name)
+        : dot_token(dot_token), callee(callee), field_name(field_name) {}
+
+    Token get_position() { return dot_token; }
+
+    std::shared_ptr<Expression> get_callee() { return callee; }
+
+    Token get_field_name() { return field_name; }
+
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
+
+    std::any accept(ExpressionVisitor *visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::DotExpr; }
+
+    bool is_constant() override { return false; }
+
+    int field_index = 0;
+
+  private:
+    Token dot_token;
+    std::shared_ptr<Expression> callee;
+    Token field_name;
     std::shared_ptr<JotType> type;
 };
 

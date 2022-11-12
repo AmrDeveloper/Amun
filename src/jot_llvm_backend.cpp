@@ -111,6 +111,7 @@ std::any JotLLVMBackend::visit(FieldDeclaration *node) {
         alloca_inst_scope->define(var_name, alloc_inst);
     } else {
         jot::loge << "Un supported rvalue for field declaration " << value.type().name() << '\n';
+        throw "Stop";
     }
     return 0;
 }
@@ -119,7 +120,7 @@ std::any JotLLVMBackend::visit(FunctionPrototype *node) {
     auto parameters = node->get_parameters();
     size_t parameters_size = parameters.size();
     std::vector<llvm::Type *> arguments(parameters_size);
-    for (int i = 0; i < parameters_size; i++) {
+    for (size_t i = 0; i < parameters_size; i++) {
         arguments[i] = llvm_type_from_jot_type(parameters[i]->get_type());
     }
 
@@ -547,9 +548,10 @@ std::any JotLLVMBackend::visit(GroupExpression *node) {
 }
 
 std::any JotLLVMBackend::visit(AssignExpression *node) {
+    auto left_node = node->get_left();
     // Assign value to variable
     // variable = value
-    if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_left())) {
+    if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(left_node)) {
         auto name = literal->get_name().get_literal();
         auto value = node->get_right()->accept(this);
 
@@ -569,7 +571,7 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
 
     // Assign value to n dimentions array position
     // array []? = value
-    if (auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node->get_left())) {
+    if (auto index_expression = std::dynamic_pointer_cast<IndexExpression>(left_node)) {
         auto node_value = index_expression->get_value();
         auto index = llvm_resolve_value(index_expression->get_index()->accept(this));
         auto right_value = llvm_node_value(node->get_right()->accept(this));
@@ -616,6 +618,13 @@ std::any JotLLVMBackend::visit(AssignExpression *node) {
                                          {zero_int32_value, index});
             return Builder.CreateStore(right_value, ptr);
         }
+    }
+
+    // Assign value to structure field
+    if (auto dot_expression = std::dynamic_pointer_cast<DotExpression>(left_node)) {
+        auto member_ptr = access_struct_member_pointer(dot_expression.get());
+        auto right_value = llvm_node_value(node->get_right()->accept(this));
+        return Builder.CreateStore(right_value, member_ptr);
     }
 
     jot::loge << "Internal compiler error: Invalid assignments with multi d array \n";
@@ -864,6 +873,12 @@ std::any JotLLVMBackend::visit(CallExpression *node) {
         arguments_values.push_back(loaded_value);
     }
     return Builder.CreateCall(function, arguments_values);
+}
+
+std::any JotLLVMBackend::visit(DotExpression *node) {
+    auto node_llvm_type = llvm_type_from_jot_type(node->get_type_node());
+    auto member_ptr = access_struct_member_pointer(node);
+    return Builder.CreateLoad(node_llvm_type, member_ptr);
 }
 
 std::any JotLLVMBackend::visit(CastExpression *node) {
@@ -1351,9 +1366,16 @@ inline llvm::Value *JotLLVMBackend::create_llvm_floats_comparison(TokenKind op, 
 
 inline llvm::Value *JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> operand,
                                                                 bool is_prefix) {
-    auto right = operand->accept(this);
     auto number_type = std::dynamic_pointer_cast<JotNumberType>(operand->get_type_node());
     auto constants_one = llvm_number_value("1", number_type->get_kind());
+
+    std::any right = nullptr;
+    if (operand->get_ast_node_type() == AstNodeType::DotExpr) {
+        auto dot_expression = std::dynamic_pointer_cast<DotExpression>(operand);
+        right = access_struct_member_pointer(dot_expression.get());
+    } else {
+        right = operand->accept(this);
+    }
 
     if (right.type() == typeid(llvm::LoadInst *)) {
         auto current_value = std::any_cast<llvm::LoadInst *>(right);
@@ -1375,6 +1397,15 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<
         auto current_value = Builder.CreateLoad(global_variable->getValueType(), global_variable);
         auto new_value = create_llvm_integers_bianry(TokenKind::Plus, current_value, constants_one);
         Builder.CreateStore(new_value, global_variable);
+        return is_prefix ? new_value : current_value;
+    }
+
+    if (right.type() == typeid(llvm::Value *)) {
+        auto current_value_ptr = std::any_cast<llvm::Value *>(right);
+        auto number_llvm_type = llvm_type_from_jot_type(number_type);
+        auto current_value = Builder.CreateLoad(number_llvm_type, current_value_ptr);
+        auto new_value = create_llvm_integers_bianry(TokenKind::Plus, current_value, constants_one);
+        Builder.CreateStore(new_value, current_value_ptr);
         return is_prefix ? new_value : current_value;
     }
 
@@ -1385,9 +1416,16 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<
 
 inline llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> operand,
                                                                 bool is_prefix) {
-    auto right = operand->accept(this);
     auto number_type = std::dynamic_pointer_cast<JotNumberType>(operand->get_type_node());
     auto constants_one = llvm_number_value("1", number_type->get_kind());
+
+    std::any right = nullptr;
+    if (operand->get_ast_node_type() == AstNodeType::DotExpr) {
+        auto dot_expression = std::dynamic_pointer_cast<DotExpression>(operand);
+        right = access_struct_member_pointer(dot_expression.get());
+    } else {
+        right = operand->accept(this);
+    }
 
     if (right.type() == typeid(llvm::LoadInst *)) {
         auto current_value = std::any_cast<llvm::LoadInst *>(right);
@@ -1415,9 +1453,34 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<
         return is_prefix ? new_value : current_value;
     }
 
+    if (right.type() == typeid(llvm::Value *)) {
+        auto current_value_ptr = std::any_cast<llvm::Value *>(right);
+        auto number_llvm_type = llvm_type_from_jot_type(number_type);
+        auto current_value = Builder.CreateLoad(number_llvm_type, current_value_ptr);
+        auto new_value =
+            create_llvm_integers_bianry(TokenKind::Minus, current_value, constants_one);
+        Builder.CreateStore(new_value, current_value_ptr);
+        return is_prefix ? new_value : current_value;
+    }
+
     jot::loge << "Compiler Internal Error: Unary expression with non global or alloca type "
               << right.type().name() << '\n';
     exit(1);
+}
+
+inline llvm::Value *JotLLVMBackend::access_struct_member_pointer(DotExpression *expression) {
+    auto structure = llvm_node_value(expression->get_callee()->accept(this));
+    auto struct_type = expression->get_callee()->get_type_node();
+    auto struct_llvm_type = llvm_type_from_jot_type(struct_type);
+    if (struct_llvm_type->isStructTy()) {
+        std::vector<llvm::Value *> indices(2);
+        indices[0] = zero_int32_value;
+        indices[1] =
+            llvm::ConstantInt::get(llvm_context, llvm::APInt(32, expression->field_index, true));
+        auto member_ptr = Builder.CreateGEP(struct_llvm_type, structure, indices);
+        return member_ptr;
+    }
+    return nullptr;
 }
 
 llvm::Constant *JotLLVMBackend::resolve_constant_expression(FieldDeclaration *node) {

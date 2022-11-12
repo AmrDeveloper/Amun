@@ -131,6 +131,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(CallExpression *node) override;
 
+    std::any visit(DotExpression *node) override;
+
     std::any visit(CastExpression *node) override;
 
     std::any visit(TypeSizeExpression *node) override;
@@ -182,6 +184,8 @@ class JotLLVMBackend : public TreeVisitor {
     llvm::Value *create_llvm_value_increment(std::shared_ptr<Expression> right, bool is_prefix);
 
     llvm::Value *create_llvm_value_decrement(std::shared_ptr<Expression> right, bool is_prefix);
+
+    llvm::Value *access_struct_member_pointer(DotExpression *expression);
 
     llvm::Constant *resolve_constant_expression(FieldDeclaration *expression);
 

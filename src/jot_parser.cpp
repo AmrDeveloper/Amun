@@ -783,14 +783,17 @@ std::shared_ptr<Expression> JotParser::parse_enum_access_expression() {
 std::shared_ptr<Expression> JotParser::parse_infix_call_expression() {
     auto expression = parse_prefix_expression();
     auto current_token_literal = peek_current().get_literal();
+
+    // Parse Infix function call as a call expression
     if (is_current_kind(TokenKind::Symbol) and context->is_infix_function(current_token_literal)) {
-        Token symbol_token = peek_current();
+        auto symbol_token = peek_current();
         auto literal = parse_literal_expression();
         std::vector<std::shared_ptr<Expression>> arguments;
         arguments.push_back(expression);
         arguments.push_back(parse_infix_call_expression());
         return std::make_shared<CallExpression>(symbol_token, literal, arguments);
     }
+
     return expression;
 }
 
@@ -806,7 +809,7 @@ std::shared_ptr<Expression> JotParser::parse_prefix_expression() {
         auto right = parse_prefix_expression();
         auto ast_node_type = right->get_ast_node_type();
         if ((ast_node_type == AstNodeType::LiteralExpr) or
-            (ast_node_type == AstNodeType::IndexExpr)) {
+            (ast_node_type == AstNodeType::IndexExpr) or (ast_node_type == AstNodeType::DotExpr)) {
             return std::make_shared<PrefixUnaryExpression>(token, right);
         }
 
@@ -853,7 +856,8 @@ std::shared_ptr<Expression> JotParser::parse_postfix_expression() {
             auto token = peek_and_advance_token();
             auto ast_node_type = expression->get_ast_node_type();
             if ((ast_node_type == AstNodeType::LiteralExpr) or
-                (ast_node_type == AstNodeType::IndexExpr)) {
+                (ast_node_type == AstNodeType::IndexExpr) or
+                (ast_node_type == AstNodeType::DotExpr)) {
                 return std::make_shared<PostfixUnaryExpression>(token, expression);
             }
             context->diagnostics.add_diagnostic_error(
@@ -868,7 +872,7 @@ std::shared_ptr<Expression> JotParser::parse_postfix_expression() {
 }
 
 std::shared_ptr<Expression> JotParser::parse_postfix_call_expression() {
-    auto expression = parse_primary_expression();
+    auto expression = parse_dot_expression();
     auto current_token_literal = peek_current().get_literal();
     if (is_current_kind(TokenKind::Symbol) and
         context->is_postfix_function(current_token_literal)) {
@@ -877,6 +881,16 @@ std::shared_ptr<Expression> JotParser::parse_postfix_call_expression() {
         std::vector<std::shared_ptr<Expression>> arguments;
         arguments.push_back(expression);
         return std::make_shared<CallExpression>(symbol_token, literal, arguments);
+    }
+    return expression;
+}
+
+std::shared_ptr<Expression> JotParser::parse_dot_expression() {
+    auto expression = parse_primary_expression();
+    if (is_current_kind(TokenKind::Dot)) {
+        auto dot_token = peek_and_advance_token();
+        auto field_name = consume_kind(TokenKind::Symbol, "Expect literal as field name");
+        return std::make_shared<DotExpression>(dot_token, expression, field_name);
     }
     return expression;
 }
