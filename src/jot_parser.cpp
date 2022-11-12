@@ -354,7 +354,13 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration() {
     }
     assert_kind(TokenKind::CloseBrace, "Expect } in the end of struct declaration");
     auto structure_type = std::make_shared<JotStructType>(struct_name, fields_names, fields_types);
-    context->structures[struct_name.get_literal()] = structure_type;
+    auto struct_name_str = struct_name.get_literal();
+    if (context->structures.count(struct_name_str)) {
+        context->diagnostics.add_diagnostic_error(
+            struct_name.get_span(), "There is already struct with name " + struct_name_str);
+        throw "Stop";
+    }
+    context->structures[struct_name_str] = structure_type;
     return std::make_shared<StructDeclaration>(structure_type);
 }
 

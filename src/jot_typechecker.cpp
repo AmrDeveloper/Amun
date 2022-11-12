@@ -120,6 +120,7 @@ std::any JotTypeChecker::visit(FunctionDeclaration *node) {
 
 std::any JotTypeChecker::visit(StructDeclaration *node) {
     auto struct_type = node->get_struct_type();
+    auto struct_name = struct_type->get_type_token().get_literal();
     symbol_table->define(struct_type->get_type_token().get_literal(), struct_type);
     return nullptr;
 }
