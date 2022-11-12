@@ -1222,6 +1222,10 @@ llvm::Type *JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
 
     if (type_kind == TypeKind::Pointer) {
         auto jot_pointer_type = std::dynamic_pointer_cast<JotPointerType>(type);
+        // In llvm *void should be generated as *i8
+        if (jot_pointer_type->get_point_to()->get_type_kind() == TypeKind::Void) {
+            return llvm_void_ptr_type;
+        }
         auto point_to_type = llvm_type_from_jot_type(jot_pointer_type->get_point_to());
         return llvm::PointerType::get(point_to_type, 0);
     }

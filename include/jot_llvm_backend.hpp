@@ -43,6 +43,9 @@ static auto llvm_float64_type = llvm::Type::getDoubleTy(llvm_context);
 // LLVM Void type
 static auto llvm_void_type = llvm::Type::getVoidTy(llvm_context);
 
+// LLVM void pointer type as *i8 not *void
+static auto llvm_void_ptr_type = llvm::PointerType::get(llvm_int8_type, 0);
+
 // LLVM 1 bit integer with zero value (false)
 static auto false_value = Builder.getInt1(false);
 
