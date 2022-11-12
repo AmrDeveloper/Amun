@@ -180,12 +180,13 @@ class JotFunctionType : public JotType {
 
 class JotStructType : public JotType {
   public:
-    JotStructType(Token name, std::vector<Token> names, std::vector<std::shared_ptr<JotType>> types)
-        : name(name), fields_names(names), fields_types(types) {}
+    JotStructType(Token name, std::unordered_map<std::string, int> fields_names,
+                  std::vector<std::shared_ptr<JotType>> types)
+        : name(name), fields_names(fields_names), fields_types(types) {}
 
     Token get_type_token() override { return name; }
 
-    std::vector<Token> get_fields_names() { return fields_names; }
+    std::unordered_map<std::string, int> get_fields_names() { return fields_names; }
 
     std::vector<std::shared_ptr<JotType>> get_fields_types() { return fields_types; }
 
@@ -201,7 +202,7 @@ class JotStructType : public JotType {
 
   private:
     Token name;
-    std::vector<Token> fields_names;
+    std::unordered_map<std::string, int> fields_names;
     std::vector<std::shared_ptr<JotType>> fields_types;
 };
 

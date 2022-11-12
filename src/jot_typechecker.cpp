@@ -702,28 +702,20 @@ std::any JotTypeChecker::visit(DotExpression *node) {
     if (callee_type->get_type_kind() == TypeKind::Structure) {
         auto struct_type = std::dynamic_pointer_cast<JotStructType>(callee_type);
         auto field_name = node->get_field_name().get_literal();
-        int index = -1;
-        bool found = false;
-        for (auto &field : struct_type->get_fields_names()) {
-            index++;
-            if (field.get_literal() == field_name) {
-                found = true;
-                break;
-            }
+        auto fields_names = struct_type->get_fields_names();
+        if (fields_names.contains(field_name)) {
+            int member_index = fields_names[field_name];
+            auto field_type = struct_type->get_fields_types().at(member_index);
+            node->set_type_node(field_type);
+            node->field_index = member_index;
+            return field_type;
         }
 
-        if (not found) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_position().get_span(), "Can't find a field with name " + field_name +
-                                                     " in struct " +
-                                                     struct_type->get_type_token().get_literal());
-            throw "Stop";
-        }
-
-        auto field_type = struct_type->get_fields_types().at(index);
-        node->set_type_node(field_type);
-        node->field_index = index;
-        return field_type;
+        context->diagnostics.add_diagnostic_error(node->get_position().get_span(),
+                                                  "Can't find a field with name " + field_name +
+                                                      " in struct " +
+                                                      struct_type->get_type_token().get_literal());
+        throw "Stop";
     }
 
     context->diagnostics.add_diagnostic_error(node->get_position().get_span(),

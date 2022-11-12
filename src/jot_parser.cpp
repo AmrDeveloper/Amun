@@ -342,12 +342,13 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(Funct
 std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration() {
     auto struct_token = consume_kind(TokenKind::StructKeyword, "Expect struct keyword");
     auto struct_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
-    std::vector<Token> fields_names;
+    size_t field_index = 0;
+    std::unordered_map<std::string, int> fields_names;
     std::vector<std::shared_ptr<JotType>> fields_types;
     assert_kind(TokenKind::OpenBrace, "Expect { after struct name");
     while (is_source_available() && !is_current_kind(TokenKind::CloseBrace)) {
         auto field_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
-        fields_names.push_back(field_name);
+        fields_names[field_name.get_literal()] = field_index++;
         auto field_type = parse_type();
         fields_types.push_back(field_type);
         assert_kind(TokenKind::Semicolon, "Expect ; at the end of struct field declaration");
