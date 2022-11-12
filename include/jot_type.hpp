@@ -189,7 +189,7 @@ class JotStructType : public JotType {
 
     std::vector<std::shared_ptr<JotType>> get_fields_types() { return fields_types; }
 
-    std::string type_literal() override { return "struct"; }
+    std::string type_literal() override { return name.get_literal(); }
 
     TypeKind get_type_kind() override { return TypeKind::Structure; }
 
