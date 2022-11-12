@@ -1,0 +1,15 @@
+extern fun printf(format *char, varargs) int64;
+
+struct Point2D {
+    x int64;
+    y int64;
+}
+
+fun main() int64 {
+    var p : Point2D;
+    p.x = 10;
+    p.y = 20;
+    printf("p.x = %d\n", p.x);
+    printf("p.y = %d\n", p.y);
+    return 0;
+}
