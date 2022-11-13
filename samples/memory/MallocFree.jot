@@ -1,0 +1,12 @@
+extern fun printf(format *char, varargs) int64;
+
+extern fun malloc(size int64) *int8;
+
+extern fun free(ptr *int8) void;
+
+fun main() int64 {
+    var memory = malloc(8);
+    printf("%p\n", memory);
+    free(memory);
+    return 0;
+}
