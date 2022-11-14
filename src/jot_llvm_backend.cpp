@@ -1369,7 +1369,7 @@ inline llvm::Value *JotLLVMBackend::create_llvm_floats_comparison(TokenKind op, 
     }
 }
 
-inline llvm::Value *JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> operand,
+llvm::Value *JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> operand,
                                                                 bool is_prefix) {
     auto number_type = std::dynamic_pointer_cast<JotNumberType>(operand->get_type_node());
     auto constants_one = llvm_number_value("1", number_type->get_kind());
@@ -1419,7 +1419,7 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<
     exit(1);
 }
 
-inline llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> operand,
+llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> operand,
                                                                 bool is_prefix) {
     auto number_type = std::dynamic_pointer_cast<JotNumberType>(operand->get_type_node());
     auto constants_one = llvm_number_value("1", number_type->get_kind());
@@ -1473,18 +1473,36 @@ inline llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<
     exit(1);
 }
 
-inline llvm::Value *JotLLVMBackend::access_struct_member_pointer(DotExpression *expression) {
-    auto structure = llvm_node_value(expression->get_callee()->accept(this));
-    auto struct_type = expression->get_callee()->get_type_node();
-    auto struct_llvm_type = llvm_type_from_jot_type(struct_type);
-    if (struct_llvm_type->isStructTy()) {
-        std::vector<llvm::Value *> indices(2);
-        indices[0] = zero_int32_value;
-        indices[1] =
-            llvm::ConstantInt::get(llvm_context, llvm::APInt(32, expression->field_index, true));
-        auto member_ptr = Builder.CreateGEP(struct_llvm_type, structure, indices);
-        return member_ptr;
+llvm::Value *JotLLVMBackend::access_struct_member_pointer(DotExpression *expression) {
+    auto callee = expression->get_callee();
+    auto callee_value = llvm_node_value(callee->accept(this));
+    auto callee_llvm_type = llvm_type_from_jot_type(callee->get_type_node());
+
+    // Indices to access structure member
+    std::vector<llvm::Value *> indices(2);
+    indices[0] = zero_int32_value;
+    indices[1] = llvm_number_value(std::to_string(expression->field_index), NumberKind::Integer32);
+
+    // Access struct member allocaed on the stack or derefernecs from pointer
+    // struct.member or (*struct).member
+    if (callee_llvm_type->isStructTy()) {
+        // Return a pointer to struct member
+        return Builder.CreateGEP(callee_llvm_type, callee_value, indices);
     }
+
+    // Syntax sugger for accessing struct member from pointer to struct, like -> operator in c
+    if (callee_llvm_type->isPointerTy()) {
+        // Struct type used it to access member from it
+        auto struct_type = callee_llvm_type->getPointerElementType();
+        assert(struct_type->isStructTy());
+        // Pointer to struct type used it to Dereferencing
+        auto struct_ptr_type = callee_value->getType()->getPointerElementType();
+        // Auto Dereferencing the struct pointer
+        auto struct_value = Builder.CreateLoad(struct_ptr_type, callee_value);
+        // Return a pointer to struct member
+        return Builder.CreateGEP(struct_type, struct_value, indices);
+    }
+
     return nullptr;
 }
 

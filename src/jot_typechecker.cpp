@@ -699,6 +699,8 @@ std::any JotTypeChecker::visit(CallExpression *node) {
 std::any JotTypeChecker::visit(DotExpression *node) {
     auto callee = node->get_callee()->accept(this);
     auto callee_type = node_jot_type(callee);
+    auto callee_type_kind = callee_type->get_type_kind();
+
     if (callee_type->get_type_kind() == TypeKind::Structure) {
         auto struct_type = std::dynamic_pointer_cast<JotStructType>(callee_type);
         auto field_name = node->get_field_name().get_literal();
@@ -715,6 +717,33 @@ std::any JotTypeChecker::visit(DotExpression *node) {
                                                   "Can't find a field with name " + field_name +
                                                       " in struct " +
                                                       struct_type->get_type_token().get_literal());
+        throw "Stop";
+    }
+
+    if (callee_type_kind == TypeKind::Pointer) {
+        auto pointer_type = std::dynamic_pointer_cast<JotPointerType>(callee_type);
+        auto pointer_to_type = pointer_type->get_point_to();
+        if (pointer_to_type->get_type_kind() == TypeKind::Structure) {
+            auto struct_type = std::dynamic_pointer_cast<JotStructType>(pointer_to_type);
+            auto field_name = node->get_field_name().get_literal();
+            auto fields_names = struct_type->get_fields_names();
+            if (fields_names.contains(field_name)) {
+                int member_index = fields_names[field_name];
+                auto field_type = struct_type->get_fields_types().at(member_index);
+                node->set_type_node(field_type);
+                node->field_index = member_index;
+                return field_type;
+            }
+            context->diagnostics.add_diagnostic_error(
+                node->get_position().get_span(), "Can't find a field with name " + field_name +
+                                                     " in struct " +
+                                                     struct_type->get_type_token().get_literal());
+            throw "Stop";
+        }
+
+        context->diagnostics.add_diagnostic_error(
+            node->get_position().get_span(),
+            "Dot expression expect calling member from struct or pointer to struct");
         throw "Stop";
     }
 
