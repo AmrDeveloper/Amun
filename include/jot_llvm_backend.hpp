@@ -190,6 +190,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Value *access_struct_member_pointer(DotExpression *expression);
 
+    llvm::Value *derefernecs_llvm_pointer(llvm::Value *pointer);
+
     llvm::Constant *resolve_constant_expression(FieldDeclaration *expression);
 
     llvm::Constant *resolve_constant_index_expression(std::shared_ptr<IndexExpression> expression);

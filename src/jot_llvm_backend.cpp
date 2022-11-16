@@ -757,7 +757,7 @@ std::any JotLLVMBackend::visit(PrefixUnaryExpression *node) {
     // Pointer * Dereference operator
     if (operator_kind == TokenKind::Star) {
         auto right = llvm_node_value(operand->accept(this));
-        return Builder.CreateLoad(right->getType()->getPointerElementType(), right);
+        return derefernecs_llvm_pointer(right);
     }
 
     // Address of operator (&) to return pointer of operand
@@ -1370,7 +1370,7 @@ inline llvm::Value *JotLLVMBackend::create_llvm_floats_comparison(TokenKind op, 
 }
 
 llvm::Value *JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> operand,
-                                                                bool is_prefix) {
+                                                         bool is_prefix) {
     auto number_type = std::dynamic_pointer_cast<JotNumberType>(operand->get_type_node());
     auto constants_one = llvm_number_value("1", number_type->get_kind());
 
@@ -1420,7 +1420,7 @@ llvm::Value *JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<Express
 }
 
 llvm::Value *JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> operand,
-                                                                bool is_prefix) {
+                                                         bool is_prefix) {
     auto number_type = std::dynamic_pointer_cast<JotNumberType>(operand->get_type_node());
     auto constants_one = llvm_number_value("1", number_type->get_kind());
 
@@ -1495,15 +1495,18 @@ llvm::Value *JotLLVMBackend::access_struct_member_pointer(DotExpression *express
         // Struct type used it to access member from it
         auto struct_type = callee_llvm_type->getPointerElementType();
         assert(struct_type->isStructTy());
-        // Pointer to struct type used it to Dereferencing
-        auto struct_ptr_type = callee_value->getType()->getPointerElementType();
         // Auto Dereferencing the struct pointer
-        auto struct_value = Builder.CreateLoad(struct_ptr_type, callee_value);
+        auto struct_value = derefernecs_llvm_pointer(callee_value);
         // Return a pointer to struct member
         return Builder.CreateGEP(struct_type, struct_value, indices);
     }
 
     return nullptr;
+}
+
+inline llvm::Value *JotLLVMBackend::derefernecs_llvm_pointer(llvm::Value *pointer) {
+    auto pointer_element_type = pointer->getType()->getPointerElementType();
+    return Builder.CreateLoad(pointer_element_type, pointer);
 }
 
 llvm::Constant *JotLLVMBackend::resolve_constant_expression(FieldDeclaration *node) {
