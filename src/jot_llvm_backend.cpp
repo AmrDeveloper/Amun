@@ -869,14 +869,23 @@ std::any JotLLVMBackend::visit(CallExpression *node) {
     std::vector<llvm::Value *> arguments_values;
     arguments_values.reserve(arguments_size);
     for (size_t i = 0; i < arguments_size; i++) {
-        auto value = llvm_node_value(arguments[i]->accept(this));
+        auto argument = arguments[i];
+        auto value = llvm_node_value(argument->accept(this));
 
-        // This condition work only if this function has varargs flag
+        // This condition works only if this function has varargs flag
         if (i >= parameter_size) {
+            if (argument->get_ast_node_type() == AstNodeType::LiteralExpr) {
+                auto argument_type = llvm_type_from_jot_type(argument->get_type_node());
+                auto loaded_value = Builder.CreateLoad(argument_type, value);
+                arguments_values.push_back(loaded_value);
+                continue;
+            }
+
             arguments_values.push_back(value);
             continue;
         }
 
+        // If argument type is the same parameter type just pass it directly
         if (function->getArg(i)->getType() == value->getType()) {
             arguments_values.push_back(value);
             continue;
