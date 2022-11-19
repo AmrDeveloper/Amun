@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.16.0)
 
 # Config Version
 set(JOT_VERSION_MAJOR 0)
@@ -10,9 +10,19 @@ project(jot VERSION ${JOT_VERSION})
 
 # Config C++
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -Wuninitialized")
+set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
+# C++ Compiler options
+add_compile_options(-Wall)
+add_compile_options(-Wextra)
+add_compile_options(-pedantic)
+add_compile_options(-Wno-unused-parameter)
+add_compile_options(-Wno-uninitialized)
+add_compile_options(-Wno-missing-field-initializers)
+
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin CACHE INTERNAL "")
 
 # Use ccache if possible
 FIND_PROGRAM(CCACHE_PROGRAM ccache)
@@ -21,10 +31,14 @@ IF(CCACHE_PROGRAM)
 ENDIF()
 
 # Config LLVM
-find_package(LLVM 14 REQUIRED CONFIG)
-
+find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
+# Check if LLVM Version is valid
+if (${LLVM_PACKAGE_VERSION} VERSION_LESS "14.0")
+  message(FATAL_ERROR "LLVM version is too low, need at last v14.0")
+endif()
 
 include_directories(${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
@@ -37,7 +51,7 @@ include_directories(
 
 file(GLOB source_files CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/src/*.cpp"
-    "${PROJECT_SOURCE_DIR}/include/*.h"
+    "${PROJECT_SOURCE_DIR}/include/*.hpp"
 )
 
 add_executable(jot ${source_files})
