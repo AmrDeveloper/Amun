@@ -1,0 +1,9 @@
+extern fun getenv(name *char) *char;
+
+extern fun system(string *char) int32;
+
+extern fun malloc(size int64) *void;
+
+extern fun free(ptr *void) void;
+
+extern fun exit(status int) void;

@@ -1,0 +1,45 @@
+extern fun memchr(s *void, c *void, n int64) *void;
+
+extern fun memcmp(s1 *void, s2 *void, n int64) int32;
+
+extern fun memcpy(dest *void, src *void, n int64) *void;
+
+extern fun memmove(dest *void, src *void, n int64) *void;
+
+extern fun memset(ptr *void, c int32, n int64) *void;
+
+extern fun strcat(dest *char, src *char) *char;
+
+extern fun strchr(str *char, c int32) *char;
+
+extern fun strcmp(str1 *char, str2 *char) int32;
+
+extern fun strcoll(str1 *char, str2 *char) int32;
+
+extern fun strcpy(dest *char, src *char) *char;
+
+extern fun strcspn(str *char, reject *char) int64;
+
+extern fun strdup(str *char) *char;
+
+extern fun strerror(err int32) *char;
+
+extern fun strlen(str *char) int64;
+
+extern fun strncat(dest *char, src *char, n int64) *char;
+
+extern fun strncmp(str1 *char, str2 *char, n int64) int32;
+
+extern fun strncpy(dest *char, src *char, n int64) *char;
+
+extern fun strpbrk(str *char, accept *char) *char;
+
+extern fun strrchr(str *char, c int32) *char;
+
+extern fun strspn(str *char, accept *char) int64;
+
+extern fun strstr(str *char, finding *char) *char;
+
+extern fun strtok(str *char, delimiters *char) *char;
+
+extern fun strxfrm(dest *char, str *char, n int64) int64;

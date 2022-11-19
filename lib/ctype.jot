@@ -1,0 +1,25 @@
+extern fun isalnum(c int32) int32;
+
+extern fun isalpha(c int32) int32;
+
+extern fun iscntrl(c int32) int32;
+
+extern fun isdigit(c int32) int32;
+
+extern fun isgraph(c int32) int32;
+
+extern fun islower(c int32) int32;
+
+extern fun isprint(c int32) int32;
+
+extern fun ispunct(c int32) int32;
+
+extern fun isspace(c int32) int32;
+
+extern fun isupper(c int32) int32;
+
+extern fun isxdigit(c int32) int32;
+
+extern fun tolower(c int32) int32;
+
+extern fun toupper(c int32) int32;

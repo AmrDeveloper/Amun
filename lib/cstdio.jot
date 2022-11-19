@@ -1,0 +1,8 @@
+extern fun getchar() int64;
+
+extern fun puts(s *char) int64;
+
+extern fun printf(format *char, varargs) int64;
+
+extern fun perror(s *char) void;
+
