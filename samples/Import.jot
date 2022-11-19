@@ -1,0 +1,8 @@
+import {
+    "cmath"
+    "cstdio"
+}
+
+fun main() int64 {
+    return 0;
+}
