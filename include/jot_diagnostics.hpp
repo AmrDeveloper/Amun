@@ -7,7 +7,7 @@
 
 enum class DiagnosticLevel { Warning, Error };
 
-static std::unordered_map<DiagnosticLevel, const char *> diagnostic_level_literal = {
+static std::unordered_map<DiagnosticLevel, const char*> diagnostic_level_literal = {
     {DiagnosticLevel::Warning, "Warning"},
     {DiagnosticLevel::Error, "Error"},
 };
@@ -15,7 +15,9 @@ static std::unordered_map<DiagnosticLevel, const char *> diagnostic_level_litera
 class JotDiagnostic {
   public:
     JotDiagnostic(TokenSpan location, std::string message, DiagnosticLevel level)
-        : location(std::move(location)), message(std::move(message)), level(level) {}
+        : location(std::move(location)), message(std::move(message)), level(level)
+    {
+    }
 
     TokenSpan get_location() { return location; }
 
@@ -23,11 +25,11 @@ class JotDiagnostic {
 
     DiagnosticLevel get_level() { return level; }
 
-    const char *get_level_literal() { return diagnostic_level_literal[level]; }
+    const char* get_level_literal() { return diagnostic_level_literal[level]; }
 
   private:
-    TokenSpan location;
-    std::string message;
+    TokenSpan       location;
+    std::string     message;
     DiagnosticLevel level;
 };
 
@@ -44,9 +46,9 @@ class JotDiagnosticEngine {
     int get_errors_number();
 
   private:
-    void report_diagnostic(JotDiagnostic &diagnostic);
+    void report_diagnostic(JotDiagnostic& diagnostic);
 
     std::vector<JotDiagnostic> diagnostics;
-    int errors_number = 0;
-    int warns_number = 0;
+    int                        errors_number = 0;
+    int                        warns_number = 0;
 };

@@ -8,7 +8,8 @@
 #define unused [[maybe_unused]]
 #define JOT_VERSION "0.0.1"
 
-int execute_create_command(unused int argc, char **argv) {
+int execute_create_command(unused int argc, char** argv)
+{
     if (argc < 3) {
         printf("Invalid number of arguments for create command expect %i but got %i\n", 3, argc);
         printf("Usage : %s create <project name>\n", argv[0]);
@@ -38,7 +39,8 @@ int execute_create_command(unused int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
-int execute_compile_command(unused int argc, char **argv) {
+int execute_compile_command(unused int argc, char** argv)
+{
     if (argc < 3) {
         printf("Invalid number of arguments for `compile` command expect at last %i but got %i\n",
                3, argc);
@@ -46,32 +48,35 @@ int execute_compile_command(unused int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    const char *source = argv[2];
-    auto jot_context = std::make_shared<JotContext>();
+    const char* source = argv[2];
+    auto        jot_context = std::make_shared<JotContext>();
     parse_compiler_options(&jot_context->options, argc, argv);
 
     JotCompiler jot_compiler(jot_context);
     return jot_compiler.compile_source_code(source);
 }
 
-int execute_check_command(unused int argc, char **argv) {
+int execute_check_command(unused int argc, char** argv)
+{
     if (argc < 3) {
         printf("Invalid number of arguments for `check` command expect %i but got %i\n", 3, argc);
         printf("Usage : %s check <file>\n", argv[0]);
         return EXIT_FAILURE;
     }
-    const char *source = argv[2];
-    auto jot_context = std::make_shared<JotContext>();
+    const char* source = argv[2];
+    auto        jot_context = std::make_shared<JotContext>();
     JotCompiler jot_compiler(jot_context);
     return jot_compiler.check_source_code(source);
 }
 
-int execute_version_command(unused int argc, unused char **argv) {
+int execute_version_command(unused int argc, unused char** argv)
+{
     printf("Jot version is %s\n", JOT_VERSION);
     return EXIT_SUCCESS;
 }
 
-int execute_help_command(unused int argc, char **argv) {
+int execute_help_command(unused int argc, char** argv)
+{
     printf("Usage: %s <command> <options>\n", argv[0]);
     printf("Commands:\n");
     printf("    - create  <name>           : Create a new project with Hello world code.\n");
@@ -85,7 +90,8 @@ int execute_help_command(unused int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv)
+{
     JotCommands jot_commands;
     jot_commands.registerCommand("create", execute_create_command);
     jot_commands.registerCommand("compile", execute_compile_command);

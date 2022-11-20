@@ -4,7 +4,8 @@
 #include <iostream>
 #include <sstream>
 
-std::vector<Token> JotTokenizer::scan_all_tokens() {
+std::vector<Token> JotTokenizer::scan_all_tokens()
+{
     std::vector<Token> tokens;
     while (is_source_available()) {
         tokens.push_back(scan_next_token());
@@ -13,7 +14,8 @@ std::vector<Token> JotTokenizer::scan_all_tokens() {
     return tokens;
 }
 
-Token JotTokenizer::scan_next_token() {
+Token JotTokenizer::scan_next_token()
+{
     skip_whitespaces();
 
     start_position = current_position;
@@ -176,12 +178,13 @@ Token JotTokenizer::scan_next_token() {
     }
 }
 
-Token JotTokenizer::consume_symbol() {
+Token JotTokenizer::consume_symbol()
+{
     while (is_alpha_num(peek()) or peek() == '_') {
         advance();
     }
     size_t len = current_position - start_position + 1;
-    auto literal = source_code.substr(start_position - 1, len);
+    auto   literal = source_code.substr(start_position - 1, len);
     if (language_keywords.find(literal) == language_keywords.end()) {
         return build_token(TokenKind::Symbol, literal);
     }
@@ -189,7 +192,8 @@ Token JotTokenizer::consume_symbol() {
     return build_token(kind, literal);
 }
 
-Token JotTokenizer::consume_number() {
+Token JotTokenizer::consume_number()
+{
     auto kind = TokenKind::Integer;
     while (is_digit(peek()) or is_underscore(peek())) {
         advance();
@@ -216,7 +220,8 @@ Token JotTokenizer::consume_number() {
             kind = Integer64Type;
         else
             return build_token(TokenKind::Invalid, "Invalid integer type");
-    } else if (match('f')) {
+    }
+    else if (match('f')) {
         if (match('3') && match('2'))
             kind = Float32Type;
         else if (match('6') && match('4'))
@@ -226,18 +231,19 @@ Token JotTokenizer::consume_number() {
     }
 
     size_t len = number_end_position - start_position + 1;
-    auto literal = source_code.substr(start_position - 1, len);
+    auto   literal = source_code.substr(start_position - 1, len);
     literal.erase(std::remove(literal.begin(), literal.end(), '_'), literal.end());
     return build_token(kind, literal);
 }
 
-Token JotTokenizer::consume_hex_number() {
+Token JotTokenizer::consume_hex_number()
+{
     while (is_hex_digit(peek()) or is_underscore(peek())) {
         advance();
     }
 
     size_t len = current_position - start_position - 1;
-    auto literal = source_code.substr(start_position + 1, len);
+    auto   literal = source_code.substr(start_position + 1, len);
     literal.erase(std::remove(literal.begin(), literal.end(), '_'), literal.end());
     auto decimal_value = hex_to_decimal(literal);
 
@@ -248,13 +254,14 @@ Token JotTokenizer::consume_hex_number() {
     return build_token(TokenKind::Integer, std::to_string(decimal_value));
 }
 
-Token JotTokenizer::consume_binary_number() {
+Token JotTokenizer::consume_binary_number()
+{
     while (is_binary_digit(peek()) or is_underscore(peek())) {
         advance();
     }
 
     size_t len = current_position - start_position - 1;
-    auto literal = source_code.substr(start_position + 1, len);
+    auto   literal = source_code.substr(start_position + 1, len);
     literal.erase(std::remove(literal.begin(), literal.end(), '_'), literal.end());
     auto decimal_value = binary_to_decimal(literal);
 
@@ -265,7 +272,8 @@ Token JotTokenizer::consume_binary_number() {
     return build_token(TokenKind::Integer, std::to_string(decimal_value));
 }
 
-Token JotTokenizer::consume_string() {
+Token JotTokenizer::consume_string()
+{
     std::stringstream stream;
     while (is_source_available() && peek() != '"') {
         stream << consume_one_character();
@@ -279,7 +287,8 @@ Token JotTokenizer::consume_string() {
     return build_token(TokenKind::String, stream.str());
 }
 
-Token JotTokenizer::consume_character() {
+Token JotTokenizer::consume_character()
+{
     char c = consume_one_character();
 
     if (peek() != '\'') {
@@ -291,7 +300,8 @@ Token JotTokenizer::consume_character() {
     return build_token(TokenKind::Character, std::string(1, c));
 }
 
-char JotTokenizer::consume_one_character() {
+char JotTokenizer::consume_one_character()
+{
     char c = advance();
     if (c == '\\') {
         char escape = peek();
@@ -374,16 +384,19 @@ char JotTokenizer::consume_one_character() {
 
 Token JotTokenizer::build_token(TokenKind kind) { return build_token(kind, ""); }
 
-Token JotTokenizer::build_token(TokenKind kind, std::string literal) {
+Token JotTokenizer::build_token(TokenKind kind, std::string literal)
+{
     TokenSpan span = build_token_span();
     return {kind, span, literal};
 }
 
-TokenSpan JotTokenizer::build_token_span() {
+TokenSpan JotTokenizer::build_token_span()
+{
     return {file_name, line_number, column_start, column_current};
 }
 
-void JotTokenizer::skip_whitespaces() {
+void JotTokenizer::skip_whitespaces()
+{
     while (is_source_available()) {
         char c = peek();
         switch (c) {
@@ -411,13 +424,15 @@ void JotTokenizer::skip_whitespaces() {
     }
 }
 
-void JotTokenizer::skip_single_line_comment() {
+void JotTokenizer::skip_single_line_comment()
+{
     while (is_source_available() && peek() != '\n') {
         advance();
     }
 }
 
-void JotTokenizer::skip_multi_lines_comment() {
+void JotTokenizer::skip_multi_lines_comment()
+{
     while (is_source_available() && !(peek() == '*' && peek_next() == '/')) {
         advance();
         if (peek() == '\n') {
@@ -429,7 +444,8 @@ void JotTokenizer::skip_multi_lines_comment() {
     advance();
 }
 
-bool JotTokenizer::match(char expected) {
+bool JotTokenizer::match(char expected)
+{
     if (!is_source_available() || expected != peek()) {
         return false;
     }
@@ -438,7 +454,8 @@ bool JotTokenizer::match(char expected) {
     return true;
 }
 
-char JotTokenizer::advance() {
+char JotTokenizer::advance()
+{
     if (is_source_available()) {
         current_position++;
         column_current++;
@@ -449,7 +466,8 @@ char JotTokenizer::advance() {
 
 inline char JotTokenizer::peek() { return source_code[current_position]; }
 
-char JotTokenizer::peek_next() {
+char JotTokenizer::peek_next()
+{
     if (current_position + 1 < source_code_length) {
         return source_code[current_position + 1];
     }
@@ -458,13 +476,15 @@ char JotTokenizer::peek_next() {
 
 inline bool JotTokenizer::is_digit(char c) { return '9' >= c && c >= '0'; }
 
-inline bool JotTokenizer::is_hex_digit(char c) {
+inline bool JotTokenizer::is_hex_digit(char c)
+{
     return is_digit(c) || ('F' >= c && c >= 'A') || ('f' >= c && c >= 'a');
 }
 
 inline bool JotTokenizer::is_binary_digit(char c) { return '1' == c || '0' == c; }
 
-inline bool JotTokenizer::is_alpha(char c) {
+inline bool JotTokenizer::is_alpha(char c)
+{
     if ('z' >= c && c >= 'a')
         return true;
     return 'Z' >= c && c >= 'A';
@@ -474,22 +494,27 @@ inline bool JotTokenizer::is_alpha_num(char c) { return is_alpha(c) || is_digit(
 
 inline bool JotTokenizer::is_underscore(char c) { return c == '_'; }
 
-int8_t JotTokenizer::hex_to_int(char c) {
+int8_t JotTokenizer::hex_to_int(char c)
+{
     return c <= '9' ? c - '0' : c <= 'F' ? c - 'A' : c - 'a';
 }
 
-int64_t JotTokenizer::hex_to_decimal(const std::string &hex) {
+int64_t JotTokenizer::hex_to_decimal(const std::string& hex)
+{
     try {
         return std::stol(hex, nullptr, 16);
-    } catch (...) {
+    }
+    catch (...) {
         return -1;
     }
 }
 
-int64_t JotTokenizer::binary_to_decimal(const std::string &binary) {
+int64_t JotTokenizer::binary_to_decimal(const std::string& binary)
+{
     try {
         return std::stol(binary, nullptr, 2);
-    } catch (...) {
+    }
+    catch (...) {
         return -1;
     }
 }

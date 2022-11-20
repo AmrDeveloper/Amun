@@ -4,3 +4,6 @@ IndentWidth: 4
 AllowShortCaseLabelsOnASingleLine: true
 ColumnLimit: 100
 FixNamespaceComments: false
+PointerAlignment: Left
+AlignConsecutiveDeclarations: true
+BreakBeforeBraces: Stroustrup

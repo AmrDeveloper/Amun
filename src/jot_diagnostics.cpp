@@ -4,15 +4,17 @@
 #include <iostream>
 #include <string>
 
-void JotDiagnosticEngine::report_diagnostics(DiagnosticLevel level) {
-    for (auto &diagnostic : diagnostics) {
+void JotDiagnosticEngine::report_diagnostics(DiagnosticLevel level)
+{
+    for (auto& diagnostic : diagnostics) {
         if (diagnostic.get_level() == level) {
             report_diagnostic(diagnostic);
         }
     }
 }
 
-void JotDiagnosticEngine::report_diagnostic(JotDiagnostic &diagnostic) {
+void JotDiagnosticEngine::report_diagnostic(JotDiagnostic& diagnostic)
+{
     auto location = diagnostic.get_location();
     auto message = diagnostic.get_message();
     auto file_name = location.get_file_name();
@@ -35,12 +37,14 @@ void JotDiagnosticEngine::report_diagnostic(JotDiagnostic &diagnostic) {
     std::cout << std::endl;
 }
 
-void JotDiagnosticEngine::add_diagnostic_error(TokenSpan location, std::string message) {
+void JotDiagnosticEngine::add_diagnostic_error(TokenSpan location, std::string message)
+{
     errors_number++;
     diagnostics.push_back({location, message, DiagnosticLevel::Error});
 }
 
-void JotDiagnosticEngine::add_diagnostic_warn(TokenSpan location, std::string message) {
+void JotDiagnosticEngine::add_diagnostic_warn(TokenSpan location, std::string message)
+{
     warns_number++;
     diagnostics.push_back({location, message, DiagnosticLevel::Warning});
 }

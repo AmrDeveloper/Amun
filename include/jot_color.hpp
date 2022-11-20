@@ -25,10 +25,11 @@
 #define COLOR_YELLOW 14
 #define COLOR_WHITE 15
 
-template <class T> void material_print(T text, const int text_color, const int background_color) {
+template <class T> void material_print(T text, const int text_color, const int background_color)
+{
 #if defined(_WIN32)
     CONSOLE_SCREEN_BUFFER_INFO consoleScreenBuffInfo;
-    WORD default_colors = 0;
+    WORD                       default_colors = 0;
     if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &consoleScreenBuffInfo))
         default_colors = consoleScreenBuffInfo.wAttributes;
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), background_color << 4 | text_color);
@@ -82,7 +83,8 @@ template <class T> void material_print(T text, const int text_color, const int b
 #endif
 }
 
-template <class T> void material_println(T text, const int text_color, const int background_color) {
+template <class T> void material_println(T text, const int text_color, const int background_color)
+{
     material_print(text, text_color, background_color);
     std::cout << '\n';
 }

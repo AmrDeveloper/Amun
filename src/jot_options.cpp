@@ -4,7 +4,8 @@
 #include <cstdlib>
 #include <cstring>
 
-void parse_compiler_options(JotOptions *options, int argc, char **argv) {
+void parse_compiler_options(JotOptions* options, int argc, char** argv)
+{
     int start_index = 3;
     for (int i = start_index; i < argc; i++) {
         auto argument = argv[i];

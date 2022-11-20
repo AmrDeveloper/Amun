@@ -105,7 +105,7 @@ enum TokenKind {
     EndOfFile,
 };
 
-static std::unordered_map<TokenKind, const char *> token_kind_literal = {
+static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::LoadKeyword, "Load"},
     {TokenKind::ImportKeyword, "Import"},
     {TokenKind::VarKeyword, "Var"},
@@ -250,7 +250,9 @@ static std::unordered_map<TokenKind, TokenKind> assignments_binary_operators{
 class TokenSpan {
   public:
     TokenSpan(std::string file, size_t l, size_t cs, size_t cd)
-        : file_name(std::move(file)), line_number(l), column_start(cs), column_end(cd) {}
+        : file_name(std::move(file)), line_number(l), column_start(cs), column_end(cd)
+    {
+    }
 
     std::string get_file_name() { return file_name; }
 
@@ -262,15 +264,17 @@ class TokenSpan {
 
   private:
     std::string file_name;
-    size_t line_number;
-    size_t column_start;
-    size_t column_end;
+    size_t      line_number;
+    size_t      column_start;
+    size_t      column_end;
 };
 
 class Token {
   public:
     Token(TokenKind k, TokenSpan s, std::string literal)
-        : kind(k), span(s), literal(std::move(literal)) {}
+        : kind(k), span(s), literal(std::move(literal))
+    {
+    }
 
     TokenKind get_kind() { return kind; }
 
@@ -290,12 +294,19 @@ class Token {
 
     bool is_unary_operator() { return unary_operators.find(kind) != unary_operators.end(); }
 
-    bool is_assignments_operator() {
+    bool is_assignments_operator()
+    {
         return assignments_operators.find(kind) != assignments_operators.end();
     }
 
+    bool is_float_number()
+    {
+        return kind == TokenKind::Float or kind == TokenKind::Float32Type or
+               kind == TokenKind::Float64Type;
+    }
+
   private:
-    TokenKind kind;
-    TokenSpan span;
+    TokenKind   kind;
+    TokenSpan   span;
     std::string literal;
 };

@@ -9,26 +9,26 @@
 
 class JotContext {
   public:
-    bool is_path_visited(std::string &path);
+    bool is_path_visited(std::string& path);
 
-    void set_path_visited(std::string &path);
+    void set_path_visited(std::string& path);
 
-    bool is_prefix_function(std::string &name);
+    bool is_prefix_function(std::string& name);
 
-    void set_prefix_function(std::string &name);
+    void set_prefix_function(std::string& name);
 
-    bool is_infix_function(std::string &name);
+    bool is_infix_function(std::string& name);
 
-    void set_infix_function(std::string &name);
+    void set_infix_function(std::string& name);
 
-    bool is_postfix_function(std::string &name);
+    bool is_postfix_function(std::string& name);
 
-    void set_postfix_function(std::string &name);
+    void set_postfix_function(std::string& name);
 
-    JotOptions options;
-    JotDiagnosticEngine diagnostics;
+    JotOptions                                                      options;
+    JotDiagnosticEngine                                             diagnostics;
     std::unordered_map<std::string, std::shared_ptr<JotStructType>> structures;
-    std::unordered_map<std::string, std::shared_ptr<JotEnumType>> enumerations;
+    std::unordered_map<std::string, std::shared_ptr<JotEnumType>>   enumerations;
 
   private:
     std::unordered_set<std::string> visited_files;

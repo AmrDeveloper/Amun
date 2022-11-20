@@ -9,7 +9,9 @@ class JotTokenizer {
     JotTokenizer(std::string file, std::string source)
         : file_name(std::move(file)), source_code(std::move(source)),
           source_code_length(source_code.size()), start_position(0), current_position(0),
-          line_number(1), column_start(0), column_current(0) {}
+          line_number(1), column_start(0), column_current(0)
+    {
+    }
 
     std::string get_current_file_path() { return file_name; }
 
@@ -66,18 +68,18 @@ class JotTokenizer {
 
     static int8_t hex_to_int(char c);
 
-    static int64_t hex_to_decimal(const std::string &);
+    static int64_t hex_to_decimal(const std::string&);
 
-    static int64_t binary_to_decimal(const std::string &);
+    static int64_t binary_to_decimal(const std::string&);
 
     bool is_source_available();
 
     std::string file_name;
     std::string source_code;
-    size_t source_code_length;
-    size_t start_position;
-    size_t current_position;
-    size_t line_number;
-    size_t column_start;
-    size_t column_current;
+    size_t      source_code_length;
+    size_t      start_position;
+    size_t      current_position;
+    size_t      line_number;
+    size_t      column_start;
+    size_t      column_current;
 };

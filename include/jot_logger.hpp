@@ -23,12 +23,14 @@ static std::unordered_map<LogKind, int> colors_map = {
 class JotLogger {
 
   public:
-    JotLogger &type(LogKind kind) {
+    JotLogger& type(LogKind kind)
+    {
         text_color = colors_map[kind];
         return *this;
     }
 
-    template <class T> JotLogger &operator<<([[maybe_unused]] T content) {
+    template <class T> JotLogger& operator<<([[maybe_unused]] T content)
+    {
 #ifdef JOT_LOGGER
         material_print(content, text_color, background_color);
 #endif

@@ -21,7 +21,8 @@ enum class AstNodeScope {
 class JotParser {
   public:
     JotParser(std::shared_ptr<JotContext> context, std::unique_ptr<JotTokenizer> tokenizer)
-        : context(context), tokenizer(std::move(tokenizer)) {
+        : context(context), tokenizer(std::move(tokenizer))
+    {
         advanced_token();
         advanced_token();
         file_parent_path = find_parent_path(this->tokenizer->get_current_file_path()) + "/";
@@ -36,10 +37,10 @@ class JotParser {
 
     std::vector<std::shared_ptr<Statement>> parse_load_declaration();
 
-    std::vector<std::shared_ptr<Statement>> parse_single_source_file(std::string &path);
+    std::vector<std::shared_ptr<Statement>> parse_single_source_file(std::string& path);
 
-    void merge_tree_nodes(std::vector<std::shared_ptr<Statement>> &distany,
-                          std::vector<std::shared_ptr<Statement>> &source);
+    void merge_tree_nodes(std::vector<std::shared_ptr<Statement>>& distany,
+                          std::vector<std::shared_ptr<Statement>>& source);
 
     std::shared_ptr<Statement> parse_declaration_statement();
 
@@ -48,7 +49,7 @@ class JotParser {
     std::shared_ptr<FieldDeclaration> parse_field_declaration(bool is_global);
 
     std::shared_ptr<FunctionPrototype> parse_function_prototype(FunctionCallKind kind,
-                                                                bool is_external);
+                                                                bool             is_external);
 
     std::shared_ptr<FunctionDeclaration> parse_function_declaration(FunctionCallKind kind);
 
@@ -140,7 +141,7 @@ class JotParser {
 
     NumberKind get_number_kind(TokenKind token);
 
-    void register_function_call(FunctionCallKind kind, std::string &name);
+    void register_function_call(FunctionCallKind kind, std::string& name);
 
     void advanced_token();
 
@@ -158,17 +159,17 @@ class JotParser {
 
     bool is_next_kind(TokenKind);
 
-    Token consume_kind(TokenKind, const char *);
+    Token consume_kind(TokenKind, const char*);
 
-    void assert_kind(TokenKind, const char *);
+    void assert_kind(TokenKind, const char*);
 
     bool is_source_available();
 
-    std::string file_parent_path;
-    std::shared_ptr<JotContext> context;
+    std::string                   file_parent_path;
+    std::shared_ptr<JotContext>   context;
     std::unique_ptr<JotTokenizer> tokenizer;
-    std::optional<Token> previous_token;
-    std::optional<Token> current_token;
-    std::optional<Token> next_token;
-    AstNodeScope current_ast_scope = AstNodeScope::GlobalScope;
+    std::optional<Token>          previous_token;
+    std::optional<Token>          current_token;
+    std::optional<Token>          next_token;
+    AstNodeScope                  current_ast_scope = AstNodeScope::GlobalScope;
 };

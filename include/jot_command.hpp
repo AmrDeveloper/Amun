@@ -6,10 +6,10 @@
 
 class JotCommands {
   public:
-    void registerCommand(const char *name, const std::function<int(int, char **)> &command);
+    void registerCommand(const char* name, const std::function<int(int, char**)>& command);
 
-    int executeCommand(int argc, char **argv);
+    int executeCommand(int argc, char** argv);
 
   private:
-    std::unordered_map<std::string, std::function<int(int, char **)>> commands_map;
+    std::unordered_map<std::string, std::function<int(int, char**)>> commands_map;
 };
