@@ -1,0 +1,10 @@
+enum Numbers {
+    ONE    = 1,
+    TWO    = 2,
+    THREE  = 3,
+}
+
+fun main() int64 {
+    var one = Numbers::ONE;
+    return 0;
+}
