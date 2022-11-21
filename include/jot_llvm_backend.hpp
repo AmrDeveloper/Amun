@@ -227,6 +227,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     void pop_alloca_inst_scope();
 
+    void internal_compiler_error(const char* message);
+
     std::unique_ptr<llvm::Module> llvm_module;
 
     std::unordered_map<std::string, std::shared_ptr<FunctionPrototype>> functions_table;

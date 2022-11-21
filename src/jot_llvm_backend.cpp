@@ -121,8 +121,7 @@ std::any JotLLVMBackend::visit(FieldDeclaration* node)
         alloca_inst_scope->define(var_name, alloc_inst);
     }
     else {
-        jot::loge << "Un supported rvalue for field declaration " << value.type().name() << '\n';
-        throw "Stop";
+        internal_compiler_error("Un supported rvalue for field declaration");
     }
     return 0;
 }
@@ -374,10 +373,8 @@ std::any JotLLVMBackend::visit(ReturnStatement* node)
         auto phi = std::any_cast<llvm::PHINode*>(value);
         return Builder.CreateRet(phi);
     }
-    else {
-        jot::loge << "Un expected return type " << value.type().name() << '\n';
-    }
-    return 0;
+
+    internal_compiler_error("Un expected return type");
 }
 
 std::any JotLLVMBackend::visit(DeferStatement* node)
@@ -643,24 +640,12 @@ std::any JotLLVMBackend::visit(AssignExpression* node)
             if (array.type() == typeid(llvm::GlobalVariable*)) {
                 auto global_variable_array =
                     llvm::dyn_cast<llvm::GlobalVariable>(llvm_node_value(array));
-                // auto variable_constants_value = global_variable_array->getInitializer();
-
-                // auto alloca = Builder.CreateAlloca(variable_constants_value->getType());
-                // auto store = Builder.CreateStore(variable_constants_value, alloca);
-
                 auto ptr = Builder.CreateGEP(global_variable_array->getValueType(),
                                              global_variable_array, {zero_int32_value, index});
-
-                /*
-                auto global_variable = std::any_cast<llvm::GlobalVariable *>(left_value);
-                return Builder.CreateStore(right_value, global_variable);
-                */
-
                 return Builder.CreateStore(right_value, ptr);
             }
 
-            jot::loge << "Internal Compiler error: assign value index expression\n";
-            exit(1);
+            internal_compiler_error("Assign value index expression");
         }
 
         // Update element value in Multi dimentions Array
@@ -680,8 +665,7 @@ std::any JotLLVMBackend::visit(AssignExpression* node)
         return Builder.CreateStore(right_value, member_ptr);
     }
 
-    jot::loge << "Internal compiler error: Invalid assignments with multi d array \n";
-    exit(EXIT_FAILURE);
+    internal_compiler_error("Invalid assignments with multi d array");
 }
 
 std::any JotLLVMBackend::visit(BinaryExpression* node)
@@ -692,14 +676,12 @@ std::any JotLLVMBackend::visit(BinaryExpression* node)
 
     if (auto right_field = std::dynamic_pointer_cast<FieldDeclaration>(node->get_right())) {
         if (right_field->is_global() && left->getType()->isIntegerTy()) {
-            jot::loge << "Here we can resolve it bro\n";
             return zero_int32_value;
         }
     }
 
     if (auto right_field = std::dynamic_pointer_cast<FieldDeclaration>(node->get_left())) {
         if (right_field->is_global() && right->getType()->isIntegerTy()) {
-            jot::loge << "Here we can resolve it bro\n";
             return zero_int32_value;
         }
     }
@@ -714,8 +696,7 @@ std::any JotLLVMBackend::visit(BinaryExpression* node)
         return create_llvm_floats_bianry(op, left, right);
     }
 
-    jot::loge << "Binary Operators work only for Numeric types\n";
-    exit(1);
+    internal_compiler_error("Binary Operators work only for Numeric types");
 }
 
 std::any JotLLVMBackend::visit(ShiftExpression* node)
@@ -732,8 +713,7 @@ std::any JotLLVMBackend::visit(ShiftExpression* node)
         return Builder.CreateAShr(left, right);
     }
 
-    jot::loge << "Invalid Shift expression operator\n";
-    exit(1);
+    internal_compiler_error("Invalid Shift expression operator");
 }
 
 std::any JotLLVMBackend::visit(ComparisonExpression* node)
@@ -753,9 +733,7 @@ std::any JotLLVMBackend::visit(ComparisonExpression* node)
     }
 
     // TODO: add support for more comparisons types
-
-    jot::loge << "Binary Operators work only for Numeric types\n";
-    exit(1);
+    internal_compiler_error("Binary Operators work only for Numeric types");
 }
 
 std::any JotLLVMBackend::visit(LogicalExpression* node)
@@ -774,8 +752,7 @@ std::any JotLLVMBackend::visit(LogicalExpression* node)
         return Builder.CreateLogicalOr(left, right);
     }
     default: {
-        jot::loge << "Invalid Logical operator\n";
-        exit(1);
+        internal_compiler_error("Invalid Logical operator");
     }
     }
 }
@@ -827,8 +804,7 @@ std::any JotLLVMBackend::visit(PrefixUnaryExpression* node)
         return create_llvm_value_decrement(operand, true);
     }
 
-    jot::loge << "Invalid Prefix Unary operator\n";
-    exit(1);
+    internal_compiler_error("Invalid Prefix Unary operator");
 }
 
 std::any JotLLVMBackend::visit(PostfixUnaryExpression* node)
@@ -846,8 +822,7 @@ std::any JotLLVMBackend::visit(PostfixUnaryExpression* node)
         return create_llvm_value_decrement(operand, false);
     }
 
-    jot::loge << "Invalid Postfix Unary operator\n";
-    exit(1);
+    internal_compiler_error("Invalid Postfix Unary operator");
 }
 
 std::any JotLLVMBackend::visit(CallExpression* node)
@@ -1074,9 +1049,7 @@ std::any JotLLVMBackend::visit(IndexExpression* node)
             }
         }
 
-        jot::loge << "Internal Compiler error: Index expression with literal must have alloca or "
-                     "global variable\n";
-        exit(1);
+        internal_compiler_error("Index expr with literal must have alloca or global variable");
     }
 
     // Multidimensional Array Index Expression
@@ -1094,8 +1067,7 @@ std::any JotLLVMBackend::visit(IndexExpression* node)
         }
     }
 
-    jot::loge << "Internal compiler error: Invalid Index expression \n";
-    exit(EXIT_FAILURE);
+    internal_compiler_error("Invalid Index expression");
 }
 
 std::any JotLLVMBackend::visit(EnumAccessExpression* node)
@@ -1208,11 +1180,8 @@ llvm::Value* JotLLVMBackend::llvm_node_value(std::any any_value)
     else if (any_value.type() == typeid(llvm::GlobalVariable*)) {
         return std::any_cast<llvm::GlobalVariable*>(any_value);
     }
-    else {
-        jot::loge << "Unknown type " << any_value.type().name() << '\n';
-        exit(1);
-    }
-    return nullptr;
+
+    internal_compiler_error("Unknown type llvm node type");
 }
 
 llvm::Value* JotLLVMBackend::llvm_resolve_value(std::any any_value)
@@ -1343,9 +1312,7 @@ llvm::Type* JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
         return llvm_void_type;
     }
 
-    jot::loge << "Compiler Internal error: Can't find LLVM Type for this Jot Type "
-              << type->type_literal() << '\n';
-    exit(1);
+    internal_compiler_error("Can't find LLVM Type for this Jot Type");
 }
 
 inline llvm::Value* JotLLVMBackend::create_llvm_integers_bianry(TokenKind op, llvm::Value* left,
@@ -1368,8 +1335,7 @@ inline llvm::Value* JotLLVMBackend::create_llvm_integers_bianry(TokenKind op, ll
         return Builder.CreateURem(left, right, "remtemp");
     }
     default: {
-        jot::loge << "Invalid binary operator for integers types\n";
-        exit(1);
+        internal_compiler_error("Invalid binary operator for integers types");
     }
     }
 }
@@ -1394,8 +1360,7 @@ inline llvm::Value* JotLLVMBackend::create_llvm_floats_bianry(TokenKind op, llvm
         return Builder.CreateFRem(left, right, "remtemp");
     }
     default: {
-        jot::loge << "Invalid binary operator for floating point types\n";
-        exit(1);
+        internal_compiler_error("Invalid binary operator for floating point types");
     }
     }
 }
@@ -1423,8 +1388,7 @@ inline llvm::Value* JotLLVMBackend::create_llvm_integers_comparison(TokenKind op
         return Builder.CreateICmpSLE(left, right);
     }
     default: {
-        jot::loge << "Invalid Comparison operator\n";
-        exit(1);
+        internal_compiler_error("Invalid Integers Comparison operator");
     }
     }
 }
@@ -1452,8 +1416,7 @@ inline llvm::Value* JotLLVMBackend::create_llvm_floats_comparison(TokenKind op, 
         return Builder.CreateFCmpOLE(left, right);
     }
     default: {
-        jot::loge << "Invalid Comparison operator\n";
-        exit(1);
+        internal_compiler_error("Invalid floats Comparison operator");
     }
     }
 }
@@ -1505,9 +1468,7 @@ llvm::Value* JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<Express
         return is_prefix ? new_value : current_value;
     }
 
-    jot::loge << "Compiler Internal Error: Unary expression with non global or alloca type but got "
-              << right.type().name() << '\n';
-    exit(1);
+    internal_compiler_error("Unary expression with non global or alloca type");
 }
 
 llvm::Value* JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> operand,
@@ -1561,9 +1522,7 @@ llvm::Value* JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<Express
         return is_prefix ? new_value : current_value;
     }
 
-    jot::loge << "Compiler Internal Error: Unary expression with non global or alloca type "
-              << right.type().name() << '\n';
-    exit(1);
+    internal_compiler_error("Unary expression with non global or alloca type");
 }
 
 llvm::Value* JotLLVMBackend::access_struct_member_pointer(DotExpression* expression)
@@ -1595,7 +1554,7 @@ llvm::Value* JotLLVMBackend::access_struct_member_pointer(DotExpression* express
         return Builder.CreateGEP(struct_type, struct_value, indices);
     }
 
-    return nullptr;
+    internal_compiler_error("Invalid callee type in access_struct_member_pointer");
 }
 
 inline llvm::Value* JotLLVMBackend::derefernecs_llvm_pointer(llvm::Value* pointer)
@@ -1668,8 +1627,7 @@ JotLLVMBackend::resolve_constant_index_expression(std::shared_ptr<IndexExpressio
         return constants_array->getAggregateElement(constants_index);
     }
 
-    jot::loge << "Internal compiler error: invalid type in resolve_global_index_expression\n";
-    exit(EXIT_FAILURE);
+    internal_compiler_error("Invalid type in resolve_global_index_expression");
 }
 
 llvm::Constant*
@@ -1822,4 +1780,10 @@ inline void JotLLVMBackend::push_alloca_inst_scope()
 inline void JotLLVMBackend::pop_alloca_inst_scope()
 {
     alloca_inst_scope = alloca_inst_scope->get_parent_symbol_table();
+}
+
+inline void JotLLVMBackend::internal_compiler_error(const char* message)
+{
+    jot::loge << "Internal Compiler Error: " << message << '\n';
+    exit(EXIT_FAILURE);
 }
