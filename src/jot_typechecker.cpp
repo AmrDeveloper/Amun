@@ -778,8 +778,8 @@ std::any JotTypeChecker::visit(DotExpression* node)
         throw "Stop";
     }
 
-    context->diagnostics.add_diagnostic_error(node->get_position().get_span(),
-                                              "Dot expression expect struct type as lvalue");
+    context->diagnostics.add_diagnostic_error(
+        node->get_position().get_span(), "Dot expression expect struct or enum type as lvalue");
     throw "Stop";
 }
 

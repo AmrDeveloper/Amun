@@ -1,8 +1,6 @@
 #include "../include/jot_parser.hpp"
 #include "../include/jot_files.hpp"
 #include "../include/jot_logger.hpp"
-#include "jot_ast.hpp"
-#include "jot_ast_visitor.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -986,11 +984,35 @@ std::shared_ptr<Expression> JotParser::parse_postfix_call_expression()
     return expression;
 }
 
+std::shared_ptr<Expression> JotParser::parse_enum_type_attribute(std::string& enum_name)
+{
+    auto attribute = consume_kind(TokenKind::Symbol, "Expect attribute name for enum");
+    auto attribute_str = attribute.get_literal();
+    if (attribute_str == "count") {
+        auto count = context->enumerations[enum_name]->get_enum_values().size();
+        auto number_token = Token(TokenKind::Integer, attribute.get_span(), std::to_string(count));
+        auto number_type = std::make_shared<JotNumberType>(number_token, NumberKind::Integer64);
+        return std::make_shared<NumberExpression>(number_token, number_type);
+    }
+
+    context->diagnostics.add_diagnostic_error(attribute.get_span(),
+                                              "Un supported attribute for enumeration type");
+    throw "Stop";
+}
+
 std::shared_ptr<Expression> JotParser::parse_dot_expression()
 {
     auto expression = parse_primary_expression();
     if (is_current_kind(TokenKind::Dot)) {
         auto dot_token = peek_and_advance_token();
+        if (expression->get_ast_node_type() == AstNodeType::LiteralExpr) {
+            auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression);
+            auto literal_str = literal->get_name().get_literal();
+            if (context->enumerations.count(literal_str)) {
+                return parse_enum_type_attribute(literal_str);
+            }
+        }
+
         auto field_name = consume_kind(TokenKind::Symbol, "Expect literal as field name");
         return std::make_shared<DotExpression>(dot_token, expression, field_name);
     }

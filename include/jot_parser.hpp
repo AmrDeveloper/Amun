@@ -107,6 +107,8 @@ class JotParser {
 
     std::shared_ptr<Expression> parse_postfix_call_expression();
 
+    std::shared_ptr<Expression> parse_enum_type_attribute(std::string& enum_name);
+
     std::shared_ptr<Expression> parse_dot_expression();
 
     std::shared_ptr<Expression> parse_primary_expression();
