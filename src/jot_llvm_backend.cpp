@@ -661,11 +661,11 @@ std::any JotLLVMBackend::visit(AssignExpression* node)
     // Assign value to structure field
     if (auto dot_expression = std::dynamic_pointer_cast<DotExpression>(left_node)) {
         auto member_ptr = access_struct_member_pointer(dot_expression.get());
-        auto right_value = llvm_node_value(node->get_right()->accept(this));
-        return Builder.CreateStore(right_value, member_ptr);
+        auto rvalue = llvm_resolve_value(node->get_right()->accept(this));
+        return Builder.CreateStore(rvalue, member_ptr);
     }
 
-    internal_compiler_error("Invalid assignments with multi d array");
+    internal_compiler_error("Invalid assignments expression with unexpected lvalue type");
 }
 
 std::any JotLLVMBackend::visit(BinaryExpression* node)
