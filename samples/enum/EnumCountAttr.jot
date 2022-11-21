@@ -1,0 +1,14 @@
+extern fun printf(format *char, varargs) int64;
+
+enum Numbers {
+    ONE    = 1,
+    TWO    = 2,
+    THREE  = 3,
+    FOUR   = 4,
+}
+
+fun main() int64 {
+    // Get number of enum fields at compile time
+    printf("Number fields count = %d\n", Numbers.count);
+    return 0;
+}
