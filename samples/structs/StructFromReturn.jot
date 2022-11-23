@@ -1,0 +1,27 @@
+extern fun printf(format *char, varargs) int64;
+
+extern fun malloc(size int64) *void;
+
+extern fun free(ptr *void) void;
+
+struct Point {
+    x int64;
+    y int64;
+}
+
+fun new_point() *Point {
+   var point = cast(*Point) malloc(type_size(Point));
+   point.x = 10;
+   point.y = 20;
+   return point;
+}
+
+fun main() int64 {
+    var point = new_point();
+    defer free(cast(*void) point);
+
+    printf("point.x = %d\n", point.x);
+    printf("point.y = %d\n", point.y);
+
+    return 0;
+}
