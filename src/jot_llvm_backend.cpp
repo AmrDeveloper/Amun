@@ -80,6 +80,17 @@ std::any JotLLVMBackend::visit(FieldDeclaration* node)
     auto current_function = Builder.GetInsertBlock()->getParent();
     if (value.type() == typeid(llvm::Value*)) {
         auto init_value = std::any_cast<llvm::Value*>(value);
+        auto init_value_type = init_value->getType();
+
+        // This case if you assign derefernced variable for example
+        // Case in C Language
+        // int* ptr = (int*) malloc(sizeof(int));
+        // int value = *ptr;
+        // Clang compiler emit load instruction twice to resolve this problem
+        if (init_value_type != llvm_type && init_value_type->getPointerElementType() == llvm_type) {
+            init_value = derefernecs_llvm_pointer(init_value);
+        }
+
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
         Builder.CreateStore(init_value, alloc_inst);
         alloca_inst_scope->define(var_name, alloc_inst);
@@ -96,15 +107,15 @@ std::any JotLLVMBackend::visit(FieldDeclaration* node)
         alloca_inst_scope->define(var_name, init_value);
     }
     else if (value.type() == typeid(llvm::Constant*)) {
-        auto constants_string = std::any_cast<llvm::Constant*>(value);
+        auto constant = std::any_cast<llvm::Constant*>(value);
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
-        Builder.CreateStore(constants_string, alloc_inst);
+        Builder.CreateStore(constant, alloc_inst);
         alloca_inst_scope->define(var_name, alloc_inst);
     }
     else if (value.type() == typeid(llvm::LoadInst*)) {
-        auto constants_string = std::any_cast<llvm::LoadInst*>(value);
+        auto load_inst = std::any_cast<llvm::LoadInst*>(value);
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
-        Builder.CreateStore(constants_string, alloc_inst);
+        Builder.CreateStore(load_inst, alloc_inst);
         alloca_inst_scope->define(var_name, alloc_inst);
     }
     else if (value.type() == typeid(llvm::PHINode*)) {
@@ -665,6 +676,19 @@ std::any JotLLVMBackend::visit(AssignExpression* node)
         return Builder.CreateStore(rvalue, member_ptr);
     }
 
+    // Assign value to pointer address
+    // *ptr = value;
+    if (auto unary_expression = std::dynamic_pointer_cast<PrefixUnaryExpression>(left_node)) {
+        auto opt = unary_expression->get_operator_token().get_kind();
+        if (opt == TokenKind::Star) {
+            auto rvalue = llvm_node_value(node->get_right()->accept(this));
+            auto pointer = llvm_node_value(unary_expression->get_right()->accept(this));
+            auto load = Builder.CreateLoad(pointer->getType()->getPointerElementType(), pointer);
+            Builder.CreateStore(rvalue, load);
+            return rvalue;
+        }
+    }
+
     internal_compiler_error("Invalid assignments expression with unexpected lvalue type");
 }
 
@@ -673,18 +697,6 @@ std::any JotLLVMBackend::visit(BinaryExpression* node)
     auto left = llvm_resolve_value(node->get_left()->accept(this));
     auto right = llvm_resolve_value(node->get_right()->accept(this));
     auto op = node->get_operator_token().get_kind();
-
-    if (auto right_field = std::dynamic_pointer_cast<FieldDeclaration>(node->get_right())) {
-        if (right_field->is_global() && left->getType()->isIntegerTy()) {
-            return zero_int32_value;
-        }
-    }
-
-    if (auto right_field = std::dynamic_pointer_cast<FieldDeclaration>(node->get_left())) {
-        if (right_field->is_global() && right->getType()->isIntegerTy()) {
-            return zero_int32_value;
-        }
-    }
 
     // Binary Operations for integer types
     if (left->getType()->isIntegerTy() and right->getType()->isIntegerTy()) {
@@ -1559,6 +1571,7 @@ llvm::Value* JotLLVMBackend::access_struct_member_pointer(DotExpression* express
 
 inline llvm::Value* JotLLVMBackend::derefernecs_llvm_pointer(llvm::Value* pointer)
 {
+    assert(pointer->getType()->isPointerTy());
     auto pointer_element_type = pointer->getType()->getPointerElementType();
     return Builder.CreateLoad(pointer_element_type, pointer);
 }
