@@ -620,6 +620,17 @@ std::any JotLLVMBackend::visit(AssignExpression* node)
         auto left_value = node->get_left()->accept(this);
         if (left_value.type() == typeid(llvm::AllocaInst*)) {
             auto alloca = std::any_cast<llvm::AllocaInst*>(left_value);
+
+            // Alloca type must be a pointer to rvalue type
+            // this case solve assiging dereferneced value into variable
+            // Case
+            // var x = 0;
+            // x = *ptr;
+            // Check samples/memory/AssignPtrValueToVar.jot
+            if (alloca->getType() == right_value->getType()) {
+                right_value = derefernecs_llvm_pointer(right_value);
+            }
+
             alloca_inst_scope->update(name, alloca);
             return Builder.CreateStore(right_value, alloca);
         }
