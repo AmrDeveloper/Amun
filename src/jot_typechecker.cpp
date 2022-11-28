@@ -788,6 +788,13 @@ std::any JotTypeChecker::visit(CastExpression* node)
     auto value = node->get_value();
     auto value_type = node_jot_type(value->accept(this));
     auto cast_result_type = node->get_type_node();
+
+    // No need for castring if both has the same type
+    if (value_type->equals(cast_result_type)) {
+        // TODO: Fire warning 'Unrequired castring because both has same type'
+        return cast_result_type;
+    }
+
     if (not value_type->castable(cast_result_type)) {
         context->diagnostics.add_diagnostic_error(node->get_position().get_span(),
                                                   "Can't cast from " + value_type->type_literal() +

@@ -80,16 +80,17 @@ std::any JotLLVMBackend::visit(FieldDeclaration* node)
     auto current_function = Builder.GetInsertBlock()->getParent();
     if (value.type() == typeid(llvm::Value*)) {
         auto init_value = std::any_cast<llvm::Value*>(value);
-        auto init_value_type = init_value->getType();
+        // auto init_value_type = init_value->getType();
 
         // This case if you assign derefernced variable for example
         // Case in C Language
         // int* ptr = (int*) malloc(sizeof(int));
         // int value = *ptr;
         // Clang compiler emit load instruction twice to resolve this problem
-        if (init_value_type != llvm_type && init_value_type->getPointerElementType() == llvm_type) {
-            init_value = derefernecs_llvm_pointer(init_value);
-        }
+        //  if (init_value_type != llvm_type && init_value_type->getPointerElementType() ==
+        //  llvm_type) {
+        //    init_value = derefernecs_llvm_pointer(init_value);
+        // }
 
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
         Builder.CreateStore(init_value, alloc_inst);
@@ -627,9 +628,9 @@ std::any JotLLVMBackend::visit(AssignExpression* node)
             // var x = 0;
             // x = *ptr;
             // Check samples/memory/AssignPtrValueToVar.jot
-            if (alloca->getType() == right_value->getType()) {
-                right_value = derefernecs_llvm_pointer(right_value);
-            }
+            // if (alloca->getType() == right_value->getType()) {
+            //    right_value = derefernecs_llvm_pointer(right_value);
+            //}
 
             alloca_inst_scope->update(name, alloca);
             return Builder.CreateStore(right_value, alloca);
@@ -800,7 +801,13 @@ std::any JotLLVMBackend::visit(PrefixUnaryExpression* node)
     // Pointer * Dereference operator
     if (operator_kind == TokenKind::Star) {
         auto right = llvm_node_value(operand->accept(this));
-        return derefernecs_llvm_pointer(right);
+        auto is_expect_struct_type = node->get_type_node()->get_type_kind() == TypeKind::Structure;
+        // No need to emit 2 load inst if the current type is pointer to struct
+        if (is_expect_struct_type) {
+            return derefernecs_llvm_pointer(right);
+        }
+        auto derefernce_right = derefernecs_llvm_pointer(right);
+        return derefernecs_llvm_pointer(derefernce_right);
     }
 
     // Address of operator (&) to return pointer of operand
@@ -957,6 +964,11 @@ std::any JotLLVMBackend::visit(CastExpression* node)
     auto value_type = llvm_type_from_jot_type(node->get_value()->get_type_node());
     auto target_type = llvm_type_from_jot_type(node->get_type_node());
 
+    // No need for castring if both part has the same type
+    if (value_type == target_type) {
+        return value;
+    }
+
     // Integer to Integer with different size
     if (target_type->isIntegerTy() and value_type->isIntegerTy()) {
         return Builder.CreateIntCast(value, target_type, true);
@@ -987,12 +999,11 @@ std::any JotLLVMBackend::visit(CastExpression* node)
         return Builder.CreateIntToPtr(value, target_type);
     }
 
-    // Array of type T to pointer or type T
+    // Array of type T to pointer or type T, return pointer to the first element
     if (target_type->isPointerTy() and value_type->isArrayTy()) {
-        auto load_inst = dyn_cast<llvm::LoadInst>(value);
-        auto ptr = Builder.CreateGEP(value->getType(), load_inst->getPointerOperand(),
-                                     {zero_int32_value, zero_int32_value});
-        return ptr;
+        auto                         load_inst = dyn_cast<llvm::LoadInst>(value);
+        llvm::ArrayRef<llvm::Value*> indices = {zero_int32_value, zero_int32_value};
+        return Builder.CreateGEP(value->getType(), load_inst->getPointerOperand(), indices);
     }
 
     // Bit casting
