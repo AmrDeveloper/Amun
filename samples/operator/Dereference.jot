@@ -1,4 +1,4 @@
-extern fun printf(format *char, value int64) int64;
+extern fun printf(format *char, varargs) int64;
 
 fun main() int64 {
     var array = [1, 2, 3, 4];

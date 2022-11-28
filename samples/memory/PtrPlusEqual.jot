@@ -1,0 +1,16 @@
+extern fun printf(format *char, varargs) int64;
+
+extern fun malloc(size int64) *void;
+
+extern fun free(ptr *void) void;
+
+fun main() int64 {
+    var ptr = cast(*int64) malloc(type_size(int64));
+    defer free(cast(*void) ptr);
+    
+    *ptr = 0;
+    *ptr += 10;
+    *ptr += *ptr;
+    printf("%d\n", *ptr);
+    return 0;
+}
