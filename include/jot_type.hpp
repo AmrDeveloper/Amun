@@ -144,8 +144,10 @@ class JotArrayType : public JotType {
 class JotFunctionType : public JotType {
   public:
     JotFunctionType(Token name, std::vector<std::shared_ptr<JotType>> parameters,
-                    std::shared_ptr<JotType> return_type, bool varargs = false)
-        : name(name), parameters(parameters), return_type(return_type), varargs(varargs)
+                    std::shared_ptr<JotType> return_type, bool varargs = false,
+                    std::shared_ptr<JotType> varargs_type = nullptr)
+        : name(name), parameters(parameters), return_type(return_type), varargs(varargs),
+          varargs_type(varargs_type)
     {
     }
 
@@ -180,11 +182,14 @@ class JotFunctionType : public JotType {
 
     bool has_varargs() { return varargs; }
 
+    std::shared_ptr<JotType> get_varargs_type() { return varargs_type; }
+
   private:
     Token                                 name;
     std::vector<std::shared_ptr<JotType>> parameters;
     std::shared_ptr<JotType>              return_type;
     bool                                  varargs;
+    std::shared_ptr<JotType>              varargs_type;
 };
 
 class JotStructType : public JotType {

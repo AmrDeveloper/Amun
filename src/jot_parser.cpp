@@ -259,6 +259,7 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
     Token name = consume_kind(TokenKind::Symbol, "Expect identifier as function name.");
 
     bool                                    has_varargs = false;
+    std::shared_ptr<JotType>                varargs_type = nullptr;
     std::vector<std::shared_ptr<Parameter>> parameters;
     if (is_current_kind(TokenKind::OpenParen)) {
         advanced_token();
@@ -272,6 +273,12 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
 
             if (is_current_kind(TokenKind::VarargsKeyword)) {
                 advanced_token();
+                if (is_current_kind(TokenKind::Symbol) && current_token->get_literal() == "Any") {
+                    advanced_token();
+                }
+                else {
+                    varargs_type = parse_type();
+                }
                 has_varargs = true;
                 continue;
             }
@@ -320,7 +327,8 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
     if (is_external)
         assert_kind(TokenKind::Semicolon, "Expect ; after external function declaration");
     return std::make_shared<FunctionPrototype>(name, parameters, return_type,
-                                               FunctionCallKind::Normal, is_external, has_varargs);
+                                               FunctionCallKind::Normal, is_external, has_varargs,
+                                               varargs_type);
 }
 
 std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(FunctionCallKind kind)

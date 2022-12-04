@@ -95,8 +95,8 @@ std::any JotTypeChecker::visit(FunctionPrototype* node)
         parameters.push_back(parameter->get_type());
     }
     auto return_type = node->get_return_type();
-    auto function_type =
-        std::make_shared<JotFunctionType>(name, parameters, return_type, node->has_varargs());
+    auto function_type = std::make_shared<JotFunctionType>(
+        name, parameters, return_type, node->has_varargs(), node->get_varargs_type());
     bool is_first_defined = symbol_table->define(name.get_literal(), function_type);
     if (not is_first_defined) {
         context->diagnostics.add_diagnostic_error(node->get_name().get_span(),
@@ -691,7 +691,7 @@ std::any JotTypeChecker::visit(CallExpression* node)
                 auto parameters = type->get_parameters();
                 auto arguments = node->get_arguments();
                 check_parameters_types(node->get_position().get_span(), arguments, parameters,
-                                       type->has_varargs());
+                                       type->has_varargs(), type->get_varargs_type());
                 return type->get_return_type();
             }
             else {
@@ -716,7 +716,7 @@ std::any JotTypeChecker::visit(CallExpression* node)
         auto parameters = function_type->get_parameters();
         auto arguments = node->get_arguments();
         check_parameters_types(node->get_position().get_span(), arguments, parameters,
-                               function_type->has_varargs());
+                               function_type->has_varargs(), function_type->get_varargs_type());
         return function_type->get_return_type();
     }
 
@@ -999,35 +999,57 @@ bool JotTypeChecker::is_none_type(const std::shared_ptr<JotType>& type)
 void JotTypeChecker::check_parameters_types(TokenSpan                                 location,
                                             std::vector<std::shared_ptr<Expression>>& arguments,
                                             std::vector<std::shared_ptr<JotType>>&    parameters,
-                                            bool                                      has_varargs)
+                                            bool has_varargs, std::shared_ptr<JotType> varargs_type)
 {
+
+    const auto arguments_size = arguments.size();
+    const auto parameters_size = parameters.size();
+
     // If hasent varargs, parameters and arguments must be the same size
-    if (not has_varargs && arguments.size() != parameters.size()) {
+    if (not has_varargs && arguments_size != parameters_size) {
         context->diagnostics.add_diagnostic_error(
-            location, "Invalid number of arguments, expect " + std::to_string(parameters.size()) +
-                          " but got " + std::to_string(arguments.size()));
+            location, "Invalid number of arguments, expect " + std::to_string(parameters_size) +
+                          " but got " + std::to_string(arguments_size));
         throw "Stop";
     }
 
-    if (has_varargs && parameters.size() > arguments.size()) {
-        context->diagnostics.add_diagnostic_error(
-            location, "Invalid number of arguments, expect at last" +
-                          std::to_string(parameters.size()) + " but got " +
-                          std::to_string(arguments.size()));
+    // If it has varargs, number of parameters must be bigger than arguments
+    if (has_varargs && parameters_size > arguments_size) {
+        context->diagnostics.add_diagnostic_error(location,
+                                                  "Invalid number of arguments, expect at last" +
+                                                      std::to_string(parameters_size) +
+                                                      " but got " + std::to_string(arguments_size));
         throw "Stop";
     }
 
+    // Resolve Arguments types
     std::vector<std::shared_ptr<JotType>> arguments_types;
     for (auto& argument : arguments) {
         arguments_types.push_back(node_jot_type(argument->accept(this)));
     }
 
-    size_t parameters_size = parameters.size();
+    // Check non varargs parameters vs arguments
     for (size_t i = 0; i < parameters_size; i++) {
         if (not parameters[i]->equals(arguments_types[i])) {
             context->diagnostics.add_diagnostic_error(
                 location, "Argument type didn't match parameter type expect " +
                               parameters[i]->type_literal() + " got " +
+                              arguments_types[i]->type_literal());
+            throw "Stop";
+        }
+    }
+
+    // If varargs type is Any, no need for type checking
+    if (varargs_type == nullptr) {
+        return;
+    }
+
+    // Check extra varargs types
+    for (size_t i = parameters_size; i < arguments_size; i++) {
+        if (not arguments_types[i]->equals(varargs_type)) {
+            context->diagnostics.add_diagnostic_error(
+                location, "Argument type didn't match varargs type expect " +
+                              varargs_type->type_literal() + " got " +
                               arguments_types[i]->type_literal());
             throw "Stop";
         }
