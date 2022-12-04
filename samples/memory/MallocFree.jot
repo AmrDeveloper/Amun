@@ -1,4 +1,4 @@
-extern fun printf(format *char, varargs) int64;
+extern fun printf(format *char, varargs Any) int64;
 
 extern fun malloc(size int64) *int8;
 
