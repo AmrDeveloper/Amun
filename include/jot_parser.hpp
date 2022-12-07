@@ -20,12 +20,12 @@ enum class AstNodeScope {
 
 class JotParser {
   public:
-    JotParser(std::shared_ptr<JotContext> context, std::unique_ptr<JotTokenizer> tokenizer)
-        : context(context), tokenizer(std::move(tokenizer))
+    JotParser(std::shared_ptr<JotContext> context, JotTokenizer& tokenizer)
+        : context(context), tokenizer(tokenizer)
     {
         advanced_token();
         advanced_token();
-        file_parent_path = find_parent_path(this->tokenizer->get_current_file_path()) + "/";
+        file_parent_path = find_parent_path(this->tokenizer.get_current_file_path()) + "/";
     }
 
     std::shared_ptr<CompilationUnit> parse_compilation_unit();
@@ -167,11 +167,11 @@ class JotParser {
 
     bool is_source_available();
 
-    std::string                   file_parent_path;
-    std::shared_ptr<JotContext>   context;
-    std::unique_ptr<JotTokenizer> tokenizer;
-    std::optional<Token>          previous_token;
-    std::optional<Token>          current_token;
-    std::optional<Token>          next_token;
-    AstNodeScope                  current_ast_scope = AstNodeScope::GlobalScope;
+    std::string                 file_parent_path;
+    std::shared_ptr<JotContext> context;
+    JotTokenizer&               tokenizer;
+    std::optional<Token>        previous_token;
+    std::optional<Token>        current_token;
+    std::optional<Token>        next_token;
+    AstNodeScope                current_ast_scope = AstNodeScope::GlobalScope;
 };

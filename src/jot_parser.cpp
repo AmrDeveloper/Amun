@@ -131,11 +131,11 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration()
 
 std::vector<std::shared_ptr<Statement>> JotParser::parse_single_source_file(std::string& path)
 {
-    const char* file_name = path.c_str();
-    std::string source_content = read_file_content(file_name);
-    auto        tokenizer = std::make_unique<JotTokenizer>(file_name, source_content);
-    JotParser   parser(context, std::move(tokenizer));
-    auto        compilation_unit = parser.parse_compilation_unit();
+    const char*  file_name = path.c_str();
+    std::string  source_content = read_file_content(file_name);
+    JotTokenizer tokenizer(file_name, source_content);
+    JotParser    parser(context, tokenizer);
+    auto         compilation_unit = parser.parse_compilation_unit();
     if (context->diagnostics.get_errors_number() > 0) {
         throw "Stop";
     }
@@ -1418,7 +1418,7 @@ void JotParser::advanced_token()
 {
     previous_token = current_token;
     current_token = next_token;
-    next_token = tokenizer->scan_next_token();
+    next_token = tokenizer.scan_next_token();
 }
 
 Token JotParser::peek_and_advance_token()

@@ -74,9 +74,9 @@ std::shared_ptr<CompilationUnit> JotCompiler::parse_source_code(const char* sour
         jot::loge << "Path " << source_file << " not exists\n";
         exit(EXIT_FAILURE);
     }
-    auto      source_content = read_file_content(source_file);
-    auto      tokenizer = std::make_unique<JotTokenizer>(source_file, source_content);
-    JotParser parser(jot_context, std::move(tokenizer));
+    auto         source_content = read_file_content(source_file);
+    JotTokenizer tokenizer(source_file, source_content);
+    JotParser    parser(jot_context, tokenizer);
 
     auto compilation_unit = parser.parse_compilation_unit();
 
