@@ -201,7 +201,7 @@ std::any JotLLVMBackend::visit(FunctionDeclaration* node)
 std::any JotLLVMBackend::visit(StructDeclaration* node)
 {
     auto struct_type = node->get_struct_type();
-    auto struct_name = struct_type->get_type_token().get_literal();
+    auto struct_name = struct_type->get_name();
     auto struct_llvm_type = llvm::StructType::create(llvm_context);
     struct_llvm_type->setName(struct_name);
     auto                     fields = struct_type->get_fields_types();
@@ -1333,7 +1333,7 @@ llvm::Type* JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
 
     if (type_kind == TypeKind::Structure) {
         auto struct_type = std::dynamic_pointer_cast<JotStructType>(type);
-        auto struct_name = struct_type->get_type_token().get_literal();
+        auto struct_name = struct_type->get_name();
         return structures_types_map[struct_name];
     }
 

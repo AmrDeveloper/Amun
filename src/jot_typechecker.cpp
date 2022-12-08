@@ -127,8 +127,8 @@ std::any JotTypeChecker::visit(FunctionDeclaration* node)
 std::any JotTypeChecker::visit(StructDeclaration* node)
 {
     auto struct_type = node->get_struct_type();
-    auto struct_name = struct_type->get_type_token().get_literal();
-    symbol_table->define(struct_type->get_type_token().get_literal(), struct_type);
+    auto struct_name = struct_type->get_name();
+    symbol_table->define(struct_name, struct_type);
     return nullptr;
 }
 
@@ -199,7 +199,7 @@ std::any JotTypeChecker::visit(SwitchStatement* node)
     auto argument = node_jot_type(node->get_argument()->accept(this));
     if ((not is_integer_type(argument)) and (not is_enum_element_type(argument))) {
         context->diagnostics.add_diagnostic_error(
-            argument->get_type_position(),
+            node->get_position().get_span(),
             "Switch argument type must be integer or enum element but found " +
                 argument->type_literal());
         throw "Stop";
@@ -339,7 +339,7 @@ std::any JotTypeChecker::visit(IfExpression* node)
     auto condition = node_jot_type(node->get_condition()->accept(this));
     if (not is_number_type(condition)) {
         context->diagnostics.add_diagnostic_error(
-            condition->get_type_position(),
+            node->get_if_position().get_span(),
             "If Expression condition mush be a number but got " + condition->type_literal());
         throw "Stop";
     }
@@ -628,7 +628,7 @@ std::any JotTypeChecker::visit(PrefixUnaryExpression* node)
 
     if (unary_operator == TokenKind::And) {
         auto pointer_type =
-            std::make_shared<JotPointerType>(operand_type->get_type_token(), operand_type);
+            std::make_shared<JotPointerType>(operand_type);
         node->set_type_node(pointer_type);
         return pointer_type;
     }
@@ -747,7 +747,7 @@ std::any JotTypeChecker::visit(DotExpression* node)
         context->diagnostics.add_diagnostic_error(node->get_position().get_span(),
                                                   "Can't find a field with name " + field_name +
                                                       " in struct " +
-                                                      struct_type->get_type_token().get_literal());
+                                                      struct_type->get_name());
         throw "Stop";
     }
 
@@ -768,7 +768,7 @@ std::any JotTypeChecker::visit(DotExpression* node)
             context->diagnostics.add_diagnostic_error(
                 node->get_position().get_span(), "Can't find a field with name " + field_name +
                                                      " in struct " +
-                                                     struct_type->get_type_token().get_literal());
+                                                     struct_type->get_name());
             throw "Stop";
         }
 

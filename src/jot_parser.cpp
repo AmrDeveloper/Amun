@@ -318,9 +318,8 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
 
     // Function can't return fixed size array, you can use pointer format to return allocated array
     if (return_type->get_type_kind() == TypeKind::Array) {
-        context->diagnostics.add_diagnostic_error(return_type->get_type_position(),
-                                                  "Function cannot return array type " +
-                                                      return_type->type_literal());
+        context->diagnostics.add_diagnostic_error(
+            name.get_span(), "Function cannot return array type " + return_type->type_literal());
         throw "Stop";
     }
 
@@ -380,7 +379,8 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration()
         assert_kind(TokenKind::Semicolon, "Expect ; at the end of struct field declaration");
     }
     assert_kind(TokenKind::CloseBrace, "Expect } in the end of struct declaration");
-    auto structure_type = std::make_shared<JotStructType>(struct_name, fields_names, fields_types);
+    auto structure_type =
+        std::make_shared<JotStructType>(struct_name.get_literal(), fields_names, fields_types);
     auto struct_name_str = struct_name.get_literal();
     if (context->structures.count(struct_name_str)) {
         context->diagnostics.add_diagnostic_error(
@@ -405,7 +405,7 @@ std::shared_ptr<EnumDeclaration> JotParser::parse_enum_declaration()
     else {
         // TODO: if we split the type from his position we can declare this type once
         // Default enumeration element type is integer 32
-        element_type = std::make_shared<JotNumberType>(enum_token, NumberKind::Integer32);
+        element_type = jot_int32_ty;
     }
 
     assert_kind(TokenKind::OpenBrace, "Expect { after enum name");
@@ -999,7 +999,7 @@ std::shared_ptr<Expression> JotParser::parse_enum_type_attribute(std::string& en
     if (attribute_str == "count") {
         auto count = context->enumerations[enum_name]->get_enum_values().size();
         auto number_token = Token(TokenKind::Integer, attribute.get_span(), std::to_string(count));
-        auto number_type = std::make_shared<JotNumberType>(number_token, NumberKind::Integer64);
+        auto number_type = jot_int64_ty;
         return std::make_shared<NumberExpression>(number_token, number_type);
     }
 
@@ -1095,14 +1095,14 @@ std::shared_ptr<NumberExpression> JotParser::parse_number_expression()
 {
     auto number_token = peek_and_advance_token();
     auto number_kind = get_number_kind(number_token.get_kind());
-    auto number_type = std::make_shared<JotNumberType>(number_token, number_kind);
+    auto number_type = std::make_shared<JotNumberType>(number_kind);
     return std::make_shared<NumberExpression>(number_token, number_type);
 }
 
 std::shared_ptr<LiteralExpression> JotParser::parse_literal_expression()
 {
     Token symbol_token = peek_and_advance_token();
-    auto  type = std::make_shared<JotNoneType>(symbol_token);
+    auto  type = std::make_shared<JotNoneType>();
     return std::make_shared<LiteralExpression>(symbol_token, type);
 }
 
@@ -1249,16 +1249,16 @@ std::shared_ptr<JotType> JotParser::parse_type_with_prefix()
 {
     // Parse pointer type
     if (is_current_kind(TokenKind::Star)) {
-        advanced_token();
+        auto star_token = peek_and_advance_token();
         auto operand = parse_type_with_prefix();
-        return std::make_shared<JotPointerType>(operand->get_type_token(), operand);
+        return std::make_shared<JotPointerType>(operand);
     }
 
     // Parse refernse type
     if (is_current_kind(TokenKind::And)) {
-        advanced_token();
+        auto and_token = peek_and_advance_token();
         auto operand = parse_type_with_prefix();
-        return std::make_shared<JotNumberType>(operand->get_type_token(), NumberKind::Integer64);
+        return jot_int64_ty;
     }
 
     // Parse function pointer type
@@ -1281,7 +1281,7 @@ std::shared_ptr<JotType> JotParser::parse_type_with_prefix()
         auto size = parse_number_expression();
         auto number_type = std::dynamic_pointer_cast<JotNumberType>(size->get_type_node());
         if (not number_type->is_integer()) {
-            context->diagnostics.add_diagnostic_error(number_type->get_type_position(),
+            context->diagnostics.add_diagnostic_error(bracket_token.get_span(),
                                                       "Array size must be an integer constants");
             throw "Stop";
         }
@@ -1324,35 +1324,35 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type()
     std::string type_literal = symbol_token.get_literal();
 
     if (type_literal == "int16") {
-        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Integer16);
+        return jot_int16_ty;
     }
 
     if (type_literal == "int32") {
-        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Integer32);
+        return jot_int32_ty;
     }
 
     if (type_literal == "int64") {
-        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Integer64);
+        return jot_int64_ty;
     }
 
     if (type_literal == "float32") {
-        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Float32);
+        return jot_float32_ty;
     }
 
     if (type_literal == "float64") {
-        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Float64);
+        return jot_float64_ty;
     }
 
     if (type_literal == "char" || type_literal == "int8") {
-        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Integer8);
+        return jot_int8_ty;
     }
 
     if (type_literal == "bool" || type_literal == "int1") {
-        return std::make_shared<JotNumberType>(symbol_token, NumberKind::Integer1);
+        return jot_int1_ty;
     }
 
     if (type_literal == "void") {
-        return std::make_shared<JotVoidType>(symbol_token);
+        return jot_void_ty;
     }
 
     // Check if this type is structure type
@@ -1363,9 +1363,8 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type()
     // Check if this type is enumeration type
     if (context->enumerations.count(type_literal)) {
         auto enum_type = context->enumerations[type_literal];
-        auto enum_name = enum_type->get_type_token();
         auto enum_element_type =
-            std::make_shared<JotEnumElementType>(enum_name, enum_type->get_element_type());
+            std::make_shared<JotEnumElementType>(symbol_token, enum_type->get_element_type());
         return enum_element_type;
     }
 

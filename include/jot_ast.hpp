@@ -693,7 +693,7 @@ class ComparisonExpression : public Expression {
                          std::shared_ptr<Expression> right)
         : left(left), operator_token(token), right(right)
     {
-        type = std::make_shared<JotNumberType>(operator_token, NumberKind::Integer1);
+        type = std::make_shared<JotNumberType>(NumberKind::Integer1);
     }
 
     Token get_operator_token() { return operator_token; }
@@ -725,7 +725,7 @@ class LogicalExpression : public Expression {
                       std::shared_ptr<Expression> right)
         : left(left), operator_token(token), right(right)
     {
-        type = std::make_shared<JotNumberType>(operator_token, NumberKind::Integer1);
+        type = std::make_shared<JotNumberType>(NumberKind::Integer1);
     }
 
     Token get_operator_token() { return operator_token; }
@@ -900,7 +900,7 @@ class TypeSizeExpression : public Expression {
     TypeSizeExpression(Token position, std::shared_ptr<JotType> type)
         : position(position), type(type)
     {
-        node_type = std::make_shared<JotNumberType>(position, NumberKind::Integer64);
+        node_type = std::make_shared<JotNumberType>(NumberKind::Integer64);
     }
 
     Token get_position() { return position; }
@@ -928,7 +928,7 @@ class ValueSizeExpression : public Expression {
     ValueSizeExpression(Token position, std::shared_ptr<Expression> value)
         : position(position), value(value)
     {
-        node_type = std::make_shared<JotNumberType>(position, NumberKind::Integer64);
+        node_type = std::make_shared<JotNumberType>(NumberKind::Integer64);
     }
 
     Token get_position() { return position; }
@@ -957,7 +957,7 @@ class IndexExpression : public Expression {
                     std::shared_ptr<Expression> index)
         : position(position), value(value), index(index)
     {
-        type = std::make_shared<JotNoneType>(position);
+        type = std::make_shared<JotNoneType>();
     }
 
     Token get_position() { return position; }
@@ -1023,7 +1023,7 @@ class ArrayExpression : public Expression {
     {
         auto size = values.size();
         auto element_type =
-            size == 0 ? std::make_shared<JotNoneType>(position) : values[0]->get_type_node();
+            size == 0 ? std::make_shared<JotNoneType>() : values[0]->get_type_node();
         type = std::make_shared<JotArrayType>(element_type, size);
 
         // Check if all values of array are constant or not
@@ -1058,8 +1058,8 @@ class StringExpression : public Expression {
   public:
     StringExpression(Token value) : value(value)
     {
-        auto element_type = std::make_shared<JotNumberType>(value, NumberKind::Integer8);
-        type = std::make_shared<JotPointerType>(value, element_type);
+        auto element_type = std::make_shared<JotNumberType>(NumberKind::Integer8);
+        type = std::make_shared<JotPointerType>(element_type);
     }
 
     Token get_value() { return value; }
@@ -1129,7 +1129,7 @@ class NumberExpression : public Expression {
 class CharacterExpression : public Expression {
   public:
     CharacterExpression(Token value)
-        : value(value), type(std::make_shared<JotNumberType>(value, NumberKind::Integer8))
+        : value(value), type(std::make_shared<JotNumberType>(NumberKind::Integer8))
     {
     }
 
@@ -1153,7 +1153,7 @@ class CharacterExpression : public Expression {
 class BooleanExpression : public Expression {
   public:
     BooleanExpression(Token value)
-        : value(value), type(std::make_shared<JotNumberType>(value, NumberKind::Integer1))
+        : value(value), type(std::make_shared<JotNumberType>(NumberKind::Integer1))
     {
     }
 
@@ -1176,7 +1176,7 @@ class BooleanExpression : public Expression {
 
 class NullExpression : public Expression {
   public:
-    NullExpression(Token value) : value(value), type(std::make_shared<JotNullType>(value)) {}
+    NullExpression(Token value) : value(value), type(std::make_shared<JotNullType>()) {}
 
     Token get_value() { return value; }
 

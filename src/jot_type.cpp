@@ -76,7 +76,7 @@ bool JotFunctionType::castable(const std::shared_ptr<JotType>& other) { return f
 bool JotStructType::equals(const std::shared_ptr<JotType>& other)
 {
     if (auto other_struct = std::dynamic_pointer_cast<JotStructType>(other)) {
-        return name.get_literal() == other->type_literal();
+        return name == other_struct->get_name();
     }
     return false;
 }
@@ -98,7 +98,7 @@ bool JotEnumElementType::equals(const std::shared_ptr<JotType>& other)
 {
     if (other->get_type_kind() == TypeKind::EnumerationElement) {
         auto other_enum_type = std::dynamic_pointer_cast<JotEnumElementType>(other);
-        if (other_enum_type->get_type_token().get_literal() == get_type_token().get_literal()) {
+        if (other_enum_type->get_name() == get_name()) {
             return true;
         }
         return false;
