@@ -72,7 +72,7 @@ class JotNumberType : public JotType {
     bool is_float() { return kind == NumberKind::Float32 || kind == NumberKind::Float64; }
 
   private:
-      NumberKind kind;
+    NumberKind kind;
 };
 
 class JotPointerType : public JotType {
@@ -192,7 +192,7 @@ class JotStructType : public JotType {
     bool castable(const std::shared_ptr<JotType>& other) override;
 
   private:
-    std::string                                 name;
+    std::string                           name;
     std::unordered_map<std::string, int>  fields_names;
     std::vector<std::shared_ptr<JotType>> fields_types;
 };

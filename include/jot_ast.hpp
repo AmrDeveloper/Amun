@@ -1,8 +1,8 @@
 #pragma once
 
 #include "jot_ast_visitor.hpp"
+#include "jot_primitives.hpp"
 #include "jot_token.hpp"
-#include "jot_type.hpp"
 
 #include <any>
 #include <memory>
@@ -691,9 +691,8 @@ class ComparisonExpression : public Expression {
   public:
     ComparisonExpression(std::shared_ptr<Expression> left, Token token,
                          std::shared_ptr<Expression> right)
-        : left(left), operator_token(token), right(right)
+        : left(left), operator_token(token), right(right), type(jot_int1_ty)
     {
-        type = std::make_shared<JotNumberType>(NumberKind::Integer1);
     }
 
     Token get_operator_token() { return operator_token; }
@@ -723,9 +722,8 @@ class LogicalExpression : public Expression {
   public:
     LogicalExpression(std::shared_ptr<Expression> left, Token token,
                       std::shared_ptr<Expression> right)
-        : left(left), operator_token(token), right(right)
+        : left(left), operator_token(token), right(right), type(jot_int1_ty)
     {
-        type = std::make_shared<JotNumberType>(NumberKind::Integer1);
     }
 
     Token get_operator_token() { return operator_token; }
@@ -898,9 +896,8 @@ class CastExpression : public Expression {
 class TypeSizeExpression : public Expression {
   public:
     TypeSizeExpression(Token position, std::shared_ptr<JotType> type)
-        : position(position), type(type)
+        : position(position), type(type), node_type(jot_int64_ty)
     {
-        node_type = std::make_shared<JotNumberType>(NumberKind::Integer64);
     }
 
     Token get_position() { return position; }
@@ -926,9 +923,8 @@ class TypeSizeExpression : public Expression {
 class ValueSizeExpression : public Expression {
   public:
     ValueSizeExpression(Token position, std::shared_ptr<Expression> value)
-        : position(position), value(value)
+        : position(position), value(value), node_type(jot_int64_ty)
     {
-        node_type = std::make_shared<JotNumberType>(NumberKind::Integer64);
     }
 
     Token get_position() { return position; }
@@ -1022,8 +1018,7 @@ class ArrayExpression : public Expression {
         : position(position), values(values)
     {
         auto size = values.size();
-        auto element_type =
-            size == 0 ? std::make_shared<JotNoneType>() : values[0]->get_type_node();
+        auto element_type = size == 0 ? jot_none_ty : values[0]->get_type_node();
         type = std::make_shared<JotArrayType>(element_type, size);
 
         // Check if all values of array are constant or not
@@ -1056,11 +1051,7 @@ class ArrayExpression : public Expression {
 
 class StringExpression : public Expression {
   public:
-    StringExpression(Token value) : value(value)
-    {
-        auto element_type = std::make_shared<JotNumberType>(NumberKind::Integer8);
-        type = std::make_shared<JotPointerType>(element_type);
-    }
+    StringExpression(Token value) : value(value), type(jot_int8ptr_ty) {}
 
     Token get_value() { return value; }
 
@@ -1128,10 +1119,7 @@ class NumberExpression : public Expression {
 
 class CharacterExpression : public Expression {
   public:
-    CharacterExpression(Token value)
-        : value(value), type(std::make_shared<JotNumberType>(NumberKind::Integer8))
-    {
-    }
+    CharacterExpression(Token value) : value(value), type(jot_int8_ty) {}
 
     Token get_value() { return value; }
 
@@ -1152,10 +1140,7 @@ class CharacterExpression : public Expression {
 
 class BooleanExpression : public Expression {
   public:
-    BooleanExpression(Token value)
-        : value(value), type(std::make_shared<JotNumberType>(NumberKind::Integer1))
-    {
-    }
+    BooleanExpression(Token value) : value(value), type(jot_int1_ty) {}
 
     Token get_value() { return value; }
 
@@ -1176,7 +1161,7 @@ class BooleanExpression : public Expression {
 
 class NullExpression : public Expression {
   public:
-    NullExpression(Token value) : value(value), type(std::make_shared<JotNullType>()) {}
+    NullExpression(Token value) : value(value), type(jot_null_ty) {}
 
     Token get_value() { return value; }
 

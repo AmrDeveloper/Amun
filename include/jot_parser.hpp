@@ -4,9 +4,9 @@
 #include "jot_context.hpp"
 #include "jot_files.hpp"
 #include "jot_parser.hpp"
+#include "jot_primitives.hpp"
 #include "jot_token.hpp"
 #include "jot_tokenizer.hpp"
-#include "jot_type.hpp"
 
 #include <memory>
 #include <optional>
@@ -17,17 +17,6 @@ enum class AstNodeScope {
     FunctionScope,
     ConditionalScope,
 };
-
-static auto jot_int1_ty = std::make_shared<JotNumberType>(NumberKind::Integer1);
-static auto jot_int8_ty = std::make_shared<JotNumberType>(NumberKind::Integer8);
-static auto jot_int16_ty = std::make_shared<JotNumberType>(NumberKind::Integer16);
-static auto jot_int32_ty = std::make_shared<JotNumberType>(NumberKind::Integer32);
-static auto jot_int64_ty = std::make_shared<JotNumberType>(NumberKind::Integer64);
-
-static auto jot_float32_ty = std::make_shared<JotNumberType>(NumberKind::Float32);
-static auto jot_float64_ty = std::make_shared<JotNumberType>(NumberKind::Float64);
-
-static auto jot_void_ty = std::make_shared<JotVoidType>();
 
 class JotParser {
   public:
