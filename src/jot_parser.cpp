@@ -46,7 +46,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration()
                 TokenKind::String, "Expect string as library name after import statement");
             std::string library_path = "../lib/" + library_name.get_literal() + ".jot";
 
-            if (context->is_path_visited(library_path))
+            if (context->source_manager.is_path_registered(library_path.c_str()))
                 continue;
 
             if (not is_file_exists(library_path)) {
@@ -57,7 +57,6 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration()
             }
 
             auto nodes = parse_single_source_file(library_path);
-            context->set_path_visited(library_path);
             merge_tree_nodes(tree_nodes, nodes);
         }
         assert_kind(TokenKind::CloseBrace, "Expect Close brace `}` after import block");
@@ -68,7 +67,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration()
         consume_kind(TokenKind::String, "Expect string as library name after import statement");
     std::string library_path = "../lib/" + library_name.get_literal() + ".jot";
 
-    if (context->is_path_visited(library_path)) {
+    if (context->source_manager.is_path_registered(library_path.c_str())) {
         return std::vector<std::shared_ptr<Statement>>();
     }
 
@@ -94,7 +93,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration()
 
             std::string library_path = file_parent_path + library_name.get_literal() + ".jot";
 
-            if (context->is_path_visited(library_path))
+            if (context->source_manager.is_path_registered(library_path.c_str()))
                 continue;
 
             if (not is_file_exists(library_path)) {
@@ -104,7 +103,6 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration()
             }
 
             auto nodes = parse_single_source_file(library_path);
-            context->set_path_visited(library_path);
             merge_tree_nodes(tree_nodes, nodes);
         }
         assert_kind(TokenKind::CloseBrace, "Expect Close brace `}` after import block");
@@ -116,7 +114,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration()
 
     std::string library_path = file_parent_path + library_name.get_literal() + ".jot";
 
-    if (context->is_path_visited(library_path)) {
+    if (context->source_manager.is_path_registered(library_path.c_str())) {
         return std::vector<std::shared_ptr<Statement>>();
     }
 
@@ -133,7 +131,8 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_single_source_file(std:
 {
     const char*  file_name = path.c_str();
     std::string  source_content = read_file_content(file_name);
-    JotTokenizer tokenizer(file_name, source_content);
+    int          file_id = context->source_manager.register_source_path(file_name);
+    JotTokenizer tokenizer(file_id, source_content);
     JotParser    parser(context, tokenizer);
     auto         compilation_unit = parser.parse_compilation_unit();
     if (context->diagnostics.get_errors_number() > 0) {

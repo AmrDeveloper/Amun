@@ -75,12 +75,9 @@ std::shared_ptr<CompilationUnit> JotCompiler::parse_source_code(const char* sour
         exit(EXIT_FAILURE);
     }
 
-    // Mark this souce file path as visited to prevent loading the same file
-    std::string source_path_str(source_file);
-    jot_context->set_path_visited(source_path_str);
-
+    auto         file_id = jot_context->source_manager.register_source_path(source_file);
     auto         source_content = read_file_content(source_file);
-    JotTokenizer tokenizer(source_file, source_content);
+    JotTokenizer tokenizer(file_id, source_content);
     JotParser    parser(jot_context, tokenizer);
 
     auto compilation_unit = parser.parse_compilation_unit();

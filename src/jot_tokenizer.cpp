@@ -392,7 +392,7 @@ Token JotTokenizer::build_token(TokenKind kind, std::string literal)
 
 TokenSpan JotTokenizer::build_token_span()
 {
-    return {file_name, line_number, column_start, column_current};
+    return {source_file_id, line_number, column_start, column_current};
 }
 
 void JotTokenizer::skip_whitespaces()

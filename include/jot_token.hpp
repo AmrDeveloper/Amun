@@ -247,26 +247,11 @@ static std::unordered_map<TokenKind, TokenKind> assignments_binary_operators{
     {TokenKind::PercentEqual, TokenKind::Percent},
 };
 
-class TokenSpan {
-  public:
-    TokenSpan(std::string file, size_t l, size_t cs, size_t cd)
-        : file_name(std::move(file)), line_number(l), column_start(cs), column_end(cd)
-    {
-    }
-
-    std::string get_file_name() { return file_name; }
-
-    size_t get_line_number() { return line_number; }
-
-    size_t get_column_start() { return column_start; }
-
-    size_t get_column_end() { return column_end; }
-
-  private:
-    std::string file_name;
-    size_t      line_number;
-    size_t      column_start;
-    size_t      column_end;
+struct TokenSpan {
+    int file_id;
+    int line_number;
+    int column_start;
+    int column_end;
 };
 
 class Token {

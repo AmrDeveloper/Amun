@@ -25,7 +25,8 @@ class JotParser {
     {
         advanced_token();
         advanced_token();
-        file_parent_path = find_parent_path(this->tokenizer.get_current_file_path()) + "/";
+        auto file_path = context->source_manager.resolve_source_path(tokenizer.source_file_id);
+        file_parent_path = find_parent_path(file_path) + "/";
     }
 
     std::shared_ptr<CompilationUnit> parse_compilation_unit();

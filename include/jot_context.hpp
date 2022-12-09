@@ -2,6 +2,7 @@
 
 #include "jot_diagnostics.hpp"
 #include "jot_options.hpp"
+#include "jot_source_manager.hpp"
 #include "jot_type.hpp"
 
 #include <memory>
@@ -9,9 +10,7 @@
 
 class JotContext {
   public:
-    bool is_path_visited(std::string& path);
-
-    void set_path_visited(std::string& path);
+    JotContext();
 
     bool is_prefix_function(std::string& name);
 
@@ -27,11 +26,11 @@ class JotContext {
 
     JotOptions                                                      options;
     JotDiagnosticEngine                                             diagnostics;
+    JotSourceManager                                                source_manager;
     std::unordered_map<std::string, std::shared_ptr<JotStructType>> structures;
     std::unordered_map<std::string, std::shared_ptr<JotEnumType>>   enumerations;
 
   private:
-    std::unordered_set<std::string> visited_files;
     std::unordered_set<std::string> prefix_functions;
     std::unordered_set<std::string> infix_functions;
     std::unordered_set<std::string> postfix_functions;

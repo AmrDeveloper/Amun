@@ -1,5 +1,6 @@
 #pragma once
 
+#include "jot_source_manager.hpp"
 #include "jot_token.hpp"
 
 #include <unordered_map>
@@ -35,6 +36,8 @@ class JotDiagnostic {
 
 class JotDiagnosticEngine {
   public:
+    JotDiagnosticEngine(JotSourceManager& source_manager);
+
     void report_diagnostics(DiagnosticLevel level);
 
     void add_diagnostic_error(TokenSpan location, std::string message);
@@ -48,6 +51,7 @@ class JotDiagnosticEngine {
   private:
     void report_diagnostic(JotDiagnostic& diagnostic);
 
+    JotSourceManager&          source_manager;
     std::vector<JotDiagnostic> diagnostics;
     int                        errors_number = 0;
     int                        warns_number = 0;
