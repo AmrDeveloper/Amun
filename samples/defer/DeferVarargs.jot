@@ -1,0 +1,10 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+
+    var x = 11;
+    defer printf("%d\n", x);
+    x += 10;
+
+    return 0;
+}
