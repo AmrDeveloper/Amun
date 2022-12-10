@@ -55,7 +55,7 @@ static auto zero_int32_value = Builder.getInt32(0);
 class DeferFunctionCall : public DeferCall {
   public:
     DeferFunctionCall(llvm::Function* function, std::vector<llvm::Value*> arguments)
-        : function(function), arguments(arguments)
+        : function(std::move(function)), arguments(std::move(arguments))
     {
     }
     llvm::Function*           function;
@@ -68,7 +68,8 @@ class DeferFunctionPtrCall : public DeferCall {
   public:
     DeferFunctionPtrCall(llvm::FunctionType* function_type, llvm::Value* callee,
                          std::vector<llvm::Value*> arguments)
-        : function_type(function_type), callee(callee), arguments(arguments)
+        : function_type(std::move(function_type)), callee(std::move(callee)),
+          arguments(std::move(arguments))
     {
     }
     llvm::FunctionType*       function_type;

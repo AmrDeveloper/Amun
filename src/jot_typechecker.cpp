@@ -627,8 +627,7 @@ std::any JotTypeChecker::visit(PrefixUnaryExpression* node)
     }
 
     if (unary_operator == TokenKind::And) {
-        auto pointer_type =
-            std::make_shared<JotPointerType>(operand_type);
+        auto pointer_type = std::make_shared<JotPointerType>(operand_type);
         node->set_type_node(pointer_type);
         return pointer_type;
     }
@@ -746,8 +745,7 @@ std::any JotTypeChecker::visit(DotExpression* node)
 
         context->diagnostics.add_diagnostic_error(node->get_position().get_span(),
                                                   "Can't find a field with name " + field_name +
-                                                      " in struct " +
-                                                      struct_type->get_name());
+                                                      " in struct " + struct_type->get_name());
         throw "Stop";
     }
 
@@ -765,10 +763,9 @@ std::any JotTypeChecker::visit(DotExpression* node)
                 node->field_index = member_index;
                 return field_type;
             }
-            context->diagnostics.add_diagnostic_error(
-                node->get_position().get_span(), "Can't find a field with name " + field_name +
-                                                     " in struct " +
-                                                     struct_type->get_name());
+            context->diagnostics.add_diagnostic_error(node->get_position().get_span(),
+                                                      "Can't find a field with name " + field_name +
+                                                          " in struct " + struct_type->get_name());
             throw "Stop";
         }
 

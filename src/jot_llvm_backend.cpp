@@ -424,20 +424,34 @@ std::any JotLLVMBackend::visit(DeferStatement* node)
         return 0;
     }
 
-    auto                      arguments_size = function->arg_size();
     auto                      arguments = call_expression->get_arguments();
+    auto                      arguments_size = arguments.size();
+    auto                      parameter_size = function->arg_size();
     std::vector<llvm::Value*> arguments_values;
     arguments_values.reserve(arguments_size);
     for (size_t i = 0; i < arguments_size; i++) {
-        auto value = llvm_node_value(arguments[i]->accept(this));
+        auto argument = arguments[i];
+        auto value = llvm_node_value(argument->accept(this));
+
+        if (i >= parameter_size) {
+            if (argument->get_ast_node_type() == AstNodeType::LiteralExpr) {
+                auto argument_type = llvm_type_from_jot_type(argument->get_type_node());
+                auto loaded_value = Builder.CreateLoad(argument_type, value);
+                arguments_values.push_back(loaded_value);
+                continue;
+            }
+            arguments_values.push_back(value);
+            continue;
+        }
+
         if (function->getArg(i)->getType() == value->getType()) {
             arguments_values.push_back(value);
+            continue;
         }
-        else {
-            auto expected_type = function->getArg(i)->getType();
-            auto loaded_value = Builder.CreateLoad(expected_type, value);
-            arguments_values.push_back(loaded_value);
-        }
+
+        auto expected_type = function->getArg(i)->getType();
+        auto loaded_value = Builder.CreateLoad(expected_type, value);
+        arguments_values.push_back(loaded_value);
     }
 
     auto defer_function_call = std::make_shared<DeferFunctionCall>(function, arguments_values);
