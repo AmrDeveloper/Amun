@@ -358,9 +358,10 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(Funct
 
 std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration()
 {
-    auto   struct_token = consume_kind(TokenKind::StructKeyword, "Expect struct keyword");
-    auto   struct_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
-    size_t field_index = 0;
+    auto struct_token = consume_kind(TokenKind::StructKeyword, "Expect struct keyword");
+    auto struct_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
+    current_struct_name = struct_name.get_literal();
+    size_t                                field_index = 0;
     std::unordered_map<std::string, int>  fields_names;
     std::vector<std::shared_ptr<JotType>> fields_types;
     assert_kind(TokenKind::OpenBrace, "Expect { after struct name");
@@ -386,7 +387,34 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration()
             struct_name.get_span(), "There is already struct with name " + struct_name_str);
         throw "Stop";
     }
+
+    // Resolve un solved types
+    // This code will executed only if there are field with type of pointer to the current struct
+    // In parsing type function we return a pointer to jot none type,
+    // Now we replace it with pointer to current struct type after it created
+    if (current_struct_unknown_fields > 0) {
+        // Pointer to current struct type
+        auto struct_pointer_ty = std::make_shared<JotPointerType>(structure_type);
+
+        const auto fields_size = fields_types.size();
+        for (size_t i = 0; i < fields_size; i++) {
+            const auto field_type = fields_types[i];
+
+            // If Field type is pointer to none that mean it point to struct itself
+            if (field_type->get_type_kind() == TypeKind::Pointer) {
+                auto ptr_ty = std::dynamic_pointer_cast<JotPointerType>(field_type);
+
+                // Update field type from *None to *Itself
+                if (ptr_ty->get_point_to()->get_type_kind() == TypeKind::None) {
+                    structure_type->set_field_type(i, struct_pointer_ty);
+                }
+            }
+        }
+    }
+
     context->structures[struct_name_str] = structure_type;
+    current_struct_name = "";
+    current_struct_unknown_fields = 0;
     return std::make_shared<StructDeclaration>(structure_type);
 }
 
@@ -1365,6 +1393,13 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type()
         auto enum_element_type =
             std::make_shared<JotEnumElementType>(symbol_token, enum_type->get_element_type());
         return enum_element_type;
+    }
+
+    // Struct with field that has his type for example LinkedList Node struct
+    // Current mark it un solved then solve it after building the struct type itself
+    if (type_literal == current_struct_name) {
+        current_struct_unknown_fields++;
+        return jot_none_ty;
     }
 
     // This type is not permitive, structure or enumerations

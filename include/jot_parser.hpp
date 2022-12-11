@@ -175,4 +175,6 @@ class JotParser {
     std::optional<Token>        current_token;
     std::optional<Token>        next_token;
     AstNodeScope                current_ast_scope = AstNodeScope::GlobalScope;
+    std::string                 current_struct_name = "";
+    int                         current_struct_unknown_fields = 0;
 };

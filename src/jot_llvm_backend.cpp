@@ -200,14 +200,24 @@ std::any JotLLVMBackend::visit(FunctionDeclaration* node)
 
 std::any JotLLVMBackend::visit(StructDeclaration* node)
 {
-    auto struct_type = node->get_struct_type();
-    auto struct_name = struct_type->get_name();
-    auto struct_llvm_type = llvm::StructType::create(llvm_context);
+    const auto struct_type = node->get_struct_type();
+    const auto struct_name = struct_type->get_name();
+    const auto struct_llvm_type = llvm::StructType::create(llvm_context);
     struct_llvm_type->setName(struct_name);
-    auto                     fields = struct_type->get_fields_types();
+    const auto               fields = struct_type->get_fields_types();
     std::vector<llvm::Type*> struct_fields;
     struct_fields.reserve(fields.size());
     for (auto& field : fields) {
+        if (field->get_type_kind() == TypeKind::Pointer) {
+            auto pointer = std::dynamic_pointer_cast<JotPointerType>(field);
+            if (pointer->get_point_to()->get_type_kind() == TypeKind::Structure) {
+                auto struct_ty = std::dynamic_pointer_cast<JotStructType>(pointer->get_point_to());
+                if (struct_ty->get_name() == struct_name) {
+                    struct_fields.push_back(struct_llvm_type->getPointerTo());
+                    continue;
+                }
+            }
+        }
         struct_fields.push_back(llvm_type_from_jot_type(field));
     }
     auto declare_with_padding = false;

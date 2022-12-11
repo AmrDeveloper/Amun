@@ -96,7 +96,7 @@ class JotPointerType : public JotType {
 class JotArrayType : public JotType {
   public:
     JotArrayType(std::shared_ptr<JotType> element_type, size_t size)
-        : element_type(element_type), size(size)
+        : element_type(std::move(element_type)), size(size)
     {
     }
 
@@ -127,8 +127,9 @@ class JotFunctionType : public JotType {
     JotFunctionType(Token name, std::vector<std::shared_ptr<JotType>> parameters,
                     std::shared_ptr<JotType> return_type, bool varargs = false,
                     std::shared_ptr<JotType> varargs_type = nullptr)
-        : name(name), parameters(parameters), return_type(return_type), varargs(varargs),
-          varargs_type(varargs_type)
+        : name(std::move(name)), parameters(std::move(parameters)),
+          return_type(std::move(return_type)), varargs(varargs),
+          varargs_type(std::move(varargs_type))
     {
     }
 
@@ -182,6 +183,8 @@ class JotStructType : public JotType {
     std::unordered_map<std::string, int> get_fields_names() { return fields_names; }
 
     std::vector<std::shared_ptr<JotType>> get_fields_types() { return fields_types; }
+
+    void set_field_type(int index, std::shared_ptr<JotType> type) { fields_types[index] = type; }
 
     std::string type_literal() override { return name; }
 
