@@ -244,7 +244,7 @@ std::any JotLLVMBackend::visit(IfStatement* node)
             current_function->getBasicBlockList().push_back(false_branch);
         }
 
-        auto condition = llvm_node_value(conditional_blocks[i]->get_condition()->accept(this));
+        auto condition = llvm_resolve_value(conditional_blocks[i]->get_condition()->accept(this));
         Builder.CreateCondBr(condition, true_block, false_branch);
         Builder.SetInsertPoint(true_block);
 
@@ -500,7 +500,7 @@ std::any JotLLVMBackend::visit(IfExpression* node)
 
     auto function = Builder.GetInsertBlock()->getParent();
 
-    auto condition = llvm_node_value(node->get_condition()->accept(this));
+    auto condition = llvm_resolve_value(node->get_condition()->accept(this));
 
     llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(llvm_context, "then", function);
     llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(llvm_context, "else");
