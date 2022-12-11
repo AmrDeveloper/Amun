@@ -1,0 +1,9 @@
+struct Node {
+    value int64;
+    next *Node;
+}
+
+fun main() int64 {
+    var node : Node;
+    return 0;
+}
