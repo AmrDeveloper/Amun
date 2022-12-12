@@ -766,21 +766,29 @@ std::any JotLLVMBackend::visit(ShiftExpression* node)
 
 std::any JotLLVMBackend::visit(ComparisonExpression* node)
 {
-    auto left = llvm_resolve_value(node->get_left()->accept(this));
-    auto right = llvm_resolve_value(node->get_right()->accept(this));
-    auto op = node->get_operator_token().get_kind();
+    const auto left = llvm_resolve_value(node->get_left()->accept(this));
+    const auto right = llvm_resolve_value(node->get_right()->accept(this));
+    const auto op = node->get_operator_token().get_kind();
+
+    const auto left_type = left->getType();
+    const auto right_type = right->getType();
 
     // Comparison Operations for integers types
-    if (left->getType()->isIntegerTy() and right->getType()->isIntegerTy()) {
+    if (left_type->isIntegerTy() and right_type->isIntegerTy()) {
         return create_llvm_integers_comparison(op, left, right);
     }
 
     // Comparison Operations for floating point types
-    if (left->getType()->isFloatingPointTy() and right->getType()->isFloatingPointTy()) {
+    if (left_type->isFloatingPointTy() and right_type->isFloatingPointTy()) {
         return create_llvm_floats_comparison(op, left, right);
     }
 
-    // TODO: add support for more comparisons types
+    // Comparison Operations for pointers types thay points to the same type, no need for casting
+    if (left_type->isPointerTy() and right_type->isPointerTy()) {
+        return create_llvm_integers_comparison(op, left, right);
+    }
+
+    // This line must be unreacable and any type error must handled in type checker pass
     internal_compiler_error("Binary Operators work only for Numeric types");
 }
 

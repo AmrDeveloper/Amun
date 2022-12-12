@@ -509,40 +509,55 @@ std::any JotTypeChecker::visit(ShiftExpression* node)
 
 std::any JotTypeChecker::visit(ComparisonExpression* node)
 {
-    auto left_type = node_jot_type(node->get_left()->accept(this));
-    auto right_type = node_jot_type(node->get_right()->accept(this));
+    const auto left_type = node_jot_type(node->get_left()->accept(this));
+    const auto right_type = node_jot_type(node->get_right()->accept(this));
+    const auto are_the_same = left_type->equals(right_type);
 
-    // TODO: Add support for more comparison expressions
-
-    bool is_left_number = is_number_type(left_type) or is_enum_element_type(left_type);
-    bool is_right_number = is_number_type(right_type) or is_enum_element_type(right_type);
-    bool is_the_same = left_type->equals(right_type);
-    if (not is_left_number || not is_right_number || not is_the_same) {
-        if (not is_left_number) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_operator_token().get_span(),
-                "Expected Comparison left to be number or enum element but got " +
-                    left_type->type_literal());
+    // Numbers comparasions
+    if (is_number_type(left_type) and is_number_type(right_type)) {
+        if (are_the_same) {
+            return node_jot_type(node->get_type_node());
         }
 
-        if (not is_right_number) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_operator_token().get_span(),
-                "Expected Comparison right to be number or enum element but got " +
-                    left_type->type_literal());
-        }
-
-        if (not is_the_same) {
-            context->diagnostics.add_diagnostic_error(node->get_operator_token().get_span(),
-                                                      "Expected Comparison type missmatch " +
-                                                          left_type->type_literal() + " and " +
-                                                          right_type->type_literal());
-        }
-
+        context->diagnostics.add_diagnostic_error(
+            node->get_operator_token().get_span(),
+            "You can't compare numbers with different size or types " + left_type->type_literal() +
+                " and " + right_type->type_literal());
         throw "Stop";
     }
 
-    return node_jot_type(node->get_type_node());
+    // Enumerations elements comparasions
+    if (is_enum_element_type(left_type) and is_enum_element_type(right_type)) {
+        if (are_the_same) {
+            return node_jot_type(node->get_type_node());
+        }
+
+        context->diagnostics.add_diagnostic_error(
+            node->get_operator_token().get_span(),
+            "You can't compare elements from different enums " + left_type->type_literal() +
+                " and " + right_type->type_literal());
+        throw "Stop";
+    }
+
+    // Pointers comparasions
+    if (is_pointer_type(left_type) and is_pointer_type(right_type)) {
+        if (are_the_same) {
+            return node_jot_type(node->get_type_node());
+        }
+
+        context->diagnostics.add_diagnostic_error(node->get_operator_token().get_span(),
+                                                  "You can't compare pointers to different types " +
+                                                      left_type->type_literal() + " and " +
+                                                      right_type->type_literal());
+        throw "Stop";
+    }
+
+    // Comparing different types together is invalid
+    context->diagnostics.add_diagnostic_error(node->get_operator_token().get_span(),
+                                              "Can't compare thoese types together " +
+                                                  left_type->type_literal() + " and " +
+                                                  right_type->type_literal());
+    throw "Stop";
 }
 
 std::any JotTypeChecker::visit(LogicalExpression* node)
