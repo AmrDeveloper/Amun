@@ -16,3 +16,5 @@ static auto jot_int8ptr_ty = std::make_shared<JotPointerType>(jot_int8_ty);
 static auto jot_void_ty = std::make_shared<JotVoidType>();
 static auto jot_null_ty = std::make_shared<JotNullType>();
 static auto jot_none_ty = std::make_shared<JotNoneType>();
+
+static auto jot_none_ptr_ty = std::make_shared<JotPointerType>(jot_none_ty);

@@ -108,7 +108,10 @@ bool JotEnumElementType::equals(const std::shared_ptr<JotType>& other)
 
 bool JotEnumElementType::castable(const std::shared_ptr<JotType>& other) { return false; }
 
-bool JotNoneType::equals(const std::shared_ptr<JotType>& other) { return false; }
+bool JotNoneType::equals(const std::shared_ptr<JotType>& other)
+{
+    return other->get_type_kind() == TypeKind::None;
+}
 
 bool JotNoneType::castable(const std::shared_ptr<JotType>& other) { return false; }
 

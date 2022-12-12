@@ -411,15 +411,10 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration()
         const auto fields_size = fields_types.size();
         for (size_t i = 0; i < fields_size; i++) {
             const auto field_type = fields_types[i];
-
             // If Field type is pointer to none that mean it point to struct itself
-            if (field_type->get_type_kind() == TypeKind::Pointer) {
-                auto ptr_ty = std::dynamic_pointer_cast<JotPointerType>(field_type);
-
+            if (field_type->equals(jot_none_ptr_ty)) {
                 // Update field type from *None to *Itself
-                if (ptr_ty->get_point_to()->get_type_kind() == TypeKind::None) {
-                    structure_type->set_field_type(i, struct_pointer_ty);
-                }
+                structure_type->set_field_type(i, struct_pointer_ty);
             }
         }
     }
