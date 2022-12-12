@@ -360,6 +360,7 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration()
 {
     auto struct_token = consume_kind(TokenKind::StructKeyword, "Expect struct keyword");
     auto struct_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
+    auto struct_name_str = struct_name.get_literal();
     current_struct_name = struct_name.get_literal();
     size_t                                field_index = 0;
     std::unordered_map<std::string, int>  fields_names;
@@ -373,15 +374,26 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration()
                                                           field_name.get_literal());
             throw "Stop";
         }
+
         fields_names[field_name.get_literal()] = field_index++;
         auto field_type = parse_type();
+
+        // Handle Incomplete field type case
+        if (field_type->get_type_kind() == TypeKind::None) {
+            context->diagnostics.add_diagnostic_error(
+                field_name.get_span(), "Field type isn't fully defined yet, you can't use it "
+                                       "until it defined but you can use *" +
+                                           struct_name_str);
+            throw "Stop";
+        }
+
         fields_types.push_back(field_type);
         assert_kind(TokenKind::Semicolon, "Expect ; at the end of struct field declaration");
     }
     assert_kind(TokenKind::CloseBrace, "Expect } in the end of struct declaration");
     auto structure_type =
-        std::make_shared<JotStructType>(struct_name.get_literal(), fields_names, fields_types);
-    auto struct_name_str = struct_name.get_literal();
+        std::make_shared<JotStructType>(struct_name_str, fields_names, fields_types);
+
     if (context->structures.count(struct_name_str)) {
         context->diagnostics.add_diagnostic_error(
             struct_name.get_span(), "There is already struct with name " + struct_name_str);
