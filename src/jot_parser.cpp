@@ -1046,11 +1046,13 @@ std::shared_ptr<Expression> JotParser::parse_dot_expression()
 {
     auto expression = parse_primary_expression();
     if (is_current_kind(TokenKind::Dot)) {
+
         // Parse Enumeration attribute
         if (expression->get_ast_node_type() == AstNodeType::LiteralExpr) {
             auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression);
             auto literal_str = literal->get_name().get_literal();
             if (context->enumerations.count(literal_str)) {
+                auto dot_token = peek_and_advance_token();
                 return parse_enum_type_attribute(literal_str);
             }
         }
