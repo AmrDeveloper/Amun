@@ -1046,7 +1046,7 @@ std::shared_ptr<Expression> JotParser::parse_dot_expression()
 {
     auto expression = parse_primary_expression();
     if (is_current_kind(TokenKind::Dot)) {
-        auto dot_token = peek_and_advance_token();
+        // Parse Enumeration attribute
         if (expression->get_ast_node_type() == AstNodeType::LiteralExpr) {
             auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression);
             auto literal_str = literal->get_name().get_literal();
@@ -1055,8 +1055,12 @@ std::shared_ptr<Expression> JotParser::parse_dot_expression()
             }
         }
 
-        auto field_name = consume_kind(TokenKind::Symbol, "Expect literal as field name");
-        return std::make_shared<DotExpression>(dot_token, expression, field_name);
+        // Parse struct fields access
+        while (is_current_kind(TokenKind::Dot)) {
+            auto dot_token = peek_and_advance_token();
+            auto field_name = consume_kind(TokenKind::Symbol, "Expect literal as field name");
+            expression = std::make_shared<DotExpression>(dot_token, expression, field_name);
+        }
     }
     return expression;
 }

@@ -977,9 +977,15 @@ std::any JotLLVMBackend::visit(CallExpression* node)
 
 std::any JotLLVMBackend::visit(DotExpression* node)
 {
-    auto node_llvm_type = llvm_type_from_jot_type(node->get_type_node());
+    auto expected_llvm_type = llvm_type_from_jot_type(node->get_type_node());
     auto member_ptr = access_struct_member_pointer(node);
-    return Builder.CreateLoad(node_llvm_type, member_ptr);
+
+    // If expected type is pointer no need for loading it for example node.next.data
+    if (expected_llvm_type->isPointerTy()) {
+        return member_ptr;
+    }
+
+    return Builder.CreateLoad(expected_llvm_type, member_ptr);
 }
 
 std::any JotLLVMBackend::visit(CastExpression* node)
