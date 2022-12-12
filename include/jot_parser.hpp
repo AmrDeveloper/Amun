@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <unordered_map>
 
 enum class AstNodeScope {
@@ -175,6 +176,6 @@ class JotParser {
     std::optional<Token>        current_token;
     std::optional<Token>        next_token;
     AstNodeScope                current_ast_scope = AstNodeScope::GlobalScope;
-    std::string                 current_struct_name = "";
+    std::string_view            current_struct_name = "";
     int                         current_struct_unknown_fields = 0;
 };
