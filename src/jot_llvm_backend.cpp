@@ -71,7 +71,7 @@ std::any JotLLVMBackend::visit(FieldDeclaration* node)
     // if field has initalizer evaluate it, else initalize it with default value
     std::any value;
     if (node->get_value() == nullptr) {
-        value = llvm_type_default_value(field_type);
+        value = llvm_type_null_value(field_type);
     }
     else {
         value = node->get_value()->accept(this);
@@ -652,9 +652,10 @@ std::any JotLLVMBackend::visit(AssignExpression* node)
             // var x = 0;
             // x = *ptr;
             // Check samples/memory/AssignPtrValueToVar.jot
-            // if (alloca->getType() == right_value->getType()) {
-            //    right_value = derefernecs_llvm_pointer(right_value);
-            //}
+            // Check samples/general/Linkedlist.jot
+            if (alloca->getType() == right_value->getType()) {
+                right_value = derefernecs_llvm_pointer(right_value);
+            }
 
             alloca_inst_scope->update(name, alloca);
             return Builder.CreateStore(right_value, alloca);
@@ -1220,7 +1221,7 @@ std::any JotLLVMBackend::visit(BooleanExpression* node)
 
 std::any JotLLVMBackend::visit([[maybe_unused]] NullExpression* node)
 {
-    return llvm::PointerType::get(llvm_int64_type, 0);
+    return llvm_type_null_value(node->null_base_type);
 }
 
 llvm::Value* JotLLVMBackend::llvm_node_value(std::any any_value)
@@ -1252,8 +1253,11 @@ llvm::Value* JotLLVMBackend::llvm_node_value(std::any any_value)
     else if (any_value.type() == typeid(llvm::GlobalVariable*)) {
         return std::any_cast<llvm::GlobalVariable*>(any_value);
     }
+    else if (any_value.type() == typeid(llvm::ConstantPointerNull*)) {
+        return std::any_cast<llvm::ConstantPointerNull*>(any_value);
+    }
 
-    internal_compiler_error("Unknown type llvm node type");
+    internal_compiler_error("Unknown type llvm node type ");
 }
 
 llvm::Value* JotLLVMBackend::llvm_resolve_value(std::any any_value)
@@ -1316,9 +1320,9 @@ inline llvm::Value* JotLLVMBackend::llvm_character_value(char character)
     return llvm::ConstantInt::get(llvm_int8_type, character);
 }
 
-inline llvm::Value* JotLLVMBackend::llvm_type_default_value(std::shared_ptr<JotType> type)
+inline llvm::Value* JotLLVMBackend::llvm_type_null_value(std::shared_ptr<JotType>& type)
 {
-    // Return the default value for llvm type
+    // Return null value for the base type
     return llvm::Constant::getNullValue(llvm_type_from_jot_type(type));
 }
 
@@ -1643,7 +1647,7 @@ llvm::Constant* JotLLVMBackend::resolve_constant_expression(FieldDeclaration* no
 
     // If there are no value, return default value
     if (value == nullptr) {
-        return llvm::dyn_cast<llvm::Constant>(llvm_type_default_value(field_type));
+        return llvm::dyn_cast<llvm::Constant>(llvm_type_null_value(field_type));
     }
 
     // If right value is index expression resolve it and return constant value

@@ -8,6 +8,8 @@ static auto jot_int16_ty = std::make_shared<JotNumberType>(NumberKind::Integer16
 static auto jot_int32_ty = std::make_shared<JotNumberType>(NumberKind::Integer32);
 static auto jot_int64_ty = std::make_shared<JotNumberType>(NumberKind::Integer64);
 
+static auto jot_int32ptr_ty = std::make_shared<JotPointerType>(jot_int32_ty);
+
 static auto jot_float32_ty = std::make_shared<JotNumberType>(NumberKind::Float32);
 static auto jot_float64_ty = std::make_shared<JotNumberType>(NumberKind::Float64);
 

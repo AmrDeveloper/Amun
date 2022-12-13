@@ -106,6 +106,8 @@ class JotTypeChecker : public TreeVisitor {
 
     bool is_pointer_type(const std::shared_ptr<JotType>& type);
 
+    bool is_null_type(const std::shared_ptr<JotType>& type);
+
     bool is_none_type(const std::shared_ptr<JotType>& type);
 
     bool is_same_type(const std::shared_ptr<JotType>& left, const std::shared_ptr<JotType>& right);
@@ -114,7 +116,8 @@ class JotTypeChecker : public TreeVisitor {
 
     void check_parameters_types(TokenSpan                                 location,
                                 std::vector<std::shared_ptr<Expression>>& arguments,
-                                std::vector<std::shared_ptr<JotType>>& parameters, bool has_varargs,
+                                std::vector<std::shared_ptr<JotType>>& parameters, 
+                                bool has_varargs,
                                 std::shared_ptr<JotType> varargs_type);
 
     void push_new_scope();

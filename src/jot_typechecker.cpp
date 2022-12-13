@@ -51,7 +51,10 @@ std::any JotTypeChecker::visit(FieldDeclaration* node)
         }
 
         bool is_left_none_type = is_none_type(left_type);
+        bool is_left_ptr_type = is_pointer_type(left_type);
         bool is_right_none_type = is_none_type(right_type);
+        bool is_right_null_type = is_null_type(right_type);
+        bool is_hanlded = false;
 
         if (is_left_none_type and is_right_none_type) {
             context->diagnostics.add_diagnostic_error(
@@ -60,17 +63,38 @@ std::any JotTypeChecker::visit(FieldDeclaration* node)
             throw "Stop";
         }
 
+        if (is_left_none_type and is_right_null_type) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_name().get_span(),
+                "Can't resolve field type rvalue is null, please add type to the varaible");
+            throw "Stop";
+        }
+
+        if (!is_left_ptr_type and is_right_null_type) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_name().get_span(), "Can't declare non pointer variable with null value");
+            throw "Stop";
+        }
+
         if (is_left_none_type) {
             node->set_type(right_type);
             left_type = right_type;
+            is_hanlded = true;
         }
 
         if (is_right_none_type) {
             node->get_value()->set_type_node(left_type);
             right_type = left_type;
+            is_hanlded = true;
         }
 
-        if (not left_type->equals(right_type)) {
+        if (is_left_ptr_type and is_right_null_type) {
+            auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->get_value());
+            null_expr->null_base_type = left_type;
+            is_hanlded = true;
+        }
+
+        if (!is_hanlded && !left_type->equals(right_type)) {
             context->diagnostics.add_diagnostic_error(
                 node->get_name().get_span(), "Type missmatch expect " + left_type->type_literal() +
                                                  " but got " + right_type->type_literal());
@@ -295,6 +319,22 @@ std::any JotTypeChecker::visit(ReturnStatement* node)
     auto return_type = node_jot_type(node->return_value()->accept(this));
 
     if (not current_function_return_type->equals(return_type)) {
+        // If Function return type is pointer and return value is null
+        // set null pointer base type to function return type
+        if (is_pointer_type(current_function_return_type) and is_null_type(return_type)) {
+            auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->return_value());
+            null_expr->null_base_type = current_function_return_type;
+            return 0;
+        }
+
+        // If function return type is not pointer, you can't return null
+        if (!is_pointer_type(current_function_return_type) and is_null_type(return_type)) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_position().get_span(),
+                "Can't return null from function that return non pointer type");
+            throw "Stop";
+        }
+
         context->diagnostics.add_diagnostic_error(node->get_position().get_span(),
                                                   "Expect return value to be " +
                                                       current_function_return_type->type_literal() +
@@ -425,6 +465,14 @@ std::any JotTypeChecker::visit(AssignExpression* node)
 
     auto right_type = node_jot_type(node->get_right()->accept(this));
 
+    // if Variable type is pointer and rvalue is null, change null base type to lvalue type
+    if (is_pointer_type(left_type) and is_null_type(right_type)) {
+        auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->get_right());
+        null_expr->null_base_type = left_type;
+        return left_type;
+    }
+
+    // RValue type and LValue Type don't matchs
     if (not left_type->equals(right_type)) {
         context->diagnostics.add_diagnostic_error(node->get_operator_token().get_span(),
                                                   "Type missmatch expect " +
@@ -550,6 +598,25 @@ std::any JotTypeChecker::visit(ComparisonExpression* node)
                                                       left_type->type_literal() + " and " +
                                                       right_type->type_literal());
         throw "Stop";
+    }
+
+    // Pointer vs null comparaisons and set null pointer base type
+    if (is_pointer_type(left_type) and is_null_type(right_type)) {
+        auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->get_right());
+        null_expr->null_base_type = left_type;
+        return node_jot_type(node->get_type_node());
+    }
+
+    // Null vs Pointer comparaisons and set null pointer base type
+    if (is_null_type(left_type) and is_pointer_type(right_type)) {
+        auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->get_left());
+        null_expr->null_base_type = right_type;
+        return node_jot_type(node->get_type_node());
+    }
+
+    // Null vs Null comparaisons, no need to set pointer base, use the default base
+    if (is_null_type(left_type) and is_null_type(right_type)) {
+        return node_jot_type(node->get_type_node());
     }
 
     // Comparing different types together is invalid
@@ -952,12 +1019,12 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type)
     return std::any_cast<std::shared_ptr<JotType>>(any_type);
 }
 
-bool JotTypeChecker::is_number_type(const std::shared_ptr<JotType>& type)
+inline bool JotTypeChecker::is_number_type(const std::shared_ptr<JotType>& type)
 {
     return type->get_type_kind() == TypeKind::Number;
 }
 
-bool JotTypeChecker::is_integer_type(std::shared_ptr<JotType>& type)
+inline bool JotTypeChecker::is_integer_type(std::shared_ptr<JotType>& type)
 {
     if (type->get_type_kind() == TypeKind::Number) {
         auto number_type = std::dynamic_pointer_cast<JotNumberType>(type);
@@ -966,7 +1033,7 @@ bool JotTypeChecker::is_integer_type(std::shared_ptr<JotType>& type)
     return false;
 }
 
-bool JotTypeChecker::is_enum_element_type(const std::shared_ptr<JotType>& type)
+inline bool JotTypeChecker::is_enum_element_type(const std::shared_ptr<JotType>& type)
 {
     return type->get_type_kind() == TypeKind::EnumerationElement;
 }
@@ -980,17 +1047,18 @@ bool JotTypeChecker::is_boolean_type(std::shared_ptr<JotType>& type)
     return false;
 }
 
-bool JotTypeChecker::is_pointer_type(const std::shared_ptr<JotType>& type)
+inline bool JotTypeChecker::is_pointer_type(const std::shared_ptr<JotType>& type)
 {
     return type->get_type_kind() == TypeKind::Pointer;
 }
 
+inline bool JotTypeChecker::is_null_type(const std::shared_ptr<JotType>& type)
+{
+    return type->get_type_kind() == TypeKind::Null;
+}
+
 bool JotTypeChecker::is_none_type(const std::shared_ptr<JotType>& type)
 {
-    if (type == nullptr) {
-        return true;
-    }
-
     if (type->get_type_kind() == TypeKind::None) {
         return true;
     }
@@ -1043,6 +1111,15 @@ void JotTypeChecker::check_parameters_types(TokenSpan                           
     // Check non varargs parameters vs arguments
     for (size_t i = 0; i < parameters_size; i++) {
         if (not parameters[i]->equals(arguments_types[i])) {
+
+            // if Parameter is pointer type and null pointer passed as argument
+            // Change null pointer base type to parameter type
+            if (is_pointer_type(parameters[i]) and is_null_type(arguments_types[i])) {
+                auto null_expr = std::dynamic_pointer_cast<NullExpression>(arguments[i]);
+                null_expr->null_base_type = parameters[i];
+                continue;
+            }
+
             context->diagnostics.add_diagnostic_error(
                 location, "Argument type didn't match parameter type expect " +
                               parameters[i]->type_literal() + " got " +

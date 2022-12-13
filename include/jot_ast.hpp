@@ -1161,7 +1161,9 @@ class BooleanExpression : public Expression {
 
 class NullExpression : public Expression {
   public:
-    NullExpression(Token value) : value(value), type(jot_null_ty) {}
+    NullExpression(Token value) : value(value), type(jot_null_ty), null_base_type(jot_int32ptr_ty)
+    {
+    }
 
     Token get_value() { return value; }
 
@@ -1174,6 +1176,8 @@ class NullExpression : public Expression {
     bool is_constant() override { return true; }
 
     AstNodeType get_ast_node_type() override { return AstNodeType::NullExpr; }
+
+    std::shared_ptr<JotType> null_base_type;
 
   private:
     Token                    value;
