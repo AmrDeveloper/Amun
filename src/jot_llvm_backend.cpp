@@ -195,6 +195,7 @@ std::any JotLLVMBackend::visit(FunctionDeclaration* node)
 
     clear_defer_calls_stack();
 
+    has_return_statement = false;
     return function;
 }
 
@@ -262,12 +263,11 @@ std::any JotLLVMBackend::visit(IfStatement* node)
         conditional_blocks[i]->get_body()->accept(this);
         pop_alloca_inst_scope();
 
-        if (not has_break_or_continue_statement && not has_return_statement) {
+        // If there are not return, break or continue statement, must branch end block
+        if (not has_break_or_continue_statement && not has_return_statement)
             Builder.CreateBr(end_block);
-        }
-        else {
+        else
             has_return_statement = false;
-        }
 
         Builder.SetInsertPoint(false_branch);
     }
