@@ -386,8 +386,7 @@ Token JotTokenizer::build_token(TokenKind kind) { return build_token(kind, ""); 
 
 Token JotTokenizer::build_token(TokenKind kind, std::string literal)
 {
-    TokenSpan span = build_token_span();
-    return {kind, span, literal};
+    return {kind, build_token_span(), literal};
 }
 
 TokenSpan JotTokenizer::build_token_span()

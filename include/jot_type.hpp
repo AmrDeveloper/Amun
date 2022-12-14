@@ -212,7 +212,7 @@ class JotEnumType : public JotType {
 
     std::unordered_map<std::string, int> get_enum_values() { return values; }
 
-    std::string type_literal() override { return "enum " + name.get_literal(); }
+    std::string type_literal() override { return "enum " + name.literal; }
 
     TypeKind get_type_kind() override { return TypeKind::Enumeration; }
 
@@ -233,11 +233,11 @@ class JotEnumElementType : public JotType {
     {
     }
 
-    std::string get_name() { return name.get_literal(); }
+    std::string get_name() { return name.literal; }
 
     std::shared_ptr<JotType> get_element_type() { return element_type; }
 
-    std::string type_literal() override { return "enum " + name.get_literal(); }
+    std::string type_literal() override { return "enum " + name.literal; }
 
     TypeKind get_type_kind() override { return TypeKind::EnumerationElement; }
 

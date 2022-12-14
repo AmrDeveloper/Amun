@@ -254,44 +254,27 @@ struct TokenSpan {
     int column_end;
 };
 
-class Token {
-  public:
-    Token(TokenKind k, TokenSpan s, std::string literal)
-        : kind(k), span(s), literal(std::move(literal))
-    {
-    }
-
-    TokenKind get_kind() { return kind; }
-
-    void set_kind(TokenKind new_kind) { kind = new_kind; }
-
-    TokenSpan get_span() { return span; }
-
-    std::string get_literal() { return literal; }
-
-    void set_literal(std::string new_literal) { literal = std::move(new_literal); }
-
-    std::string get_kind_literal() { return token_kind_literal[kind]; }
-
-    bool is_invalid() { return kind == TokenKind::Invalid; }
-
-    bool is_end_of_file() { return kind == TokenKind::EndOfFile; }
-
-    bool is_unary_operator() { return unary_operators.find(kind) != unary_operators.end(); }
-
-    bool is_assignments_operator()
-    {
-        return assignments_operators.find(kind) != assignments_operators.end();
-    }
-
-    bool is_float_number()
-    {
-        return kind == TokenKind::Float or kind == TokenKind::Float32Type or
-               kind == TokenKind::Float64Type;
-    }
-
-  private:
+struct Token {
     TokenKind   kind;
-    TokenSpan   span;
+    TokenSpan   position;
     std::string literal;
 };
+
+inline const char* get_token_kind_literal(TokenKind kind) { return token_kind_literal[kind]; }
+
+inline bool is_assignments_operator_token(Token token)
+{
+    return assignments_operators.find(token.kind) != assignments_operators.end();
+}
+
+inline bool is_unary_operator_token(Token token)
+{
+    return unary_operators.find(token.kind) != unary_operators.end();
+}
+
+inline bool is_float_number_token(Token token)
+{
+    const auto token_kind = token.kind;
+    return token_kind == TokenKind::Float or token_kind == TokenKind::Float32Type or
+           token_kind == TokenKind::Float64Type;
+}

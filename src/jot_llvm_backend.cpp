@@ -52,7 +52,7 @@ std::any JotLLVMBackend::visit(BlockStatement* node)
 
 std::any JotLLVMBackend::visit(FieldDeclaration* node)
 {
-    auto var_name = node->get_name().get_literal();
+    auto var_name = node->get_name().literal;
     auto field_type = node->get_type();
     auto llvm_type = llvm_type_from_jot_type(field_type);
 
@@ -149,7 +149,7 @@ std::any JotLLVMBackend::visit(FunctionPrototype* node)
 
     auto return_type = llvm_type_from_jot_type(node->get_return_type());
     auto function_type = llvm::FunctionType::get(return_type, arguments, node->has_varargs());
-    auto function_name = node->get_name().get_literal();
+    auto function_name = node->get_name().literal;
     auto linkage = node->is_external() || function_name == "main" ? llvm::Function::ExternalLinkage
                                                                   : llvm::Function::InternalLinkage;
     auto function =
@@ -161,7 +161,7 @@ std::any JotLLVMBackend::visit(FunctionPrototype* node)
             // Varargs case
             break;
         }
-        argument.setName(parameters[index++]->get_name().get_literal());
+        argument.setName(parameters[index++]->get_name().literal);
     }
 
     return function;
@@ -170,7 +170,7 @@ std::any JotLLVMBackend::visit(FunctionPrototype* node)
 std::any JotLLVMBackend::visit(FunctionDeclaration* node)
 {
     auto prototype = node->get_prototype();
-    auto name = prototype->get_name().get_literal();
+    auto name = prototype->get_name().literal;
     functions_table[name] = prototype;
 
     auto function = std::any_cast<llvm::Function*>(prototype->accept(this));
@@ -403,7 +403,7 @@ std::any JotLLVMBackend::visit(DeferStatement* node)
 {
     auto call_expression = node->get_call_expression();
     auto callee = std::dynamic_pointer_cast<LiteralExpression>(call_expression->get_callee());
-    auto callee_literal = callee->get_name().get_literal();
+    auto callee_literal = callee->get_name().literal;
     auto function = lookup_function(callee_literal);
     if (not function) {
         auto value = llvm_node_value(alloca_inst_scope->lookup(callee_literal));
@@ -638,7 +638,7 @@ std::any JotLLVMBackend::visit(AssignExpression* node)
     // Assign value to variable
     // variable = value
     if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(left_node)) {
-        auto name = literal->get_name().get_literal();
+        auto name = literal->get_name().literal;
         auto value = node->get_right()->accept(this);
 
         auto right_value = llvm_resolve_value(value);
@@ -679,7 +679,7 @@ std::any JotLLVMBackend::visit(AssignExpression* node)
             auto array = array_literal->accept(this);
             if (array.type() == typeid(llvm::AllocaInst*)) {
                 auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_node_value(
-                    alloca_inst_scope->lookup(array_literal->get_name().get_literal())));
+                    alloca_inst_scope->lookup(array_literal->get_name().literal)));
                 auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca,
                                              {zero_int32_value, index});
                 return Builder.CreateStore(right_value, ptr);
@@ -716,7 +716,7 @@ std::any JotLLVMBackend::visit(AssignExpression* node)
     // Assign value to pointer address
     // *ptr = value;
     if (auto unary_expression = std::dynamic_pointer_cast<PrefixUnaryExpression>(left_node)) {
-        auto opt = unary_expression->get_operator_token().get_kind();
+        auto opt = unary_expression->get_operator_token().kind;
         if (opt == TokenKind::Star) {
             auto rvalue = llvm_node_value(node->get_right()->accept(this));
             auto pointer = llvm_node_value(unary_expression->get_right()->accept(this));
@@ -733,7 +733,7 @@ std::any JotLLVMBackend::visit(BinaryExpression* node)
 {
     auto left = llvm_resolve_value(node->get_left()->accept(this));
     auto right = llvm_resolve_value(node->get_right()->accept(this));
-    auto op = node->get_operator_token().get_kind();
+    auto op = node->get_operator_token().kind;
 
     // Binary Operations for integer types
     if (left->getType()->isIntegerTy() and right->getType()->isIntegerTy()) {
@@ -752,7 +752,7 @@ std::any JotLLVMBackend::visit(ShiftExpression* node)
 {
     auto left = llvm_resolve_value(node->get_left()->accept(this));
     auto right = llvm_resolve_value(node->get_right()->accept(this));
-    auto operator_kind = node->get_operator_token().get_kind();
+    auto operator_kind = node->get_operator_token().kind;
 
     if (operator_kind == TokenKind::LeftShift) {
         return Builder.CreateShl(left, right);
@@ -769,7 +769,7 @@ std::any JotLLVMBackend::visit(ComparisonExpression* node)
 {
     const auto left = llvm_resolve_value(node->get_left()->accept(this));
     const auto right = llvm_resolve_value(node->get_right()->accept(this));
-    const auto op = node->get_operator_token().get_kind();
+    const auto op = node->get_operator_token().kind;
 
     const auto left_type = left->getType();
     const auto right_type = right->getType();
@@ -801,7 +801,7 @@ std::any JotLLVMBackend::visit(LogicalExpression* node)
         return nullptr;
     }
 
-    switch (node->get_operator_token().get_kind()) {
+    switch (node->get_operator_token().kind) {
     case TokenKind::LogicalAnd: {
         return Builder.CreateLogicalAnd(left, right);
     }
@@ -817,7 +817,7 @@ std::any JotLLVMBackend::visit(LogicalExpression* node)
 std::any JotLLVMBackend::visit(PrefixUnaryExpression* node)
 {
     auto operand = node->get_right();
-    auto operator_kind = node->get_operator_token().get_kind();
+    auto operator_kind = node->get_operator_token().kind;
 
     // Unary - minus operator
     if (operator_kind == TokenKind::Minus) {
@@ -873,7 +873,7 @@ std::any JotLLVMBackend::visit(PrefixUnaryExpression* node)
 std::any JotLLVMBackend::visit(PostfixUnaryExpression* node)
 {
     auto operand = node->get_right();
-    auto operator_kind = node->get_operator_token().get_kind();
+    auto operator_kind = node->get_operator_token().kind;
 
     // Unary postfix ++ operator, example (x++)
     if (operator_kind == TokenKind::PlusPlus) {
@@ -919,7 +919,7 @@ std::any JotLLVMBackend::visit(CallExpression* node)
     }
 
     auto callee = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee());
-    auto callee_literal = callee->get_name().get_literal();
+    auto callee_literal = callee->get_name().literal;
     auto function = lookup_function(callee_literal);
     if (not function) {
         auto value = llvm_node_value(alloca_inst_scope->lookup(callee_literal));
@@ -1152,7 +1152,7 @@ std::any JotLLVMBackend::visit(EnumAccessExpression* node)
 
 std::any JotLLVMBackend::visit(LiteralExpression* node)
 {
-    auto name = node->get_name().get_literal();
+    auto name = node->get_name().literal;
     auto alloca_inst = alloca_inst_scope->lookup(name);
     if (alloca_inst.type() != typeid(nullptr))
         return alloca_inst;
@@ -1163,7 +1163,7 @@ std::any JotLLVMBackend::visit(LiteralExpression* node)
 std::any JotLLVMBackend::visit(NumberExpression* node)
 {
     auto number_type = std::dynamic_pointer_cast<JotNumberType>(node->get_type_node());
-    return llvm_number_value(node->get_value().get_literal(), number_type->get_kind());
+    return llvm_number_value(node->get_value().literal, number_type->get_kind());
 }
 
 std::any JotLLVMBackend::visit(ArrayExpression* node)
@@ -1204,19 +1204,19 @@ std::any JotLLVMBackend::visit(ArrayExpression* node)
 
 std::any JotLLVMBackend::visit(StringExpression* node)
 {
-    std::string literal = node->get_value().get_literal();
+    std::string literal = node->get_value().literal;
     return resolve_constant_string_expression(literal);
 }
 
 std::any JotLLVMBackend::visit(CharacterExpression* node)
 {
-    char char_asci_value = node->get_value().get_literal()[0];
+    char char_asci_value = node->get_value().literal[0];
     return llvm_character_value(char_asci_value);
 }
 
 std::any JotLLVMBackend::visit(BooleanExpression* node)
 {
-    return llvm_boolean_value(node->get_value().get_kind() == TokenKind::TrueKeyword);
+    return llvm_boolean_value(node->get_value().kind == TokenKind::TrueKeyword);
 }
 
 std::any JotLLVMBackend::visit([[maybe_unused]] NullExpression* node)
