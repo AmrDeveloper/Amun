@@ -1040,9 +1040,9 @@ std::any JotLLVMBackend::visit(CastExpression* node)
 
     // Array of type T to pointer or type T, return pointer to the first element
     if (target_type->isPointerTy() and value_type->isArrayTy()) {
-        auto                         load_inst = dyn_cast<llvm::LoadInst>(value);
-        llvm::ArrayRef<llvm::Value*> indices = {zero_int32_value, zero_int32_value};
-        return Builder.CreateGEP(value->getType(), load_inst->getPointerOperand(), indices);
+        auto load_inst = dyn_cast<llvm::LoadInst>(value);
+        return Builder.CreateGEP(value->getType(), load_inst->getPointerOperand(),
+                                 {zero_int32_value, zero_int32_value});
     }
 
     // Bit casting
@@ -1084,8 +1084,8 @@ std::any JotLLVMBackend::visit(IndexExpression* node)
 
         if (array.type() == typeid(llvm::AllocaInst*)) {
             auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_node_value(array));
-            llvm::ArrayRef<llvm::Value*> indexes = {zero_int32_value, index};
-            auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, indexes);
+            auto alloca_type = alloca->getAllocatedType();
+            auto ptr = Builder.CreateGEP(alloca_type, alloca, {zero_int32_value, index});
             return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
         }
 
