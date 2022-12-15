@@ -1,6 +1,7 @@
 #include "../include/jot_parser.hpp"
 #include "../include/jot_files.hpp"
 #include "../include/jot_logger.hpp"
+#include "../include/jot_type.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -314,9 +315,9 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
     auto return_type = parse_type();
 
     // Function can't return fixed size array, you can use pointer format to return allocated array
-    if (return_type->get_type_kind() == TypeKind::Array) {
+    if (return_type->type_kind == TypeKind::Array) {
         context->diagnostics.add_diagnostic_error(
-            name.position, "Function cannot return array type " + return_type->type_literal());
+            name.position, "Function cannot return array type " + jot_type_literal(return_type));
         throw "Stop";
     }
 
@@ -377,7 +378,7 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration()
         auto field_type = parse_type();
 
         // Handle Incomplete field type case
-        if (field_type->get_type_kind() == TypeKind::None) {
+        if (field_type->type_kind == TypeKind::None) {
             context->diagnostics.add_diagnostic_error(
                 field_name.position, "Field type isn't fully defined yet, you can't use it "
                                      "until it defined but you can use *" +
@@ -410,9 +411,9 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration()
         for (size_t i = 0; i < fields_size; i++) {
             const auto field_type = fields_types[i];
             // If Field type is pointer to none that mean it point to struct itself
-            if (field_type->equals(jot_none_ptr_ty)) {
+            if (is_jot_types_equals(field_type, jot_none_ptr_ty)) {
                 // Update field type from *None to *Itself
-                structure_type->set_field_type(i, struct_pointer_ty);
+                structure_type->fields_types[i] = struct_pointer_ty;
             }
         }
     }
@@ -880,7 +881,7 @@ std::shared_ptr<Expression> JotParser::parse_enum_access_expression()
                 auto element =
                     consume_kind(TokenKind::Symbol, "Expect identifier as enum field name");
 
-                auto enum_values = enum_type->get_enum_values();
+                auto enum_values = enum_type->values;
                 if (not enum_values.count(element.literal)) {
                     context->diagnostics.add_diagnostic_error(
                         element.position, "Can't find element with name " + element.literal +
@@ -889,8 +890,8 @@ std::shared_ptr<Expression> JotParser::parse_enum_access_expression()
                 }
 
                 int  index = enum_values[element.literal];
-                auto enum_element_type =
-                    std::make_shared<JotEnumElementType>(enum_name, enum_type->get_element_type());
+                auto enum_element_type = std::make_shared<JotEnumElementType>(
+                    enum_name.literal, enum_type->element_type);
                 return std::make_shared<EnumAccessExpression>(enum_name, element, index,
                                                               enum_element_type);
             }
@@ -1028,7 +1029,7 @@ std::shared_ptr<Expression> JotParser::parse_enum_type_attribute(std::string& en
     auto attribute = consume_kind(TokenKind::Symbol, "Expect attribute name for enum");
     auto attribute_str = attribute.literal;
     if (attribute_str == "count") {
-        auto  count = context->enumerations[enum_name]->get_enum_values().size();
+        auto  count = context->enumerations[enum_name]->values.size();
         Token number_token = {TokenKind::Integer, attribute.position, std::to_string(count)};
         auto  number_type = jot_int64_ty;
         return std::make_shared<NumberExpression>(number_token, number_type);
@@ -1316,8 +1317,7 @@ std::shared_ptr<JotType> JotParser::parse_type_with_prefix()
     if (is_current_kind(TokenKind::OpenBracket)) {
         auto bracket_token = peek_and_advance_token();
         auto size = parse_number_expression();
-        auto number_type = std::dynamic_pointer_cast<JotNumberType>(size->get_type_node());
-        if (not number_type->is_integer()) {
+        if (!is_integer_type(size->get_type_node())) {
             context->diagnostics.add_diagnostic_error(bracket_token.position,
                                                       "Array size must be an integer constants");
             throw "Stop";
@@ -1401,7 +1401,7 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type()
     if (context->enumerations.count(type_literal)) {
         auto enum_type = context->enumerations[type_literal];
         auto enum_element_type =
-            std::make_shared<JotEnumElementType>(symbol_token, enum_type->get_element_type());
+            std::make_shared<JotEnumElementType>(symbol_token.literal, enum_type->element_type);
         return enum_element_type;
     }
 

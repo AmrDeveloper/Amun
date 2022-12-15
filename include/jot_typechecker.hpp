@@ -4,6 +4,7 @@
 #include "jot_ast_visitor.hpp"
 #include "jot_context.hpp"
 #include "jot_symboltable.hpp"
+#include "jot_type.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -96,28 +97,13 @@ class JotTypeChecker : public TreeVisitor {
 
     std::shared_ptr<JotType> node_jot_type(std::any any_type);
 
-    bool is_number_type(const std::shared_ptr<JotType>& type);
-
-    bool is_integer_type(std::shared_ptr<JotType>& type);
-
-    bool is_enum_element_type(const std::shared_ptr<JotType>& type);
-
-    bool is_boolean_type(std::shared_ptr<JotType>& type);
-
-    bool is_pointer_type(const std::shared_ptr<JotType>& type);
-
-    bool is_null_type(const std::shared_ptr<JotType>& type);
-
-    bool is_none_type(const std::shared_ptr<JotType>& type);
-
     bool is_same_type(const std::shared_ptr<JotType>& left, const std::shared_ptr<JotType>& right);
 
     bool check_number_limits(const char* literal, NumberKind kind);
 
     void check_parameters_types(TokenSpan                                 location,
                                 std::vector<std::shared_ptr<Expression>>& arguments,
-                                std::vector<std::shared_ptr<JotType>>& parameters, 
-                                bool has_varargs,
+                                std::vector<std::shared_ptr<JotType>>& parameters, bool has_varargs,
                                 std::shared_ptr<JotType> varargs_type);
 
     void push_new_scope();

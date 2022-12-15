@@ -94,10 +94,10 @@ std::any JotTypeChecker::visit(FieldDeclaration* node)
             is_hanlded = true;
         }
 
-        if (!is_hanlded && !left_type->equals(right_type)) {
+        if (!is_hanlded && !is_jot_types_equals(left_type, right_type)) {
             context->diagnostics.add_diagnostic_error(
-                node->get_name().position, "Type missmatch expect " + left_type->type_literal() +
-                                                 " but got " + right_type->type_literal());
+                node->get_name().position, "Type missmatch expect " + jot_type_literal(left_type) +
+                                               " but got " + jot_type_literal(right_type));
             throw "Stop";
         }
     }
@@ -135,8 +135,8 @@ std::any JotTypeChecker::visit(FunctionDeclaration* node)
 {
     auto prototype = node->get_prototype();
     auto function_type = node_jot_type(node->get_prototype()->accept(this));
-    auto function = std::dynamic_pointer_cast<JotFunctionType>(function_type);
-    current_function_return_type = function->get_return_type();
+    auto function = std::static_pointer_cast<JotFunctionType>(function_type);
+    current_function_return_type = function->return_type;
 
     push_new_scope();
     for (auto& parameter : prototype->get_parameters()) {
@@ -151,7 +151,7 @@ std::any JotTypeChecker::visit(FunctionDeclaration* node)
 std::any JotTypeChecker::visit(StructDeclaration* node)
 {
     auto struct_type = node->get_struct_type();
-    auto struct_name = struct_type->get_name();
+    auto struct_name = struct_type->name;
     symbol_table->define(struct_name, struct_type);
     return nullptr;
 }
@@ -159,19 +159,18 @@ std::any JotTypeChecker::visit(StructDeclaration* node)
 std::any JotTypeChecker::visit(EnumDeclaration* node)
 {
     auto name = node->get_name().literal;
-    auto enum_type = std::dynamic_pointer_cast<JotEnumType>(node->get_enum_type());
-    auto enum_element_type = enum_type->get_element_type();
+    auto enum_type = std::static_pointer_cast<JotEnumType>(node->get_enum_type());
+    auto enum_element_type = enum_type->element_type;
     if (not is_integer_type(enum_element_type)) {
         context->diagnostics.add_diagnostic_error(node->get_name().position,
                                                   "Enum element type must be aa integer type");
         throw "Stop";
     }
 
-    auto element_size = enum_type->get_enum_values().size();
+    auto element_size = enum_type->values.size();
     if (element_size > 2 && is_boolean_type(enum_element_type)) {
         context->diagnostics.add_diagnostic_error(
-            node->get_name().position,
-            "Enum with bool (int1) type can't has more than 2 elements");
+            node->get_name().position, "Enum with bool (int1) type can't has more than 2 elements");
         throw "Stop";
     }
 
@@ -192,7 +191,7 @@ std::any JotTypeChecker::visit(IfStatement* node)
         if (not is_number_type(condition)) {
             context->diagnostics.add_diagnostic_error(conditional_block->get_position().position,
                                                       "if condition mush be a number but got " +
-                                                          condition->type_literal());
+                                                          jot_type_literal(condition));
             throw "Stop";
         }
         push_new_scope();
@@ -208,7 +207,7 @@ std::any JotTypeChecker::visit(WhileStatement* node)
     if (not is_number_type(left_type)) {
         context->diagnostics.add_diagnostic_error(node->get_position().position,
                                                   "While condition mush be a number but got " +
-                                                      left_type->type_literal());
+                                                      jot_type_literal(left_type));
         throw "Stop";
     }
     push_new_scope();
@@ -225,7 +224,7 @@ std::any JotTypeChecker::visit(SwitchStatement* node)
         context->diagnostics.add_diagnostic_error(
             node->get_position().position,
             "Switch argument type must be integer or enum element but found " +
-                argument->type_literal());
+                jot_type_literal(argument));
         throw "Stop";
     }
 
@@ -244,19 +243,18 @@ std::any JotTypeChecker::visit(SwitchStatement* node)
                 // but if it number we need to assert that it integer
                 if (value_node_type == AstNodeType::NumberExpr) {
                     auto value_type = node_jot_type(value->accept(this));
-                    auto numeric_type = std::dynamic_pointer_cast<JotNumberType>(value_type);
-                    if (not numeric_type->is_integer()) {
+                    if (!is_number_type(value_type)) {
                         context->diagnostics.add_diagnostic_error(
                             branch->get_position().position,
                             "Switch case value must be an integer but found " +
-                                numeric_type->type_literal());
+                                jot_type_literal(value_type));
                         throw "Stop";
                     }
                 }
 
                 // Check that all cases values are uniques
                 if (auto number = std::dynamic_pointer_cast<NumberExpression>(value)) {
-                    if (not cases_values.insert(number->get_value().literal).second) {
+                    if (!cases_values.insert(number->get_value().literal).second) {
                         context->diagnostics.add_diagnostic_error(
                             branch->get_position().position,
                             "Switch can't has more than case with the same constants value");
@@ -306,11 +304,11 @@ std::any JotTypeChecker::visit(SwitchStatement* node)
 std::any JotTypeChecker::visit(ReturnStatement* node)
 {
     if (not node->has_value()) {
-        if (current_function_return_type->get_type_kind() != TypeKind::Void) {
+        if (current_function_return_type->type_kind != TypeKind::Void) {
             context->diagnostics.add_diagnostic_error(
                 node->get_position().position, "Expect return value to be " +
-                                                     current_function_return_type->type_literal() +
-                                                     " but got void");
+                                                   jot_type_literal(current_function_return_type) +
+                                                   " but got void");
             throw "Stop";
         }
         return 0;
@@ -318,7 +316,7 @@ std::any JotTypeChecker::visit(ReturnStatement* node)
 
     auto return_type = node_jot_type(node->return_value()->accept(this));
 
-    if (not current_function_return_type->equals(return_type)) {
+    if (!is_jot_types_equals(current_function_return_type, return_type)) {
         // If Function return type is pointer and return value is null
         // set null pointer base type to function return type
         if (is_pointer_type(current_function_return_type) and is_null_type(return_type)) {
@@ -335,10 +333,10 @@ std::any JotTypeChecker::visit(ReturnStatement* node)
             throw "Stop";
         }
 
-        context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                                  "Expect return value to be " +
-                                                      current_function_return_type->type_literal() +
-                                                      " but got " + return_type->type_literal());
+        context->diagnostics.add_diagnostic_error(
+            node->get_position().position, "Expect return value to be " +
+                                               jot_type_literal(current_function_return_type) +
+                                               " but got " + jot_type_literal(return_type));
         throw "Stop";
     }
 
@@ -380,17 +378,17 @@ std::any JotTypeChecker::visit(IfExpression* node)
     if (not is_number_type(condition)) {
         context->diagnostics.add_diagnostic_error(
             node->get_if_position().position,
-            "If Expression condition mush be a number but got " + condition->type_literal());
+            "If Expression condition mush be a number but got " + jot_type_literal(condition));
         throw "Stop";
     }
 
     auto if_value = node_jot_type(node->get_if_value()->accept(this));
     auto else_value = node_jot_type(node->get_else_value()->accept(this));
-    if (not if_value->equals(else_value)) {
+    if (!is_jot_types_equals(if_value, else_value)) {
         context->diagnostics.add_diagnostic_error(node->get_if_position().position,
                                                   "If Expression Type missmatch expect " +
-                                                      if_value->type_literal() + " but got " +
-                                                      else_value->type_literal());
+                                                      jot_type_literal(if_value) + " but got " +
+                                                      jot_type_literal(else_value));
         throw "Stop";
     }
 
@@ -405,11 +403,11 @@ std::any JotTypeChecker::visit(SwitchExpression* node)
     for (size_t i = 0; i < cases_size; i++) {
         auto case_expression = cases[i];
         auto case_type = node_jot_type(case_expression->accept(this));
-        if (not argument->equals(case_type)) {
+        if (!is_jot_types_equals(argument, case_type)) {
             context->diagnostics.add_diagnostic_error(
                 node->get_position().position,
                 "Switch case type must be the same type of argument type " +
-                    argument->type_literal() + " but got " + case_type->type_literal() +
+                    jot_type_literal(argument) + " but got " + jot_type_literal(case_type) +
                     " in case number " + std::to_string(i + 1));
             throw "Stop";
         }
@@ -419,21 +417,22 @@ std::any JotTypeChecker::visit(SwitchExpression* node)
     auto expected_type = node_jot_type(values[0]->accept(this));
     for (size_t i = 1; i < cases_size; i++) {
         auto case_value = node_jot_type(values[i]->accept(this));
-        if (not expected_type->equals(case_value)) {
+        if (!is_jot_types_equals(expected_type, case_value)) {
             context->diagnostics.add_diagnostic_error(
                 node->get_position().position, "Switch cases must be the same time but got " +
-                                                     expected_type->type_literal() + " and " +
-                                                     case_value->type_literal());
+                                                   jot_type_literal(expected_type) + " and " +
+                                                   jot_type_literal(case_value));
             throw "Stop";
         }
     }
 
     auto default_value_type = node_jot_type(node->get_default_case_value()->accept(this));
-    if (not expected_type->equals(default_value_type)) {
+    if (!is_jot_types_equals(expected_type, default_value_type)) {
         context->diagnostics.add_diagnostic_error(
             node->get_position().position,
             "Switch case default values must be the same type of other cases expect " +
-                expected_type->type_literal() + " but got " + default_value_type->type_literal());
+                jot_type_literal(expected_type) + " but got " +
+                jot_type_literal(default_value_type));
         throw "Stop";
     }
 
@@ -455,7 +454,7 @@ std::any JotTypeChecker::visit(AssignExpression* node)
     if (left_node->get_ast_node_type() == AstNodeType::IndexExpr) {
         auto index_expression = std::dynamic_pointer_cast<IndexExpression>(left_node);
         auto value_type = index_expression->get_value()->get_type_node();
-        if (value_type->type_literal() == "*Int8") {
+        if (jot_type_literal(value_type) == "*Int8") {
             context->diagnostics.add_diagnostic_error(
                 index_expression->get_position().position,
                 "String literal are readonly can't modify it using [i]");
@@ -473,11 +472,11 @@ std::any JotTypeChecker::visit(AssignExpression* node)
     }
 
     // RValue type and LValue Type don't matchs
-    if (not left_type->equals(right_type)) {
+    if (!is_jot_types_equals(left_type, right_type)) {
         context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
                                                   "Type missmatch expect " +
-                                                      left_type->type_literal() + " but got " +
-                                                      right_type->type_literal());
+                                                      jot_type_literal(left_type) + " but got " +
+                                                      jot_type_literal(right_type));
         throw "Stop";
     }
 
@@ -492,26 +491,26 @@ std::any JotTypeChecker::visit(BinaryExpression* node)
     // Assert that right and left values are both numbers
     bool is_left_number = is_number_type(left_type);
     bool is_right_number = is_number_type(right_type);
-    bool is_the_same = left_type->equals(right_type);
+    bool is_the_same = is_jot_types_equals(left_type, right_type);
     if (not is_left_number || not is_right_number) {
 
         if (not is_left_number) {
             context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
                                                       "Expected binary left to be number but got " +
-                                                          left_type->type_literal());
+                                                          jot_type_literal(left_type));
         }
 
         if (not is_right_number) {
             context->diagnostics.add_diagnostic_error(
                 node->get_operator_token().position,
-                "Expected binary right to be number but got " + left_type->type_literal());
+                "Expected binary right to be number but got " + jot_type_literal(left_type));
         }
 
         if (not is_the_same) {
             context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
                                                       "Binary Expression type missmatch " +
-                                                          left_type->type_literal() + " and " +
-                                                          right_type->type_literal());
+                                                          jot_type_literal(left_type) + " and " +
+                                                          jot_type_literal(right_type));
         }
 
         throw "Stop";
@@ -527,27 +526,27 @@ std::any JotTypeChecker::visit(ShiftExpression* node)
 
     bool is_left_number = is_integer_type(left_type);
     bool is_right_number = is_integer_type(right_type);
-    bool is_the_same = left_type->equals(right_type);
+    bool is_the_same = is_jot_types_equals(left_type, right_type);
     if (not is_left_number || not is_right_number || not is_the_same) {
         if (not is_left_number) {
             context->diagnostics.add_diagnostic_error(
                 node->get_operator_token().position,
                 "Shift Expressions Expected left to be integers but got " +
-                    left_type->type_literal());
+                    jot_type_literal(left_type));
         }
 
         if (not is_right_number) {
             context->diagnostics.add_diagnostic_error(
                 node->get_operator_token().position,
                 "Shift Expressions Expected right to be integers but got " +
-                    left_type->type_literal());
+                    jot_type_literal(left_type));
         }
 
         if (not is_the_same) {
             context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
                                                       "Shift Expression type missmatch " +
-                                                          left_type->type_literal() + " and " +
-                                                          right_type->type_literal());
+                                                          jot_type_literal(left_type) + " and " +
+                                                          jot_type_literal(right_type));
         }
 
         throw "Stop";
@@ -559,7 +558,7 @@ std::any JotTypeChecker::visit(ComparisonExpression* node)
 {
     const auto left_type = node_jot_type(node->get_left()->accept(this));
     const auto right_type = node_jot_type(node->get_right()->accept(this));
-    const auto are_the_same = left_type->equals(right_type);
+    const auto are_the_same = is_jot_types_equals(left_type, right_type);
 
     // Numbers comparasions
     if (is_number_type(left_type) and is_number_type(right_type)) {
@@ -569,8 +568,8 @@ std::any JotTypeChecker::visit(ComparisonExpression* node)
 
         context->diagnostics.add_diagnostic_error(
             node->get_operator_token().position,
-            "You can't compare numbers with different size or types " + left_type->type_literal() +
-                " and " + right_type->type_literal());
+            "You can't compare numbers with different size or types " +
+                jot_type_literal(left_type) + " and " + jot_type_literal(right_type));
         throw "Stop";
     }
 
@@ -582,8 +581,8 @@ std::any JotTypeChecker::visit(ComparisonExpression* node)
 
         context->diagnostics.add_diagnostic_error(
             node->get_operator_token().position,
-            "You can't compare elements from different enums " + left_type->type_literal() +
-                " and " + right_type->type_literal());
+            "You can't compare elements from different enums " + jot_type_literal(left_type) +
+                " and " + jot_type_literal(right_type));
         throw "Stop";
     }
 
@@ -595,8 +594,8 @@ std::any JotTypeChecker::visit(ComparisonExpression* node)
 
         context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
                                                   "You can't compare pointers to different types " +
-                                                      left_type->type_literal() + " and " +
-                                                      right_type->type_literal());
+                                                      jot_type_literal(left_type) + " and " +
+                                                      jot_type_literal(right_type));
         throw "Stop";
     }
 
@@ -622,8 +621,8 @@ std::any JotTypeChecker::visit(ComparisonExpression* node)
     // Comparing different types together is invalid
     context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
                                               "Can't compare thoese types together " +
-                                                  left_type->type_literal() + " and " +
-                                                  right_type->type_literal());
+                                                  jot_type_literal(left_type) + " and " +
+                                                  jot_type_literal(right_type));
     throw "Stop";
 }
 
@@ -639,12 +638,12 @@ std::any JotTypeChecker::visit(LogicalExpression* node)
         if (not is_left_number) {
             context->diagnostics.add_diagnostic_error(
                 node->get_operator_token().position,
-                "Expected Logical left to be number but got " + left_type->type_literal());
+                "Expected Logical left to be number but got " + jot_type_literal(left_type));
         }
         if (not is_right_number) {
             context->diagnostics.add_diagnostic_error(
                 node->get_operator_token().position,
-                "Expected Logical right to be number but got " + left_type->type_literal());
+                "Expected Logical right to be number but got " + jot_type_literal(left_type));
         }
         throw "Stop";
     }
@@ -665,7 +664,7 @@ std::any JotTypeChecker::visit(PrefixUnaryExpression* node)
         context->diagnostics.add_diagnostic_error(
             node->get_operator_token().position,
             "Unary - operator require number as an right operand but got " +
-                operand_type->type_literal());
+                jot_type_literal(operand_type));
         throw "Stop";
     }
 
@@ -677,7 +676,7 @@ std::any JotTypeChecker::visit(PrefixUnaryExpression* node)
         context->diagnostics.add_diagnostic_error(
             node->get_operator_token().position,
             "Unary - operator require boolean as an right operand but got " +
-                operand_type->type_literal());
+                jot_type_literal(operand_type));
         throw "Stop";
     }
 
@@ -689,14 +688,14 @@ std::any JotTypeChecker::visit(PrefixUnaryExpression* node)
         context->diagnostics.add_diagnostic_error(
             node->get_operator_token().position,
             "Unary ~ operator require number as an right operand but got " +
-                operand_type->type_literal());
+                jot_type_literal(operand_type));
         throw "Stop";
     }
 
     if (unary_operator == TokenKind::Star) {
-        if (operand_type->get_type_kind() == TypeKind::Pointer) {
-            auto pointer_type = std::dynamic_pointer_cast<JotPointerType>(operand_type);
-            auto type = pointer_type->get_point_to();
+        if (operand_type->type_kind == TypeKind::Pointer) {
+            auto pointer_type = std::static_pointer_cast<JotPointerType>(operand_type);
+            auto type = pointer_type->base_type;
             node->set_type_node(type);
             return type;
         }
@@ -704,7 +703,7 @@ std::any JotTypeChecker::visit(PrefixUnaryExpression* node)
         context->diagnostics.add_diagnostic_error(
             node->get_operator_token().position,
             "Derefernse operator require pointer as an right operand but got " +
-                operand_type->type_literal());
+                jot_type_literal(operand_type));
         throw "Stop";
     }
 
@@ -715,11 +714,11 @@ std::any JotTypeChecker::visit(PrefixUnaryExpression* node)
     }
 
     if (unary_operator == TokenKind::PlusPlus || unary_operator == TokenKind::MinusMinus) {
-        if (operand_type->get_type_kind() != TypeKind::Number) {
+        if (operand_type->type_kind != TypeKind::Number) {
             context->diagnostics.add_diagnostic_error(
                 node->get_operator_token().position,
                 "Unary ++ or -- expression expect variable to be number ttype but got " +
-                    operand_type->type_literal());
+                    jot_type_literal(operand_type));
             throw "Stop";
         }
         node->set_type_node(operand_type);
@@ -728,7 +727,7 @@ std::any JotTypeChecker::visit(PrefixUnaryExpression* node)
 
     context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
                                               "Unsupported unary expression " +
-                                                  operand_type->type_literal());
+                                                  jot_type_literal(operand_type));
     throw "Stop";
 }
 
@@ -738,11 +737,11 @@ std::any JotTypeChecker::visit(PostfixUnaryExpression* node)
     auto unary_operator = node->get_operator_token().kind;
 
     if (unary_operator == TokenKind::PlusPlus or unary_operator == TokenKind::MinusMinus) {
-        if (operand_type->get_type_kind() != TypeKind::Number) {
+        if (operand_type->type_kind != TypeKind::Number) {
             context->diagnostics.add_diagnostic_error(
                 node->get_operator_token().position,
                 "Unary ++ or -- expression expect variable to be number ttype but got " +
-                    operand_type->type_literal());
+                    jot_type_literal(operand_type));
             throw "Stop";
         }
         node->set_type_node(operand_type);
@@ -751,7 +750,7 @@ std::any JotTypeChecker::visit(PostfixUnaryExpression* node)
 
     context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
                                               "Unsupported unary expression " +
-                                                  operand_type->type_literal());
+                                                  jot_type_literal(operand_type));
     throw "Stop";
 }
 
@@ -762,18 +761,20 @@ std::any JotTypeChecker::visit(CallExpression* node)
         if (symbol_table->is_defined(name)) {
             auto lookup = symbol_table->lookup(name);
             auto value = node_jot_type(symbol_table->lookup(name));
-            if (auto functional_type = std::dynamic_pointer_cast<JotPointerType>(value)) {
-                value = functional_type->get_point_to();
+
+            if (value->type_kind == TypeKind::Pointer) {
+                auto pointer_type = std::static_pointer_cast<JotPointerType>(value);
+                value = pointer_type->base_type;
             }
-            node->set_type_node(value);
-            if (value->get_type_kind() == TypeKind::Function) {
-                auto type = std::dynamic_pointer_cast<JotFunctionType>(value);
+
+            if (value->type_kind == TypeKind::Function) {
+                auto type = std::static_pointer_cast<JotFunctionType>(value);
                 node->set_type_node(type);
-                auto parameters = type->get_parameters();
+                auto parameters = type->parameters;
                 auto arguments = node->get_arguments();
                 check_parameters_types(node->get_position().position, arguments, parameters,
-                                       type->has_varargs(), type->get_varargs_type());
-                return type->get_return_type();
+                                       type->has_varargs, type->varargs_type);
+                return type->return_type;
             }
             else {
                 context->diagnostics.add_diagnostic_error(
@@ -790,15 +791,15 @@ std::any JotTypeChecker::visit(CallExpression* node)
 
     if (auto call = std::dynamic_pointer_cast<CallExpression>(node->get_callee())) {
         auto call_result = node_jot_type(call->accept(this));
-        auto function_pointer_type = std::dynamic_pointer_cast<JotPointerType>(call_result);
+        auto function_pointer_type = std::static_pointer_cast<JotPointerType>(call_result);
         auto function_type =
-            std::dynamic_pointer_cast<JotFunctionType>(function_pointer_type->get_point_to());
+            std::static_pointer_cast<JotFunctionType>(function_pointer_type->base_type);
         node->set_type_node(function_type);
-        auto parameters = function_type->get_parameters();
+        auto parameters = function_type->parameters;
         auto arguments = node->get_arguments();
         check_parameters_types(node->get_position().position, arguments, parameters,
-                               function_type->has_varargs(), function_type->get_varargs_type());
-        return function_type->get_return_type();
+                               function_type->has_varargs, function_type->varargs_type);
+        return function_type->return_type;
     }
 
     context->diagnostics.add_diagnostic_error(
@@ -811,15 +812,15 @@ std::any JotTypeChecker::visit(DotExpression* node)
 {
     auto callee = node->get_callee()->accept(this);
     auto callee_type = node_jot_type(callee);
-    auto callee_type_kind = callee_type->get_type_kind();
+    auto callee_type_kind = callee_type->type_kind;
 
-    if (callee_type->get_type_kind() == TypeKind::Structure) {
-        auto struct_type = std::dynamic_pointer_cast<JotStructType>(callee_type);
+    if (callee_type->type_kind == TypeKind::Structure) {
+        auto struct_type = std::static_pointer_cast<JotStructType>(callee_type);
         auto field_name = node->get_field_name().literal;
-        auto fields_names = struct_type->get_fields_names();
+        auto fields_names = struct_type->fields_names;
         if (fields_names.contains(field_name)) {
             int  member_index = fields_names[field_name];
-            auto field_type = struct_type->get_fields_types().at(member_index);
+            auto field_type = struct_type->fields_types[member_index];
             node->set_type_node(field_type);
             node->field_index = member_index;
             return field_type;
@@ -827,27 +828,27 @@ std::any JotTypeChecker::visit(DotExpression* node)
 
         context->diagnostics.add_diagnostic_error(node->get_position().position,
                                                   "Can't find a field with name " + field_name +
-                                                      " in struct " + struct_type->get_name());
+                                                      " in struct " + struct_type->name);
         throw "Stop";
     }
 
     if (callee_type_kind == TypeKind::Pointer) {
-        auto pointer_type = std::dynamic_pointer_cast<JotPointerType>(callee_type);
-        auto pointer_to_type = pointer_type->get_point_to();
-        if (pointer_to_type->get_type_kind() == TypeKind::Structure) {
-            auto struct_type = std::dynamic_pointer_cast<JotStructType>(pointer_to_type);
+        auto pointer_type = std::static_pointer_cast<JotPointerType>(callee_type);
+        auto pointer_to_type = pointer_type->base_type;
+        if (pointer_to_type->type_kind == TypeKind::Structure) {
+            auto struct_type = std::static_pointer_cast<JotStructType>(pointer_to_type);
             auto field_name = node->get_field_name().literal;
-            auto fields_names = struct_type->get_fields_names();
+            auto fields_names = struct_type->fields_names;
             if (fields_names.contains(field_name)) {
                 int  member_index = fields_names[field_name];
-                auto field_type = struct_type->get_fields_types().at(member_index);
+                auto field_type = struct_type->fields_types[member_index];
                 node->set_type_node(field_type);
                 node->field_index = member_index;
                 return field_type;
             }
             context->diagnostics.add_diagnostic_error(node->get_position().position,
                                                       "Can't find a field with name " + field_name +
-                                                          " in struct " + struct_type->get_name());
+                                                          " in struct " + struct_type->name);
             throw "Stop";
         }
 
@@ -869,15 +870,15 @@ std::any JotTypeChecker::visit(CastExpression* node)
     auto cast_result_type = node->get_type_node();
 
     // No need for castring if both has the same type
-    if (value_type->equals(cast_result_type)) {
+    if (is_jot_types_equals(value_type, cast_result_type)) {
         // TODO: Fire warning 'Unrequired castring because both has same type'
         return cast_result_type;
     }
 
-    if (not value_type->castable(cast_result_type)) {
-        context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                                  "Can't cast from " + value_type->type_literal() +
-                                                      " to " + cast_result_type->type_literal());
+    if (!can_jot_types_casted(value_type, cast_result_type)) {
+        context->diagnostics.add_diagnostic_error(
+            node->get_position().position, "Can't cast from " + jot_type_literal(value_type) +
+                                               " to " + jot_type_literal(cast_result_type));
         throw "Stop";
     }
     return cast_result_type;
@@ -890,26 +891,26 @@ std::any JotTypeChecker::visit(ValueSizeExpression* node) { return node->get_typ
 std::any JotTypeChecker::visit(IndexExpression* node)
 {
     auto callee_type = node_jot_type(node->get_value()->accept(this));
-    if (callee_type->get_type_kind() == TypeKind::Array) {
-        auto array_type = std::dynamic_pointer_cast<JotArrayType>(callee_type);
-        node->set_type_node(array_type->get_element_type());
+    if (callee_type->type_kind == TypeKind::Array) {
+        auto array_type = std::static_pointer_cast<JotArrayType>(callee_type);
+        node->set_type_node(array_type->element_type);
     }
-    else if (callee_type->get_type_kind() == TypeKind::Pointer) {
-        auto pointer_type = std::dynamic_pointer_cast<JotPointerType>(callee_type);
-        node->set_type_node(pointer_type->get_point_to());
+    else if (callee_type->type_kind == TypeKind::Pointer) {
+        auto pointer_type = std::static_pointer_cast<JotPointerType>(callee_type);
+        node->set_type_node(pointer_type->base_type);
     }
     else {
         context->diagnostics.add_diagnostic_error(node->get_position().position,
                                                   "Index expression require array but got " +
-                                                      callee_type->type_literal());
+                                                      jot_type_literal(callee_type));
         throw "Stop";
     }
 
     auto index_type = node_jot_type(node->get_index()->accept(this));
-    if (index_type->get_type_kind() != TypeKind::Number) {
+    if (index_type->type_kind != TypeKind::Number) {
         context->diagnostics.add_diagnostic_error(node->get_position().position,
                                                   "Index must be a number but got " +
-                                                      index_type->type_literal());
+                                                      jot_type_literal(index_type));
         throw "Stop";
     }
 
@@ -927,8 +928,8 @@ std::any JotTypeChecker::visit(LiteralExpression* node)
         node->set_type(type);
 
         // TODO: Must optimized later and to be more accurate
-        if (type->get_type_kind() == TypeKind::Number ||
-            type->get_type_kind() == TypeKind::EnumerationElement) {
+        if (type->type_kind == TypeKind::Number ||
+            type->type_kind == TypeKind::EnumerationElement) {
             node->set_constant(true);
         }
         return type;
@@ -943,8 +944,8 @@ std::any JotTypeChecker::visit(LiteralExpression* node)
 
 std::any JotTypeChecker::visit(NumberExpression* node)
 {
-    auto number_type = std::dynamic_pointer_cast<JotNumberType>(node->get_type_node());
-    auto number_kind = number_type->get_kind();
+    auto number_type = std::static_pointer_cast<JotNumberType>(node->get_type_node());
+    auto number_kind = number_type->number_kind;
     auto number_literal = node->get_value().literal;
 
     bool is_valid_range = check_number_limits(number_literal.c_str(), number_kind);
@@ -954,7 +955,7 @@ std::any JotTypeChecker::visit(NumberExpression* node)
         context->diagnostics.add_diagnostic_error(node->get_value().position,
                                                   "Number Value " + number_literal +
                                                       " Can't be represented using type " +
-                                                      number_type->type_literal());
+                                                      jot_type_literal(number_type));
         throw "Stop";
     }
 
@@ -965,11 +966,11 @@ std::any JotTypeChecker::visit(ArrayExpression* node)
 {
     auto values = node->get_values();
     for (size_t i = 1; i < values.size(); i++) {
-        if (not values[i]->get_type_node()->equals(values[i - 1]->get_type_node())) {
+        if (!is_jot_types_equals(values[i]->get_type_node(), values[i - 1]->get_type_node())) {
             context->diagnostics.add_diagnostic_error(
                 node->get_position().position, "Array elements with index " +
-                                                     std::to_string(i - 1) + " and " +
-                                                     std::to_string(i) + " are not the same types");
+                                                   std::to_string(i - 1) + " and " +
+                                                   std::to_string(i) + " are not the same types");
             throw "Stop";
         }
     }
@@ -1019,63 +1020,6 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type)
     return std::any_cast<std::shared_ptr<JotType>>(any_type);
 }
 
-inline bool JotTypeChecker::is_number_type(const std::shared_ptr<JotType>& type)
-{
-    return type->get_type_kind() == TypeKind::Number;
-}
-
-inline bool JotTypeChecker::is_integer_type(std::shared_ptr<JotType>& type)
-{
-    if (type->get_type_kind() == TypeKind::Number) {
-        auto number_type = std::dynamic_pointer_cast<JotNumberType>(type);
-        return number_type->is_integer();
-    }
-    return false;
-}
-
-inline bool JotTypeChecker::is_enum_element_type(const std::shared_ptr<JotType>& type)
-{
-    return type->get_type_kind() == TypeKind::EnumerationElement;
-}
-
-bool JotTypeChecker::is_boolean_type(std::shared_ptr<JotType>& type)
-{
-    if (type->get_type_kind() == TypeKind::Number) {
-        auto number_type = std::dynamic_pointer_cast<JotNumberType>(type);
-        return number_type->is_boolean();
-    }
-    return false;
-}
-
-inline bool JotTypeChecker::is_pointer_type(const std::shared_ptr<JotType>& type)
-{
-    return type->get_type_kind() == TypeKind::Pointer;
-}
-
-inline bool JotTypeChecker::is_null_type(const std::shared_ptr<JotType>& type)
-{
-    return type->get_type_kind() == TypeKind::Null;
-}
-
-bool JotTypeChecker::is_none_type(const std::shared_ptr<JotType>& type)
-{
-    if (type->get_type_kind() == TypeKind::None) {
-        return true;
-    }
-
-    if (type->get_type_kind() == TypeKind::Array) {
-        auto array_type = std::dynamic_pointer_cast<JotArrayType>(type);
-        return array_type->get_element_type()->get_type_kind() == TypeKind::None;
-    }
-
-    if (type->get_type_kind() == TypeKind::Pointer) {
-        auto array_type = std::dynamic_pointer_cast<JotPointerType>(type);
-        return array_type->get_point_to()->get_type_kind() == TypeKind::None;
-    }
-
-    return false;
-}
-
 void JotTypeChecker::check_parameters_types(TokenSpan                                 location,
                                             std::vector<std::shared_ptr<Expression>>& arguments,
                                             std::vector<std::shared_ptr<JotType>>&    parameters,
@@ -1110,7 +1054,7 @@ void JotTypeChecker::check_parameters_types(TokenSpan                           
 
     // Check non varargs parameters vs arguments
     for (size_t i = 0; i < parameters_size; i++) {
-        if (not parameters[i]->equals(arguments_types[i])) {
+        if (!is_jot_types_equals(parameters[i], arguments_types[i])) {
 
             // if Parameter is pointer type and null pointer passed as argument
             // Change null pointer base type to parameter type
@@ -1122,8 +1066,8 @@ void JotTypeChecker::check_parameters_types(TokenSpan                           
 
             context->diagnostics.add_diagnostic_error(
                 location, "Argument type didn't match parameter type expect " +
-                              parameters[i]->type_literal() + " got " +
-                              arguments_types[i]->type_literal());
+                              jot_type_literal(parameters[i]) + " got " +
+                              jot_type_literal(arguments_types[i]));
             throw "Stop";
         }
     }
@@ -1135,11 +1079,11 @@ void JotTypeChecker::check_parameters_types(TokenSpan                           
 
     // Check extra varargs types
     for (size_t i = parameters_size; i < arguments_size; i++) {
-        if (not arguments_types[i]->equals(varargs_type)) {
+        if (!is_jot_types_equals(arguments_types[i], varargs_type)) {
             context->diagnostics.add_diagnostic_error(
                 location, "Argument type didn't match varargs type expect " +
-                              varargs_type->type_literal() + " got " +
-                              arguments_types[i]->type_literal());
+                              jot_type_literal(varargs_type) + " got " +
+                              jot_type_literal(arguments_types[i]));
             throw "Stop";
         }
     }
@@ -1148,7 +1092,7 @@ void JotTypeChecker::check_parameters_types(TokenSpan                           
 bool JotTypeChecker::is_same_type(const std::shared_ptr<JotType>& left,
                                   const std::shared_ptr<JotType>& right)
 {
-    return left->get_type_kind() == right->get_type_kind();
+    return left->type_kind == right->type_kind;
 }
 
 bool JotTypeChecker::check_number_limits(const char* literal, NumberKind kind)

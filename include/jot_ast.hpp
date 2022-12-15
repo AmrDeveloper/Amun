@@ -1177,9 +1177,10 @@ class NullExpression : public Expression {
 
     AstNodeType get_ast_node_type() override { return AstNodeType::NullExpr; }
 
-    std::shared_ptr<JotType> null_base_type;
-
   private:
     Token                    value;
     std::shared_ptr<JotType> type;
+
+  public:
+    std::shared_ptr<JotType> null_base_type;
 };

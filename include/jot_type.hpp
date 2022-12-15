@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-enum class TypeKind {
+enum class TypeKind : short {
     Number,
     Pointer,
     Function,
@@ -21,15 +21,11 @@ enum class TypeKind {
     Null,
 };
 
-class JotType {
-  public:
-    virtual std::string type_literal() = 0;
-    virtual TypeKind    get_type_kind() = 0;
-    virtual bool        equals(const std::shared_ptr<JotType>& other) = 0;
-    virtual bool        castable(const std::shared_ptr<JotType>& other) = 0;
+struct JotType {
+    TypeKind type_kind = TypeKind::None;
 };
 
-enum class NumberKind {
+enum class NumberKind : short {
     Integer1,
     Integer8,
     Integer16,
@@ -39,246 +35,121 @@ enum class NumberKind {
     Float64,
 };
 
-class JotNumberType : public JotType {
-  public:
-    JotNumberType(NumberKind kind) : kind(kind) {}
+struct JotNumberType : public JotType {
+    JotNumberType(NumberKind kind) : number_kind(kind) { type_kind = TypeKind::Number; }
+    NumberKind number_kind;
+};
 
-    NumberKind get_kind() { return kind; }
-
-    std::string type_literal() override
+struct JotPointerType : public JotType {
+    JotPointerType(std::shared_ptr<JotType> base_type) : base_type(std::move(base_type))
     {
-        switch (kind) {
-        case NumberKind::Integer1: return "Int1";
-        case NumberKind::Integer8: return "Int8";
-        case NumberKind::Integer16: return "Int16";
-        case NumberKind::Integer32: return "Int32";
-        case NumberKind::Integer64: return "Int64";
-        case NumberKind::Float32: return "Float32";
-        case NumberKind::Float64: return "Float64";
-        default: return "Number";
-        }
+        type_kind = TypeKind::Pointer;
     }
 
-    TypeKind get_type_kind() override { return TypeKind::Number; }
-
-    bool equals(const std::shared_ptr<JotType>& other) override;
-
-    bool castable(const std::shared_ptr<JotType>& other) override;
-
-    bool is_boolean() { return kind == NumberKind::Integer1; }
-
-    bool is_integer() { return not is_float(); }
-
-    bool is_float() { return kind == NumberKind::Float32 || kind == NumberKind::Float64; }
-
-  private:
-    NumberKind kind;
+    std::shared_ptr<JotType> base_type;
 };
 
-class JotPointerType : public JotType {
-  public:
-    JotPointerType(std::shared_ptr<JotType> point_to) : point_to(point_to) {}
-
-    std::shared_ptr<JotType> get_point_to() { return point_to; }
-
-    std::string type_literal() override { return "*" + point_to->type_literal(); }
-
-    TypeKind get_type_kind() override { return TypeKind::Pointer; }
-
-    bool equals(const std::shared_ptr<JotType>& other) override;
-
-    bool castable(const std::shared_ptr<JotType>& other) override;
-
-  private:
-    std::shared_ptr<JotType> point_to;
-};
-
-class JotArrayType : public JotType {
-  public:
+struct JotArrayType : public JotType {
     JotArrayType(std::shared_ptr<JotType> element_type, size_t size)
         : element_type(std::move(element_type)), size(size)
     {
+        type_kind = TypeKind::Array;
     }
 
-    std::shared_ptr<JotType> get_element_type() { return element_type; }
-
-    void set_element_type(std::shared_ptr<JotType> new_type) { element_type = new_type; }
-
-    size_t get_size() { return size; }
-
-    std::string type_literal() override
-    {
-        return "[" + std::to_string(size) + "]" + element_type->type_literal();
-    }
-
-    TypeKind get_type_kind() override { return TypeKind::Array; }
-
-    bool equals(const std::shared_ptr<JotType>& other) override;
-
-    bool castable(const std::shared_ptr<JotType>& other) override;
-
-  private:
     std::shared_ptr<JotType> element_type;
     size_t                   size;
 };
 
-class JotFunctionType : public JotType {
-  public:
+struct JotFunctionType : public JotType {
     JotFunctionType(Token name, std::vector<std::shared_ptr<JotType>> parameters,
                     std::shared_ptr<JotType> return_type, bool varargs = false,
                     std::shared_ptr<JotType> varargs_type = nullptr)
         : name(std::move(name)), parameters(std::move(parameters)),
-          return_type(std::move(return_type)), varargs(varargs),
+          return_type(std::move(return_type)), has_varargs(varargs),
           varargs_type(std::move(varargs_type))
     {
+        type_kind = TypeKind::Function;
     }
 
-    std::vector<std::shared_ptr<JotType>> get_parameters() { return parameters; }
-
-    std::shared_ptr<JotType> get_return_type() { return return_type; }
-
-    std::string type_literal() override
-    {
-        std::stringstream function_type_literal;
-        function_type_literal << "(";
-        for (auto& parameter : parameters) {
-            function_type_literal << " ";
-            function_type_literal << parameter->type_literal();
-            function_type_literal << " ";
-        }
-        function_type_literal << ")";
-        function_type_literal << " -> ";
-        function_type_literal << return_type->type_literal();
-        return function_type_literal.str();
-    }
-
-    TypeKind get_type_kind() override { return TypeKind::Function; }
-
-    bool equals(const std::shared_ptr<JotType>& other) override;
-
-    bool castable(const std::shared_ptr<JotType>& other) override;
-
-    bool has_varargs() { return varargs; }
-
-    std::shared_ptr<JotType> get_varargs_type() { return varargs_type; }
-
-  private:
     Token                                 name;
     std::vector<std::shared_ptr<JotType>> parameters;
     std::shared_ptr<JotType>              return_type;
-    bool                                  varargs;
+    bool                                  has_varargs;
     std::shared_ptr<JotType>              varargs_type;
 };
 
-class JotStructType : public JotType {
-  public:
+struct JotStructType : public JotType {
     JotStructType(std::string name, std::unordered_map<std::string, int> fields_names,
                   std::vector<std::shared_ptr<JotType>> types)
-        : name(std::move(name)), fields_names(fields_names), fields_types(types)
+        : name(std::move(name)), fields_names(std::move(fields_names)),
+          fields_types(std::move(types))
     {
+        type_kind = TypeKind::Structure;
     }
 
-    std::string get_name() { return name; }
-
-    std::unordered_map<std::string, int> get_fields_names() { return fields_names; }
-
-    std::vector<std::shared_ptr<JotType>> get_fields_types() { return fields_types; }
-
-    void set_field_type(int index, std::shared_ptr<JotType> type) { fields_types[index] = type; }
-
-    std::string type_literal() override { return name; }
-
-    TypeKind get_type_kind() override { return TypeKind::Structure; }
-
-    bool equals(const std::shared_ptr<JotType>& other) override;
-
-    bool castable(const std::shared_ptr<JotType>& other) override;
-
-  private:
     std::string                           name;
     std::unordered_map<std::string, int>  fields_names;
     std::vector<std::shared_ptr<JotType>> fields_types;
 };
 
-class JotEnumType : public JotType {
-  public:
+struct JotEnumType : public JotType {
     JotEnumType(Token name, std::unordered_map<std::string, int> values,
                 std::shared_ptr<JotType> element_type)
-        : name(name), values(values), element_type(element_type)
+        : name(name), values(std::move(values)), element_type(std::move(element_type))
     {
+        type_kind = TypeKind::Enumeration;
     }
 
-    std::shared_ptr<JotType> get_element_type() { return element_type; }
-
-    std::unordered_map<std::string, int> get_enum_values() { return values; }
-
-    std::string type_literal() override { return "enum " + name.literal; }
-
-    TypeKind get_type_kind() override { return TypeKind::Enumeration; }
-
-    bool equals(const std::shared_ptr<JotType>& other) override;
-
-    bool castable(const std::shared_ptr<JotType>& other) override;
-
-  private:
     Token                                name;
     std::unordered_map<std::string, int> values;
     std::shared_ptr<JotType>             element_type;
 };
 
-class JotEnumElementType : public JotType {
-  public:
-    JotEnumElementType(Token name, std::shared_ptr<JotType> element_type)
-        : name(name), element_type(element_type)
+struct JotEnumElementType : public JotType {
+    JotEnumElementType(std::string name, std::shared_ptr<JotType> element_type)
+        : name(name), element_type(std::move(element_type))
     {
+        type_kind = TypeKind::EnumerationElement;
     }
 
-    std::string get_name() { return name.literal; }
-
-    std::shared_ptr<JotType> get_element_type() { return element_type; }
-
-    std::string type_literal() override { return "enum " + name.literal; }
-
-    TypeKind get_type_kind() override { return TypeKind::EnumerationElement; }
-
-    bool equals(const std::shared_ptr<JotType>& other) override;
-
-    bool castable(const std::shared_ptr<JotType>& other) override;
-
-  private:
-    Token                    name;
+    std::string              name;
     std::shared_ptr<JotType> element_type;
 };
 
-class JotNoneType : public JotType {
-  public:
-    std::string type_literal() override { return "None Type"; }
-
-    TypeKind get_type_kind() override { return TypeKind::None; }
-
-    bool equals(const std::shared_ptr<JotType>& other) override;
-
-    bool castable(const std::shared_ptr<JotType>& other) override;
+struct JotNoneType : public JotType {
+    JotNoneType() { type_kind = TypeKind::None; }
 };
 
-class JotVoidType : public JotType {
-  public:
-    std::string type_literal() override { return "void"; }
-
-    TypeKind get_type_kind() override { return TypeKind::Void; }
-
-    bool equals(const std::shared_ptr<JotType>& other) override;
-
-    bool castable(const std::shared_ptr<JotType>& other) override;
+struct JotVoidType : public JotType {
+    JotVoidType() { type_kind = TypeKind::Void; }
 };
 
-class JotNullType : public JotType {
-  public:
-    std::string type_literal() override { return "null"; }
-
-    TypeKind get_type_kind() override { return TypeKind::Null; }
-
-    bool equals(const std::shared_ptr<JotType>& other) override;
-
-    bool castable(const std::shared_ptr<JotType>& other) override;
+struct JotNullType : public JotType {
+    JotNullType() { type_kind = TypeKind::Null; }
 };
+
+bool is_jot_types_equals(const std::shared_ptr<JotType>& type,
+                         const std::shared_ptr<JotType>& other);
+
+bool is_jot_functions_types_equals(const std::shared_ptr<JotFunctionType>& type,
+                                   const std::shared_ptr<JotFunctionType>& other);
+
+bool can_jot_types_casted(const std::shared_ptr<JotType>& from, const std::shared_ptr<JotType>& to);
+
+std::string jot_type_literal(const std::shared_ptr<JotType>& type);
+
+const char* jot_number_kind_literal(NumberKind kind);
+
+bool is_number_type(std::shared_ptr<JotType> type);
+
+bool is_integer_type(std::shared_ptr<JotType> type);
+
+bool is_enum_element_type(std::shared_ptr<JotType> type);
+
+bool is_boolean_type(std::shared_ptr<JotType> type);
+
+bool is_pointer_type(std::shared_ptr<JotType> type);
+
+bool is_null_type(std::shared_ptr<JotType> type);
+
+bool is_none_type(std::shared_ptr<JotType> type);
