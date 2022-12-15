@@ -1,0 +1,51 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun is_null_passd(x *int64) int64 {
+    if (x == null) {
+        printf("is_null_passd accept null as argument \n");
+    }
+    return 0;
+}
+
+fun return_null() *int64 {
+    return null;
+}
+
+fun main() int64 {
+    var x : *int64;
+    x = null;
+
+    var y : *int64 = null;
+
+    if (x == null) {
+        printf("X == null\n");
+    }
+
+    if (null == x) {
+        printf("null == x\n");
+    }
+    
+    if (y == null) {
+        printf("y == null\n");
+    }
+
+    if (null == y) {
+        printf("null == y\n");
+    }
+
+    if (null == null) {
+        printf("null == null\n");
+    }
+
+    if (x == y) {
+        printf("x == y\n");
+    }
+
+    is_null_passd(null);
+
+    if (return_null() == null) {
+        printf("Return null from function\n");
+    }
+
+    return 0;
+}
