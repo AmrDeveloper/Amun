@@ -1,0 +1,38 @@
+extern fun printf(format *char, varargs Any) int64;
+
+extern fun malloc(size int64) *void;
+
+extern fun free(ptr *void) void;
+
+struct Node {
+    data int64;
+    next *Node;
+}
+
+fun create_node(value int64) *Node {
+    var node = cast(*Node) malloc(type_size(Node));
+    node.data = value;
+    return node;
+}
+
+fun main() int64 {
+    var one = create_node(1);
+    defer free(cast(*void) one);
+
+    var two = create_node(2);
+    defer free(cast(*void) two);
+
+    var three = create_node(3);
+    defer free(cast(*void) three);
+
+    one.next = two;
+    two.next = three;
+
+    var head = one;
+    while (head != null) {
+        printf("%d\n", head.data);
+        head = head.next;
+    }
+    
+    return 0;
+}
