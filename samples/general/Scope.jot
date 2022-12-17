@@ -1,0 +1,24 @@
+extern fun printf(format *char, varargs Any) int64;
+
+var x = 10;
+
+fun main() int64 {
+    printf("%d\n", x);
+
+    var x = 11;
+    {
+        printf("%d\n", x);
+    }
+
+    {
+        var x = 12;
+        printf("%d\n", x);
+    }
+
+    {
+        var x = 13;
+        printf("%d\n", x);
+    }
+    
+    return 0;
+}
