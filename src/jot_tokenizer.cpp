@@ -37,12 +37,12 @@ Token JotTokenizer::scan_next_token()
     case ']': return build_token(TokenKind::CloseBracket);
     case '{': return build_token(TokenKind::OpenBrace);
     case '}': return build_token(TokenKind::CloseBrace);
-    case '.': return build_token(TokenKind::Dot);
     case ',': return build_token(TokenKind::Comma);
     case ';': return build_token(TokenKind::Semicolon);
     case '~': return build_token(TokenKind::Not);
 
     // One or Two character token
+    case '.': return build_token(match('.') ? TokenKind::DotDot : TokenKind::Dot);
     case ':': return build_token(match(':') ? TokenKind::ColonColon : TokenKind::Colon);
     case '|': return build_token(match('|') ? TokenKind::LogicalOr : TokenKind::Or);
     case '&': return build_token(match('&') ? TokenKind::LogicalAnd : TokenKind::And);

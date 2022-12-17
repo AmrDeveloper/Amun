@@ -10,6 +10,7 @@ class FunctionDeclaration;
 class StructDeclaration;
 class EnumDeclaration;
 class IfStatement;
+class ForRangeStatement;
 class WhileStatement;
 class SwitchStatement;
 class ReturnStatement;
@@ -33,6 +34,8 @@ class StatementVisitor {
     virtual std::any visit(EnumDeclaration* node) = 0;
 
     virtual std::any visit(IfStatement* node) = 0;
+
+    virtual std::any visit(ForRangeStatement* node) = 0;
 
     virtual std::any visit(WhileStatement* node) = 0;
 
@@ -125,5 +128,4 @@ class ExpressionVisitor {
     virtual std::any visit(NullExpression* node) = 0;
 };
 
-class TreeVisitor : public StatementVisitor, public ExpressionVisitor {
-};
+class TreeVisitor : public StatementVisitor, public ExpressionVisitor {};

@@ -23,6 +23,7 @@ enum class AstNodeType {
     Struct,
     Enum,
     If,
+    ForRange,
     While,
     Switch,
     Return,
@@ -281,6 +282,28 @@ class IfStatement : public Statement {
 
   private:
     std::vector<std::shared_ptr<ConditionalBlock>> conditional_blocks;
+};
+
+class ForRangeStatement : public Statement {
+  public:
+    ForRangeStatement(Token position, std::string element_name,
+                      std::shared_ptr<Expression> range_start,
+                      std::shared_ptr<Expression> range_end, std::shared_ptr<Statement> body)
+        : position(position), element_name(std::move(element_name)),
+          range_start(std::move(range_start)), range_end(std::move(range_end)),
+          body(std::move(body))
+    {
+    }
+
+    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::ForRange; }
+
+    Token                       position;
+    std::string                 element_name;
+    std::shared_ptr<Expression> range_start;
+    std::shared_ptr<Expression> range_end;
+    std::shared_ptr<Statement>  body;
 };
 
 class WhileStatement : public Statement {

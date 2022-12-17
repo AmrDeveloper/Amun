@@ -2,7 +2,8 @@
 
 bool JotSymbolTable::define(const std::string& name, std::any value)
 {
-    if (is_defined(name))
+    // Should only check in the current scope not all scopes
+    if (environment.contains(name))
         return false;
     environment[name] = std::move(value);
     return true;

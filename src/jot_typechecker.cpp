@@ -25,11 +25,13 @@ void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> com
 
 std::any JotTypeChecker::visit(BlockStatement* node)
 {
+    push_new_scope();
     for (auto& statement : node->get_nodes()) {
         statement->accept(this);
         // Here we can report warn for unreachable code after return, continue or break keyword
         // We can make it error after return, must modify the diagnostics engine first
     }
+    pop_current_scope();
     return 0;
 }
 
@@ -199,6 +201,29 @@ std::any JotTypeChecker::visit(IfStatement* node)
         pop_current_scope();
     }
     return 0;
+}
+
+std::any JotTypeChecker::visit(ForRangeStatement* node)
+{
+    const auto start_type = node_jot_type(node->range_start->accept(this));
+    const auto end_type = node_jot_type(node->range_end->accept(this));
+
+    if (is_integer_type(start_type) && is_integer_type(end_type)) {
+        push_new_scope();
+
+        // Define element name only inside loop scope
+        symbol_table->define(node->element_name, start_type);
+
+        node->body->accept(this);
+
+        pop_current_scope();
+
+        return 0;
+    }
+
+    context->diagnostics.add_diagnostic_error(node->position.position,
+                                              "For range start and end must be integers");
+    throw "Stop";
 }
 
 std::any JotTypeChecker::visit(WhileStatement* node)

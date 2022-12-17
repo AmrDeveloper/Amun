@@ -37,6 +37,7 @@ JotLLVMBackend::compile(std::string module_name, std::shared_ptr<CompilationUnit
 
 std::any JotLLVMBackend::visit(BlockStatement* node)
 {
+    push_alloca_inst_scope();
     for (auto& statement : node->get_nodes()) {
         statement->accept(this);
 
@@ -47,6 +48,7 @@ std::any JotLLVMBackend::visit(BlockStatement* node)
             break;
         }
     }
+    pop_alloca_inst_scope();
     return 0;
 }
 
@@ -278,6 +280,70 @@ std::any JotLLVMBackend::visit(IfStatement* node)
         has_break_or_continue_statement = false;
     else
         Builder.SetInsertPoint(end_block);
+
+    return 0;
+}
+
+std::any JotLLVMBackend::visit(ForRangeStatement* node)
+{
+    auto step = Builder.getInt64(1);
+    auto start = llvm_resolve_value(node->range_start->accept(this));
+    auto end = llvm_resolve_value(node->range_end->accept(this));
+
+    start = create_llvm_integers_bianry(TokenKind::Minus, start, step);
+    end = create_llvm_integers_bianry(TokenKind::Minus, end, step);
+
+    const auto element_llvm_type = start->getType();
+
+    auto condition_block = llvm::BasicBlock::Create(llvm_context, "for.cond");
+    auto body_block = llvm::BasicBlock::Create(llvm_context, "for");
+    auto end_block = llvm::BasicBlock::Create(llvm_context, "for.end");
+
+    break_blocks_stack.push(end_block);
+    continue_blocks_stack.push(condition_block);
+
+    push_alloca_inst_scope();
+
+    // Declare iterator name variable
+    const auto var_name = node->element_name;
+    const auto current_function = Builder.GetInsertBlock()->getParent();
+    auto alloc_inst = create_entry_block_alloca(current_function, var_name, element_llvm_type);
+    Builder.CreateStore(start, alloc_inst);
+    alloca_inst_scope->define(var_name, alloc_inst);
+    Builder.CreateBr(condition_block);
+
+    // Generate condition block
+    current_function->getBasicBlockList().push_back(condition_block);
+    Builder.SetInsertPoint(condition_block);
+    auto variable = Builder.CreateLoad(alloc_inst->getAllocatedType(), alloc_inst);
+    auto condition = create_llvm_integers_comparison(TokenKind::SmallerEqual, variable, end);
+    Builder.CreateCondBr(condition, body_block, end_block);
+
+    // Generate For body IR Code
+    current_function->getBasicBlockList().push_back(body_block);
+    Builder.SetInsertPoint(body_block);
+
+    // Increment loop variable
+    auto value_ptr = Builder.CreateLoad(alloc_inst->getAllocatedType(), alloc_inst);
+    auto new_value = create_llvm_integers_bianry(TokenKind::Plus, value_ptr, step);
+    Builder.CreateStore(new_value, alloc_inst);
+
+    node->body->accept(this);
+    pop_alloca_inst_scope();
+
+    if (has_break_or_continue_statement) {
+        has_break_or_continue_statement = false;
+    }
+    else {
+        Builder.CreateBr(condition_block);
+    }
+
+    // Set the insertion point to the end block
+    current_function->getBasicBlockList().push_back(end_block);
+    Builder.SetInsertPoint(end_block);
+
+    break_blocks_stack.pop();
+    continue_blocks_stack.pop();
 
     return 0;
 }

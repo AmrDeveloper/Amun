@@ -201,6 +201,9 @@ std::shared_ptr<Statement> JotParser::parse_statement()
     case TokenKind::IfKeyword: {
         return parse_if_statement();
     }
+    case TokenKind::ForKeyword: {
+        return parse_for_statement();
+    }
     case TokenKind::WhileKeyword: {
         return parse_while_statement();
     }
@@ -698,6 +701,46 @@ std::shared_ptr<IfStatement> JotParser::parse_if_statement()
     }
     current_ast_scope = parent_node_scope;
     return std::make_shared<IfStatement>(conditional_blocks);
+}
+
+std::shared_ptr<Statement> JotParser::parse_for_statement()
+{
+    auto parent_node_scope = current_ast_scope;
+    current_ast_scope = AstNodeScope::ConditionalScope;
+
+    auto keyword = consume_kind(TokenKind::ForKeyword, "Expect for keyword.");
+
+    // Parse for each or for range statement
+    std::string variable_name = "it";
+    auto        expr = parse_expression();
+    if (is_current_kind(TokenKind::Colon)) {
+        if (expr->get_ast_node_type() != AstNodeType::LiteralExpr) {
+            context->diagnostics.add_diagnostic_error(keyword.position,
+                                                      "Optional named variable must be identifier");
+            throw "Stop";
+        }
+
+        // Previous token is the LiteralExpression that contains variable name
+        variable_name = previous_token->literal;
+        // Consume the colon
+        advanced_token();
+        expr = parse_expression();
+    }
+
+    // For range statemnet for x -> y
+    if (is_current_kind(TokenKind::DotDot)) {
+        advanced_token();
+        auto range_end = parse_expression();
+        loop_stack_size += 1;
+        auto body = parse_statement();
+        loop_stack_size -= 1;
+        current_ast_scope = parent_node_scope;
+        return std::make_shared<ForRangeStatement>(keyword, variable_name, expr, range_end, body);
+    }
+
+    context->diagnostics.add_diagnostic_error(keyword.position,
+                                              "For range expect .. between start and end of range");
+    throw "Stop";
 }
 
 std::shared_ptr<WhileStatement> JotParser::parse_while_statement()

@@ -71,6 +71,8 @@ class JotParser {
 
     std::shared_ptr<IfStatement> parse_if_statement();
 
+    std::shared_ptr<Statement> parse_for_statement();
+
     std::shared_ptr<WhileStatement> parse_while_statement();
 
     std::shared_ptr<SwitchStatement> parse_switch_statement();
