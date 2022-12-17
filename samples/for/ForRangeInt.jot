@@ -1,0 +1,25 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    for 0 .. 3 {
+        printf("Single for %d\n", it);
+    }
+
+    for 0 .. 3 {
+        printf("Second for %d\n", it);
+    }
+
+    for 0 .. 3 {
+        for 0 .. 3 {
+            printf("Nested for %d\n", it);
+        }
+    }
+
+    for i : 0 .. 3 {
+        for j : 0 .. 3 {
+            printf("Nested Named for %d %d\n", i, j);
+        }
+    }
+    
+    return 0;
+}
