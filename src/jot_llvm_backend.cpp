@@ -286,12 +286,23 @@ std::any JotLLVMBackend::visit(IfStatement* node)
 
 std::any JotLLVMBackend::visit(ForRangeStatement* node)
 {
-    auto step = Builder.getInt64(1);
     auto start = llvm_resolve_value(node->range_start->accept(this));
     auto end = llvm_resolve_value(node->range_end->accept(this));
 
-    start = create_llvm_integers_bianry(TokenKind::Minus, start, step);
-    end = create_llvm_integers_bianry(TokenKind::Minus, end, step);
+    llvm::Value* step = nullptr;
+    if (node->step) {
+        // Resolve user declared step
+        step = llvm_resolve_value(node->step->accept(this));
+    }
+    else {
+        // Default step is 1 with number type as the same as range start
+        auto node_type = node->range_start->get_type_node();
+        auto number_type = std::static_pointer_cast<JotNumberType>(node_type);
+        step = llvm_number_value("1", number_type->number_kind);
+    }
+
+    start = create_llvm_numbers_bianry(TokenKind::Minus, start, step);
+    end = create_llvm_numbers_bianry(TokenKind::Minus, end, step);
 
     const auto element_llvm_type = start->getType();
 
@@ -315,8 +326,8 @@ std::any JotLLVMBackend::visit(ForRangeStatement* node)
     // Generate condition block
     current_function->getBasicBlockList().push_back(condition_block);
     Builder.SetInsertPoint(condition_block);
-    auto variable = Builder.CreateLoad(alloc_inst->getAllocatedType(), alloc_inst);
-    auto condition = create_llvm_integers_comparison(TokenKind::SmallerEqual, variable, end);
+    auto variable = derefernecs_llvm_pointer(alloc_inst);
+    auto condition = create_llvm_numbers_comparison(TokenKind::SmallerEqual, variable, end);
     Builder.CreateCondBr(condition, body_block, end_block);
 
     // Generate For body IR Code
@@ -325,7 +336,7 @@ std::any JotLLVMBackend::visit(ForRangeStatement* node)
 
     // Increment loop variable
     auto value_ptr = Builder.CreateLoad(alloc_inst->getAllocatedType(), alloc_inst);
-    auto new_value = create_llvm_integers_bianry(TokenKind::Plus, value_ptr, step);
+    auto new_value = create_llvm_numbers_bianry(TokenKind::Plus, value_ptr, step);
     Builder.CreateStore(new_value, alloc_inst);
 
     node->body->accept(this);
@@ -1457,6 +1468,20 @@ llvm::Type* JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
     internal_compiler_error("Can't find LLVM Type for this Jot Type");
 }
 
+inline llvm::Value* JotLLVMBackend::create_llvm_numbers_bianry(TokenKind op, llvm::Value* left,
+                                                               llvm::Value* right)
+{
+    if (left->getType()->isIntegerTy() && right->getType()->isIntegerTy()) {
+        return create_llvm_integers_bianry(op, left, right);
+    }
+
+    if (left->getType()->isFloatingPointTy() && right->getType()->isFloatingPointTy()) {
+        return create_llvm_floats_bianry(op, left, right);
+    }
+
+    internal_compiler_error("llvm binary operator with number expect integers or floats");
+}
+
 inline llvm::Value* JotLLVMBackend::create_llvm_integers_bianry(TokenKind op, llvm::Value* left,
                                                                 llvm::Value* right)
 {
@@ -1505,6 +1530,20 @@ inline llvm::Value* JotLLVMBackend::create_llvm_floats_bianry(TokenKind op, llvm
         internal_compiler_error("Invalid binary operator for floating point types");
     }
     }
+}
+
+inline llvm::Value* JotLLVMBackend::create_llvm_numbers_comparison(TokenKind op, llvm::Value* left,
+                                                                   llvm::Value* right)
+{
+    if (left->getType()->isIntegerTy() && right->getType()->isIntegerTy()) {
+        return create_llvm_integers_comparison(op, left, right);
+    }
+
+    if (left->getType()->isFloatingPointTy() && right->getType()->isFloatingPointTy()) {
+        return create_llvm_floats_comparison(op, left, right);
+    }
+
+    internal_compiler_error("llvm binary comparison with number expect integers or floats");
 }
 
 inline llvm::Value* JotLLVMBackend::create_llvm_integers_comparison(TokenKind op, llvm::Value* left,

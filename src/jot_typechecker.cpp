@@ -208,7 +208,19 @@ std::any JotTypeChecker::visit(ForRangeStatement* node)
     const auto start_type = node_jot_type(node->range_start->accept(this));
     const auto end_type = node_jot_type(node->range_end->accept(this));
 
-    if (is_integer_type(start_type) && is_integer_type(end_type)) {
+    // For range start and end must be number type and has the same exacily type
+    if (is_number_type(start_type) && is_jot_types_equals(start_type, end_type)) {
+        // User declared step must be the same type as range start and end
+        if (node->step) {
+            const auto step_type = node_jot_type(node->step->accept(this));
+            if (!is_jot_types_equals(step_type, start_type)) {
+                context->diagnostics.add_diagnostic_error(
+                    node->position.position,
+                    "For range declared step must be the same type as range start and end");
+                throw "Stop";
+            }
+        }
+
         push_new_scope();
 
         // Define element name only inside loop scope

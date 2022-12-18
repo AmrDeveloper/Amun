@@ -288,10 +288,11 @@ class ForRangeStatement : public Statement {
   public:
     ForRangeStatement(Token position, std::string element_name,
                       std::shared_ptr<Expression> range_start,
-                      std::shared_ptr<Expression> range_end, std::shared_ptr<Statement> body)
+                      std::shared_ptr<Expression> range_end, std::shared_ptr<Expression> step,
+                      std::shared_ptr<Statement> body)
         : position(position), element_name(std::move(element_name)),
           range_start(std::move(range_start)), range_end(std::move(range_end)),
-          body(std::move(body))
+          step(std::move(step)), body(std::move(body))
     {
     }
 
@@ -303,6 +304,7 @@ class ForRangeStatement : public Statement {
     std::string                 element_name;
     std::shared_ptr<Expression> range_start;
     std::shared_ptr<Expression> range_end;
+    std::shared_ptr<Expression> step;
     std::shared_ptr<Statement>  body;
 };
 

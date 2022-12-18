@@ -711,7 +711,7 @@ std::shared_ptr<Statement> JotParser::parse_for_statement()
     auto keyword = consume_kind(TokenKind::ForKeyword, "Expect for keyword.");
 
     // Parse for each or for range statement
-    std::string variable_name = "it";
+    std::string name = "it";
     auto        expr = parse_expression();
     if (is_current_kind(TokenKind::Colon)) {
         if (expr->get_ast_node_type() != AstNodeType::LiteralExpr) {
@@ -721,7 +721,7 @@ std::shared_ptr<Statement> JotParser::parse_for_statement()
         }
 
         // Previous token is the LiteralExpression that contains variable name
-        variable_name = previous_token->literal;
+        name = previous_token->literal;
         // Consume the colon
         advanced_token();
         expr = parse_expression();
@@ -730,12 +730,22 @@ std::shared_ptr<Statement> JotParser::parse_for_statement()
     // For range statemnet for x -> y
     if (is_current_kind(TokenKind::DotDot)) {
         advanced_token();
-        auto range_end = parse_expression();
+        const auto range_end = parse_expression();
+
+        // If there is : after range the mean we have custom step expression
+        // If not use nullptr as default value for step (Handled in the Backend)
+        std::shared_ptr<Expression> step = nullptr;
+        if (is_current_kind(TokenKind::Colon)) {
+            advanced_token();
+            step = parse_expression();
+        }
+
         loop_stack_size += 1;
         auto body = parse_statement();
         loop_stack_size -= 1;
+
         current_ast_scope = parent_node_scope;
-        return std::make_shared<ForRangeStatement>(keyword, variable_name, expr, range_end, body);
+        return std::make_shared<ForRangeStatement>(keyword, name, expr, range_end, step, body);
     }
 
     context->diagnostics.add_diagnostic_error(keyword.position,
