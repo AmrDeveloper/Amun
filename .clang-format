@@ -7,3 +7,4 @@ FixNamespaceComments: false
 PointerAlignment: Left
 AlignConsecutiveDeclarations: true
 BreakBeforeBraces: Stroustrup
+AlwaysBreakTemplateDeclarations: true
