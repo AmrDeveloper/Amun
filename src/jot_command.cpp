@@ -1,8 +1,7 @@
 #include "../include/jot_command.hpp"
 #include <cstdio>
 
-void JotCommands::registerCommand(const char*                            literal,
-                                  const std::function<int(int, char**)>& command)
+void JotCommands::registerCommand(const char* literal, const CommandFunction& command)
 {
     commands_map[literal] = command;
 }
