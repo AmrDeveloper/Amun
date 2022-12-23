@@ -104,7 +104,7 @@ std::any JotTypeChecker::visit(FieldDeclaration* node)
         }
     }
 
-    bool is_first_defined = symbol_table->define(name, left_type);
+    bool is_first_defined = types_table.define(name, left_type);
     if (not is_first_defined) {
         context->diagnostics.add_diagnostic_error(
             node->get_name().position, "Field " + name + " is defined twice in the same scope");
@@ -123,7 +123,7 @@ std::any JotTypeChecker::visit(FunctionPrototype* node)
     auto return_type = node->get_return_type();
     auto function_type = std::make_shared<JotFunctionType>(
         name, parameters, return_type, node->has_varargs(), node->get_varargs_type());
-    bool is_first_defined = symbol_table->define(name.literal, function_type);
+    bool is_first_defined = types_table.define(name.literal, function_type);
     if (not is_first_defined) {
         context->diagnostics.add_diagnostic_error(node->get_name().position,
                                                   "function " + name.literal +
@@ -142,7 +142,7 @@ std::any JotTypeChecker::visit(FunctionDeclaration* node)
 
     push_new_scope();
     for (auto& parameter : prototype->get_parameters()) {
-        symbol_table->define(parameter->get_name().literal, parameter->get_type());
+        types_table.define(parameter->get_name().literal, parameter->get_type());
     }
     node->get_body()->accept(this);
     pop_current_scope();
@@ -154,7 +154,7 @@ std::any JotTypeChecker::visit(StructDeclaration* node)
 {
     auto struct_type = node->get_struct_type();
     auto struct_name = struct_type->name;
-    symbol_table->define(struct_name, struct_type);
+    types_table.define(struct_name, struct_type);
     return nullptr;
 }
 
@@ -176,7 +176,7 @@ std::any JotTypeChecker::visit(EnumDeclaration* node)
         throw "Stop";
     }
 
-    bool is_first_defined = symbol_table->define(name, enum_type);
+    bool is_first_defined = types_table.define(name, enum_type);
     if (not is_first_defined) {
         context->diagnostics.add_diagnostic_error(node->get_name().position,
                                                   "enumeration " + name +
@@ -224,7 +224,7 @@ std::any JotTypeChecker::visit(ForRangeStatement* node)
         push_new_scope();
 
         // Define element name only inside loop scope
-        symbol_table->define(node->element_name, start_type);
+        types_table.define(node->element_name, start_type);
 
         node->body->accept(this);
 
@@ -795,9 +795,9 @@ std::any JotTypeChecker::visit(CallExpression* node)
 {
     if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee())) {
         auto name = literal->get_name().literal;
-        if (symbol_table->is_defined(name)) {
-            auto lookup = symbol_table->lookup(name);
-            auto value = node_jot_type(symbol_table->lookup(name));
+        if (types_table.is_defined(name)) {
+            auto lookup = types_table.lookup(name);
+            auto value = node_jot_type(types_table.lookup(name));
 
             if (value->type_kind == TypeKind::Pointer) {
                 auto pointer_type = std::static_pointer_cast<JotPointerType>(value);
@@ -959,8 +959,8 @@ std::any JotTypeChecker::visit(EnumAccessExpression* node) { return node->get_ty
 std::any JotTypeChecker::visit(LiteralExpression* node)
 {
     auto name = node->get_name().literal;
-    if (symbol_table->is_defined(name)) {
-        auto value = symbol_table->lookup(name);
+    if (types_table.is_defined(name)) {
+        auto value = types_table.lookup(name);
         auto type = node_jot_type(value);
         node->set_type(type);
 
@@ -1172,9 +1172,6 @@ bool JotTypeChecker::check_number_limits(const char* literal, NumberKind kind)
     }
 }
 
-void JotTypeChecker::push_new_scope()
-{
-    symbol_table = std::make_shared<JotSymbolTable>(symbol_table);
-}
+inline void JotTypeChecker::push_new_scope() { types_table.push_new_scope(); }
 
-void JotTypeChecker::pop_current_scope() { symbol_table = symbol_table->get_parent_symbol_table(); }
+inline void JotTypeChecker::pop_current_scope() { types_table.pop_current_scope(); }

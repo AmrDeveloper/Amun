@@ -3,7 +3,7 @@
 #include "jot_ast.hpp"
 #include "jot_ast_visitor.hpp"
 #include "jot_scoped_list.hpp"
-#include "jot_symboltable.hpp"
+#include "jot_scoped_map.hpp"
 #include "jot_type.hpp"
 
 #include <llvm/IR/Constant.h>
@@ -82,11 +82,7 @@ class DeferFunctionPtrCall : public DeferCall {
 
 class JotLLVMBackend : public TreeVisitor {
   public:
-    JotLLVMBackend()
-    {
-        alloca_inst_global_scope = std::make_shared<JotSymbolTable>();
-        alloca_inst_scope = alloca_inst_global_scope;
-    }
+    JotLLVMBackend() { alloca_inst_table.push_new_scope(); }
 
     std::unique_ptr<llvm::Module> compile(std::string                      module_name,
                                           std::shared_ptr<CompilationUnit> compilation_unit);
@@ -244,11 +240,9 @@ class JotLLVMBackend : public TreeVisitor {
     std::unordered_map<std::string, llvm::Type*>                        structures_types_map;
 
     JotScopedList<std::shared_ptr<DeferCall>> defer_scoped_list;
+    JotScopedMap<std::string, std::any>       alloca_inst_table;
     std::stack<llvm::BasicBlock*>             break_blocks_stack;
     std::stack<llvm::BasicBlock*>             continue_blocks_stack;
-
-    std::shared_ptr<JotSymbolTable> alloca_inst_global_scope;
-    std::shared_ptr<JotSymbolTable> alloca_inst_scope;
 
     bool has_return_statement = false;
     bool has_break_or_continue_statement = false;
