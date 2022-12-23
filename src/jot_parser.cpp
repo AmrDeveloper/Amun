@@ -546,20 +546,14 @@ std::shared_ptr<ReturnStatement> JotParser::parse_return_statement()
 std::shared_ptr<DeferStatement> JotParser::parse_defer_statement()
 {
     auto defer_token = consume_kind(TokenKind::DeferKeyword, "Expect Defer keyword.");
-    if (current_ast_scope == AstNodeScope::FunctionScope) {
-        auto expression = parse_expression();
-        if (auto call_expression = std::dynamic_pointer_cast<CallExpression>(expression)) {
-            assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after defer call statement");
-            return std::make_shared<DeferStatement>(defer_token, call_expression);
-        }
-
-        context->diagnostics.add_diagnostic_error(defer_token.position,
-                                                  "defer keyword expect call expression");
-        throw "Stop";
+    auto expression = parse_expression();
+    if (auto call_expression = std::dynamic_pointer_cast<CallExpression>(expression)) {
+        assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after defer call statement");
+        return std::make_shared<DeferStatement>(defer_token, call_expression);
     }
-    context->diagnostics.add_diagnostic_error(
-        defer_token.position, "defer keyword can only used inside function main block, "
-                              "nested blocks such as if or while are not supported yet");
+
+    context->diagnostics.add_diagnostic_error(defer_token.position,
+                                              "defer keyword expect call expression");
     throw "Stop";
 }
 

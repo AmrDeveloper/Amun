@@ -2,6 +2,7 @@
 
 #include "jot_ast.hpp"
 #include "jot_ast_visitor.hpp"
+#include "jot_scoped_list.hpp"
 #include "jot_symboltable.hpp"
 #include "jot_type.hpp"
 
@@ -229,8 +230,6 @@ class JotLLVMBackend : public TreeVisitor {
 
     void execute_defer_calls();
 
-    void clear_defer_calls_stack();
-
     void push_alloca_inst_scope();
 
     void pop_alloca_inst_scope();
@@ -244,9 +243,9 @@ class JotLLVMBackend : public TreeVisitor {
     std::unordered_map<std::string, llvm::Constant*>                    constants_string_pool;
     std::unordered_map<std::string, llvm::Type*>                        structures_types_map;
 
-    std::vector<std::shared_ptr<DeferCall>> defer_calls_stack;
-    std::stack<llvm::BasicBlock*>           break_blocks_stack;
-    std::stack<llvm::BasicBlock*>           continue_blocks_stack;
+    JotScopedList<std::shared_ptr<DeferCall>> defer_scoped_list;
+    std::stack<llvm::BasicBlock*>             break_blocks_stack;
+    std::stack<llvm::BasicBlock*>             continue_blocks_stack;
 
     std::shared_ptr<JotSymbolTable> alloca_inst_global_scope;
     std::shared_ptr<JotSymbolTable> alloca_inst_scope;

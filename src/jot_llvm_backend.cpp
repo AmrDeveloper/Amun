@@ -38,16 +38,29 @@ JotLLVMBackend::compile(std::string module_name, std::shared_ptr<CompilationUnit
 std::any JotLLVMBackend::visit(BlockStatement* node)
 {
     push_alloca_inst_scope();
+    defer_scoped_list.push_new_scope();
+    bool should_execute_defers = true;
     for (auto& statement : node->get_nodes()) {
+        const auto ast_node_type = statement->get_ast_node_type();
+        if (ast_node_type == AstNodeType::Return) {
+            should_execute_defers = false;
+            execute_defer_calls();
+        }
+
         statement->accept(this);
 
         // In the same block there are no needs to generate code for unreachable code
-        if (statement->get_ast_node_type() == AstNodeType::Return or
-            statement->get_ast_node_type() == AstNodeType::Break or
-            statement->get_ast_node_type() == AstNodeType::Continue) {
+        if (ast_node_type == AstNodeType::Return or ast_node_type == AstNodeType::Break or
+            ast_node_type == AstNodeType::Continue) {
             break;
         }
     }
+
+    if (should_execute_defers) {
+        execute_defer_calls();
+    }
+
+    defer_scoped_list.pop_current_scope();
     pop_alloca_inst_scope();
     return 0;
 }
@@ -194,8 +207,6 @@ std::any JotLLVMBackend::visit(FunctionDeclaration* node)
     alloca_inst_scope->define(name, function);
 
     verifyFunction(*function);
-
-    clear_defer_calls_stack();
 
     has_return_statement = false;
     return function;
@@ -426,9 +437,6 @@ std::any JotLLVMBackend::visit(SwitchStatement* node)
 
 std::any JotLLVMBackend::visit(ReturnStatement* node)
 {
-    // Generate code for defer calls if there are any
-    execute_defer_calls();
-
     has_return_statement = true;
 
     if (not node->has_value()) {
@@ -505,7 +513,8 @@ std::any JotLLVMBackend::visit(DeferStatement* node)
                 }
                 auto defer_function_call = std::make_shared<DeferFunctionPtrCall>(
                     function_pointer, loaded, arguments_values);
-                defer_calls_stack.insert(defer_calls_stack.begin(), defer_function_call);
+                // defer_calls_stack.insert(defer_calls_stack.begin(), defer_function_call);
+                defer_scoped_list.push_front(defer_function_call);
             }
         }
         return 0;
@@ -544,7 +553,7 @@ std::any JotLLVMBackend::visit(DeferStatement* node)
     auto defer_function_call = std::make_shared<DeferFunctionCall>(function, arguments_values);
 
     // Inser must be at the begin to simulate stack but in vector to easy traverse and clear
-    defer_calls_stack.insert(defer_calls_stack.begin(), defer_function_call);
+    defer_scoped_list.push_front(defer_function_call);
     return 0;
 }
 
@@ -1947,12 +1956,11 @@ inline bool JotLLVMBackend::is_global_block() { return Builder.GetInsertBlock() 
 
 inline void JotLLVMBackend::execute_defer_calls()
 {
-    for (auto& defer_call : defer_calls_stack) {
+    auto defer_calls = defer_scoped_list.get_scope_elements();
+    for (auto& defer_call : defer_calls) {
         defer_call->generate_call();
     }
 }
-
-inline void JotLLVMBackend::clear_defer_calls_stack() { defer_calls_stack.clear(); }
 
 inline void JotLLVMBackend::push_alloca_inst_scope()
 {
