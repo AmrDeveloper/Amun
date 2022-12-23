@@ -1,0 +1,8 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    for 1.0 .. 3.0 : 0.1 {
+        printf("Single for %f\n", it);
+    }
+    return 0;
+}
