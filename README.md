@@ -17,6 +17,7 @@ A Statically typed, compiled general purpose low level programming language buil
 - If, else if and else statements
 - If Else Expression
 - While statement
+- For Range statement with optional name and step
 - Switch Statement and Expression
 - Break and continue statements with optional times
 - Declare Prefix, Infix, Postfix functions
