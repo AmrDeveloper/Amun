@@ -1,12 +1,12 @@
 extern fun printf(format *char, value int64) int64;
 
 fun main() int64 {
-    var array3d = [[[[0]]], [[[1]]], [[[2]]], [[[3]]]];
+    var array4d = [[[[0]]], [[[1]]], [[[2]]], [[[3]]]];
 
-    printf("%d ", array3d[0][0][0][0]);
-    printf("%d ", array3d[1][0][0][0]);
-    printf("%d ", array3d[2][0][0][0]);
-    printf("%d ", array3d[3][0][0][0]);
+    printf("%d ", array4d[0][0][0][0]);
+    printf("%d ", array4d[1][0][0][0]);
+    printf("%d ", array4d[2][0][0][0]);
+    printf("%d ", array4d[3][0][0][0]);
 
     return 0;
 }
