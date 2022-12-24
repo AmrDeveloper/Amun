@@ -224,7 +224,9 @@ class JotLLVMBackend : public TreeVisitor {
 
     bool is_global_block();
 
-    void execute_defer_calls();
+    void execute_scope_defer_calls();
+
+    void execute_all_defer_calls();
 
     void push_alloca_inst_scope();
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <list>
+#include <vector>
 
 template <typename T>
 class JotScopedList {
@@ -13,10 +14,14 @@ class JotScopedList {
 
     std::list<T> get_scope_elements() { return linked_scopes.back(); }
 
+    std::list<T> get_scope_elements(size_t i) { return linked_scopes[i]; }
+
     void push_new_scope() { linked_scopes.push_back({}); }
 
     void pop_current_scope() { linked_scopes.pop_back(); }
 
+    size_t size() { return linked_scopes.size(); }
+
   private:
-    std::list<std::list<T>> linked_scopes;
+    std::vector<std::list<T>> linked_scopes;
 };

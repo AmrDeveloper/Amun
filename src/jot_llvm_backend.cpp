@@ -44,7 +44,7 @@ std::any JotLLVMBackend::visit(BlockStatement* node)
         const auto ast_node_type = statement->get_ast_node_type();
         if (ast_node_type == AstNodeType::Return) {
             should_execute_defers = false;
-            execute_defer_calls();
+            execute_all_defer_calls();
         }
 
         statement->accept(this);
@@ -57,7 +57,7 @@ std::any JotLLVMBackend::visit(BlockStatement* node)
     }
 
     if (should_execute_defers) {
-        execute_defer_calls();
+        execute_scope_defer_calls();
     }
 
     defer_scoped_list.pop_current_scope();
@@ -1954,11 +1954,22 @@ llvm::Function* JotLLVMBackend::lookup_function(std::string name)
 
 inline bool JotLLVMBackend::is_global_block() { return Builder.GetInsertBlock() == nullptr; }
 
-inline void JotLLVMBackend::execute_defer_calls()
+inline void JotLLVMBackend::execute_scope_defer_calls()
 {
     auto defer_calls = defer_scoped_list.get_scope_elements();
     for (auto& defer_call : defer_calls) {
         defer_call->generate_call();
+    }
+}
+
+inline void JotLLVMBackend::execute_all_defer_calls()
+{
+    const auto size = defer_scoped_list.size();
+    for (int i = size - 1; i >= 0; i--) {
+        auto defer_calls = defer_scoped_list.get_scope_elements(i);
+        for (auto& defer_call : defer_calls) {
+            defer_call->generate_call();
+        }
     }
 }
 
