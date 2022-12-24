@@ -1,0 +1,17 @@
+import "cstdio"
+
+fun main() int64 {
+    var x = 10;
+    defer printf("Function Defer %d\n", x);
+
+    {
+        x = 11;
+        defer printf("Scope Defer %d\n", x);
+        printf("Scope %d\n", x);
+    }
+
+    x = 12;
+    printf("After Scope %d\n", x);
+
+    return 0;
+}
