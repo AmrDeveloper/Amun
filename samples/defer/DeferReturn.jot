@@ -1,0 +1,17 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun function() void {
+    defer printf("Return From Function\n");
+    {
+        defer printf("Return From Scope\n");
+        if true {
+            return;
+        }
+    }
+    return;
+}
+
+fun main() int64 {
+    function();
+    return 0;
+}
