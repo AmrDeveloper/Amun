@@ -370,6 +370,44 @@ std::any JotLLVMBackend::visit(ForRangeStatement* node)
     return 0;
 }
 
+std::any JotLLVMBackend::visit(ForeverStatement* node)
+{
+    auto body_block = llvm::BasicBlock::Create(llvm_context, "forever");
+    auto end_block = llvm::BasicBlock::Create(llvm_context, "forever.end");
+
+    break_blocks_stack.push(end_block);
+    continue_blocks_stack.push(body_block);
+
+    push_alloca_inst_scope();
+
+    const auto current_function = Builder.GetInsertBlock()->getParent();
+
+    Builder.CreateBr(body_block);
+
+    // Generate For body IR Code
+    current_function->getBasicBlockList().push_back(body_block);
+    Builder.SetInsertPoint(body_block);
+
+    node->body->accept(this);
+    pop_alloca_inst_scope();
+
+    if (has_break_or_continue_statement) {
+        has_break_or_continue_statement = false;
+    }
+    else {
+        Builder.CreateBr(body_block);
+    }
+
+    // Set the insertion point to the end block
+    current_function->getBasicBlockList().push_back(end_block);
+    Builder.SetInsertPoint(end_block);
+
+    break_blocks_stack.pop();
+    continue_blocks_stack.pop();
+
+    return 0;
+}
+
 std::any JotLLVMBackend::visit(WhileStatement* node)
 {
     auto current_function = Builder.GetInsertBlock()->getParent();

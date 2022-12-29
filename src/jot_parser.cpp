@@ -704,6 +704,15 @@ std::shared_ptr<Statement> JotParser::parse_for_statement()
 
     auto keyword = consume_kind(TokenKind::ForKeyword, "Expect for keyword.");
 
+    // Parse for ever statement
+    if (is_current_kind(TokenKind::OpenBrace)) {
+        loop_stack_size += 1;
+        auto body = parse_statement();
+        loop_stack_size -= 1;
+        current_ast_scope = parent_node_scope;
+        return std::make_shared<ForeverStatement>(keyword, body);
+    }
+
     // Parse for each or for range statement
     std::string name = "it";
     auto        expr = parse_expression();

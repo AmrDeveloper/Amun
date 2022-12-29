@@ -11,6 +11,7 @@ class StructDeclaration;
 class EnumDeclaration;
 class IfStatement;
 class ForRangeStatement;
+class ForeverStatement;
 class WhileStatement;
 class SwitchStatement;
 class ReturnStatement;
@@ -36,6 +37,8 @@ class StatementVisitor {
     virtual std::any visit(IfStatement* node) = 0;
 
     virtual std::any visit(ForRangeStatement* node) = 0;
+
+    virtual std::any visit(ForeverStatement* node) = 0;
 
     virtual std::any visit(WhileStatement* node) = 0;
 

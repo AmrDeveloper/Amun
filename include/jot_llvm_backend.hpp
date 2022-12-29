@@ -105,6 +105,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(ForRangeStatement* node) override;
 
+    std::any visit(ForeverStatement* node) override;
+
     std::any visit(WhileStatement* node) override;
 
     std::any visit(SwitchStatement* node) override;

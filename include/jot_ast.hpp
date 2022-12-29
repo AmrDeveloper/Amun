@@ -8,8 +8,6 @@
 #include <memory>
 #include <vector>
 
-// TODO: All ast nodes can be improved and using std::move not copy values
-
 /*
  * This enum types will be very useful in the refactor
  * and make it easy to check for the type without castring
@@ -24,6 +22,7 @@ enum class AstNodeType {
     Enum,
     If,
     ForRange,
+    Forever,
     While,
     Switch,
     Return,
@@ -306,6 +305,21 @@ class ForRangeStatement : public Statement {
     std::shared_ptr<Expression> range_end;
     std::shared_ptr<Expression> step;
     std::shared_ptr<Statement>  body;
+};
+
+class ForeverStatement : public Statement {
+  public:
+    ForeverStatement(Token position, std::shared_ptr<Statement> body)
+        : position(position), body(std::move(body))
+    {
+    }
+
+    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::Forever; }
+
+    Token                      position;
+    std::shared_ptr<Statement> body;
 };
 
 class WhileStatement : public Statement {

@@ -238,6 +238,14 @@ std::any JotTypeChecker::visit(ForRangeStatement* node)
     throw "Stop";
 }
 
+std::any JotTypeChecker::visit(ForeverStatement* node)
+{
+    push_new_scope();
+    node->body->accept(this);
+    pop_current_scope();
+    return 0;
+}
+
 std::any JotTypeChecker::visit(WhileStatement* node)
 {
     auto left_type = node_jot_type(node->get_condition()->accept(this));
