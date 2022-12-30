@@ -1759,16 +1759,13 @@ llvm::Value* JotLLVMBackend::access_struct_member_pointer(DotExpression* express
     auto callee_value = llvm_node_value(callee->accept(this));
     auto callee_llvm_type = llvm_type_from_jot_type(callee->get_type_node());
 
-    // Indices to access structure member
-    std::vector<llvm::Value*> indices(2);
-    indices[0] = zero_int32_value;
-    indices[1] = llvm_number_value(std::to_string(expression->field_index), NumberKind::Integer32);
+    auto index = llvm_number_value(std::to_string(expression->field_index), NumberKind::Integer32);
 
     // Access struct member allocaed on the stack or derefernecs from pointer
     // struct.member or (*struct).member
     if (callee_llvm_type->isStructTy()) {
         // Return a pointer to struct member
-        return Builder.CreateGEP(callee_llvm_type, callee_value, indices);
+        return Builder.CreateGEP(callee_llvm_type, callee_value, {zero_int32_value, index});
     }
 
     // Syntax sugger for accessing struct member from pointer to struct, like -> operator in c
@@ -1779,7 +1776,7 @@ llvm::Value* JotLLVMBackend::access_struct_member_pointer(DotExpression* express
         // Auto Dereferencing the struct pointer
         auto struct_value = derefernecs_llvm_pointer(callee_value);
         // Return a pointer to struct member
-        return Builder.CreateGEP(struct_type, struct_value, indices);
+        return Builder.CreateGEP(struct_type, struct_value, {zero_int32_value, index});
     }
 
     internal_compiler_error("Invalid callee type in access_struct_member_pointer");
