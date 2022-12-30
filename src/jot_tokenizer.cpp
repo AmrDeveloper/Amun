@@ -185,10 +185,7 @@ Token JotTokenizer::consume_symbol()
     }
     size_t len = current_position - start_position + 1;
     auto   literal = source_code.substr(start_position - 1, len);
-    if (language_keywords.find(literal) == language_keywords.end()) {
-        return build_token(TokenKind::Symbol, literal);
-    }
-    auto kind = language_keywords[literal];
+    auto   kind = resolve_keyword_kind(literal.c_str());
     return build_token(kind, literal);
 }
 

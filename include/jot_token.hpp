@@ -1,5 +1,8 @@
 #pragma once
 
+#include "jot_basic.hpp"
+
+#include <cstring>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -9,7 +12,6 @@ enum TokenKind {
     ImportKeyword,
 
     VarKeyword,
-    TypeKeyword,
     EnumKeyword,
     StructKeyword,
     FunKeyword,
@@ -111,7 +113,6 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::LoadKeyword, "Load"},
     {TokenKind::ImportKeyword, "Import"},
     {TokenKind::VarKeyword, "Var"},
-    {TokenKind::TypeKeyword, "Type"},
     {TokenKind::FunKeyword, "Fun"},
     {TokenKind::EnumKeyword, "Enum"},
     {TokenKind::StructKeyword, "Struct"},
@@ -208,35 +209,6 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::EndOfFile, "End of the file"},
 };
 
-static std::unordered_map<std::string, TokenKind> language_keywords = {
-    {"load", TokenKind::LoadKeyword},
-    {"import", TokenKind::ImportKeyword},
-    {"var", TokenKind::VarKeyword},
-    {"type", TokenKind::TypeKeyword},
-    {"fun", TokenKind::FunKeyword},
-    {"enum", TokenKind::EnumKeyword},
-    {"struct", TokenKind::StructKeyword},
-    {"return", TokenKind::ReturnKeyword},
-    {"extern", TokenKind::ExternKeyword},
-    {"if", TokenKind::IfKeyword},
-    {"else", TokenKind::ElseKeyword},
-    {"for", TokenKind::ForKeyword},
-    {"while", TokenKind::WhileKeyword},
-    {"switch", TokenKind::SwitchKeyword},
-    {"cast", TokenKind::CastKeyword},
-    {"defer", TokenKind::DeferKeyword},
-    {"true", TokenKind::TrueKeyword},
-    {"false", TokenKind::FalseKeyword},
-    {"null", TokenKind::NullKeyword},
-    {"break", TokenKind::BreakKeyword},
-    {"continue", TokenKind::ContinueKeyword},
-    {"prefix", TokenKind::PrefixKeyword},
-    {"infix", TokenKind::InfixKeyword},
-    {"postfix", TokenKind::PostfixKeyword},
-    {"varargs", TokenKind::VarargsKeyword},
-    {"type_size", TokenKind::TypeSizeKeyword},
-    {"value_size", TokenKind::ValueSizeKeyword}};
-
 static std::unordered_set<TokenKind> unary_operators{
     TokenKind::Minus, TokenKind::Bang, TokenKind::Star, TokenKind::And, TokenKind::Not,
 };
@@ -264,6 +236,94 @@ struct Token {
     TokenSpan   position;
     std::string literal;
 };
+
+static TokenKind resolve_keyword_kind(const char* keyword)
+{
+    switch (strlen(keyword)) {
+    case 2: {
+        if (str2Equals("if", keyword))
+            return TokenKind::IfKeyword;
+        return TokenKind::Symbol;
+    }
+    case 3: {
+        if (str3Equals("fun", keyword))
+            return TokenKind::FunKeyword;
+        if (str3Equals("var", keyword))
+            return TokenKind::VarKeyword;
+        if (str3Equals("for", keyword))
+            return TokenKind::ForKeyword;
+        return TokenKind::Symbol;
+    }
+    case 4: {
+        if (str4Equals("load", keyword))
+            return TokenKind::LoadKeyword;
+        if (str4Equals("null", keyword))
+            return TokenKind::NullKeyword;
+        if (str4Equals("true", keyword))
+            return TokenKind::TrueKeyword;
+        if (str4Equals("cast", keyword))
+            return TokenKind::CastKeyword;
+        if (str4Equals("else", keyword))
+            return TokenKind::ElseKeyword;
+        if (str4Equals("enum", keyword))
+            return TokenKind::EnumKeyword;
+        return TokenKind::Symbol;
+    }
+    case 5: {
+        if (str5Equals("while", keyword))
+            return TokenKind::WhileKeyword;
+        if (str5Equals("defer", keyword))
+            return TokenKind::DeferKeyword;
+        if (str5Equals("false", keyword))
+            return TokenKind::FalseKeyword;
+        if (str5Equals("break", keyword))
+            return TokenKind::BreakKeyword;
+        if (str5Equals("infix", keyword))
+            return TokenKind::InfixKeyword;
+        return TokenKind::Symbol;
+    }
+    case 6: {
+        if (str6Equals("import", keyword))
+            return TokenKind::ImportKeyword;
+        if (str6Equals("struct", keyword))
+            return TokenKind::StructKeyword;
+        if (str6Equals("return", keyword))
+            return TokenKind::ReturnKeyword;
+        if (str6Equals("extern", keyword))
+            return TokenKind::ExternKeyword;
+        if (str6Equals("prefix", keyword))
+            return TokenKind::PrefixKeyword;
+        if (str6Equals("switch", keyword))
+            return TokenKind::SwitchKeyword;
+        return TokenKind::Symbol;
+    }
+    case 7: {
+        if (str7Equals("postfix", keyword))
+            return TokenKind::PostfixKeyword;
+        if (str7Equals("varargs", keyword))
+            return TokenKind::VarargsKeyword;
+        return TokenKind::Symbol;
+    }
+    case 8: {
+        if (str8Equals("continue", keyword))
+            return TokenKind::ContinueKeyword;
+        return TokenKind::Symbol;
+    }
+    case 9: {
+        if (str9Equals("type_size", keyword))
+            return TokenKind::TypeSizeKeyword;
+        return TokenKind::Symbol;
+    }
+    case 10: {
+        if (str10Equals("value_size", keyword))
+            return TokenKind::ValueSizeKeyword;
+        return TokenKind::Symbol;
+    }
+    default: {
+        return TokenKind::Symbol;
+    }
+    }
+}
 
 inline const char* get_token_kind_literal(TokenKind kind) { return token_kind_literal[kind]; }
 
