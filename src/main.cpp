@@ -87,6 +87,7 @@ int execute_help_command(unused int argc, char** argv)
     printf("Options:\n");
     printf("    -o  <name>                 : Set the output exeutable name.\n");
     printf("    -w                         : Enable reporting warns, disabled by default.\n");
+    printf("    -werr                      : Convert warns to erros.\n");
     return EXIT_SUCCESS;
 }
 
