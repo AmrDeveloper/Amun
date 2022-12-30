@@ -1009,17 +1009,32 @@ std::any JotTypeChecker::visit(NumberExpression* node)
 
 std::any JotTypeChecker::visit(ArrayExpression* node)
 {
-    auto values = node->get_values();
-    for (size_t i = 1; i < values.size(); i++) {
-        if (!is_jot_types_equals(values[i]->get_type_node(), values[i - 1]->get_type_node())) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_position().position, "Array elements with index " +
-                                                   std::to_string(i - 1) + " and " +
-                                                   std::to_string(i) + " are not the same types");
-            throw "Stop";
-        }
+    const auto values = node->get_values();
+    const auto values_size = values.size();
+    if (values_size == 0) {
+        return node->get_type_node();
     }
-    return node->get_type_node();
+
+    auto last_element_type = node_jot_type(values[0]->accept(this));
+    for (size_t i = 1; i < values_size; i++) {
+        auto current_element_type = node_jot_type(values[i]->accept(this));
+        if (is_jot_types_equals(current_element_type, last_element_type)) {
+            last_element_type = current_element_type;
+            continue;
+        }
+
+        context->diagnostics.add_diagnostic_error(
+            node->get_position().position, "Array elements with index " + std::to_string(i - 1) +
+                                               " and " + std::to_string(i) +
+                                               " are not the same types");
+        throw "Stop";
+    }
+
+    // Modify element_type with the type of first elements
+    auto array_type = std::static_pointer_cast<JotArrayType>(node->get_type_node());
+    array_type->element_type = last_element_type;
+    node->set_type_node(array_type);
+    return array_type;
 }
 
 std::any JotTypeChecker::visit(StringExpression* node) { return node->get_type_node(); }
