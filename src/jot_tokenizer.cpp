@@ -206,6 +206,7 @@ Token JotTokenizer::consume_number()
 
     auto number_end_position = current_position;
 
+    // Signed Integers types
     if (match('i')) {
         if (match('1'))
             kind = match('6') ? Integer16Type : Integer1Type;
@@ -218,6 +219,20 @@ Token JotTokenizer::consume_number()
         else
             return build_token(TokenKind::Invalid, "Invalid integer type");
     }
+    // Un Signed Integers types
+    if (match('u')) {
+        if (match('1') && match('6'))
+            kind = UInteger16Type;
+        else if (match('8'))
+            kind = UInteger8Type;
+        else if (match('3') && match('2'))
+            kind = UInteger32Type;
+        else if (match('6') && match('4'))
+            kind = UInteger64Type;
+        else
+            return build_token(TokenKind::Invalid, "Invalid integer type");
+    }
+    // Floating Pointers types
     else if (match('f')) {
         if (match('3') && match('2'))
             kind = Float32Type;

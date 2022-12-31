@@ -31,6 +31,10 @@ enum class NumberKind : short {
     Integer16,
     Integer32,
     Integer64,
+    UInteger8,
+    UInteger16,
+    UInteger32,
+    UInteger64,
     Float32,
     Float64,
 };

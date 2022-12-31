@@ -859,7 +859,7 @@ std::any JotTypeChecker::visit(DotExpression* node)
     auto callee_type = node_jot_type(callee);
     auto callee_type_kind = callee_type->type_kind;
 
-    if (callee_type->type_kind == TypeKind::Structure) {
+    if (callee_type_kind == TypeKind::Structure) {
         auto struct_type = std::static_pointer_cast<JotStructType>(callee_type);
         auto field_name = node->get_field_name().literal;
         auto fields_names = struct_type->fields_names;
@@ -1167,20 +1167,40 @@ bool JotTypeChecker::check_number_limits(const char* literal, NumberKind kind)
         return value >= std::numeric_limits<int8_t>::min() and
                value <= std::numeric_limits<int8_t>::max();
     }
+    case NumberKind::UInteger8: {
+        auto value = strtoll(literal, NULL, 0);
+        return value >= std::numeric_limits<uint8_t>::min() and
+               value <= std::numeric_limits<uint8_t>::max();
+    }
     case NumberKind::Integer16: {
         auto value = strtoll(literal, NULL, 0);
         return value >= std::numeric_limits<int16_t>::min() and
                value <= std::numeric_limits<int16_t>::max();
+    }
+    case NumberKind::UInteger16: {
+        auto value = strtoll(literal, NULL, 0);
+        return value >= std::numeric_limits<uint16_t>::min() and
+               value <= std::numeric_limits<uint16_t>::max();
     }
     case NumberKind::Integer32: {
         auto value = strtoll(literal, NULL, 0);
         return value >= std::numeric_limits<int32_t>::min() and
                value <= std::numeric_limits<int32_t>::max();
     }
+    case NumberKind::UInteger32: {
+        auto value = strtoll(literal, NULL, 0);
+        return value >= std::numeric_limits<uint32_t>::min() and
+               value <= std::numeric_limits<uint32_t>::max();
+    }
     case NumberKind::Integer64: {
         auto value = strtoll(literal, NULL, 0);
         return value >= std::numeric_limits<int64_t>::min() and
                value <= std::numeric_limits<int64_t>::max();
+    }
+    case NumberKind::UInteger64: {
+        auto value = strtoll(literal, NULL, 0);
+        return value >= std::numeric_limits<uint64_t>::min() and
+               value <= std::numeric_limits<uint64_t>::max();
     }
     case NumberKind::Float32: {
         auto value = std::atof(literal);

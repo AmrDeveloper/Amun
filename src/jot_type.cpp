@@ -175,6 +175,10 @@ inline const char* jot_number_kind_literal(NumberKind kind)
     case NumberKind::Integer16: return "Int16";
     case NumberKind::Integer32: return "Int32";
     case NumberKind::Integer64: return "Int64";
+    case NumberKind::UInteger8: return "UInt8";
+    case NumberKind::UInteger16: return "UInt16";
+    case NumberKind::UInteger32: return "UInt32";
+    case NumberKind::UInteger64: return "UInt64";
     case NumberKind::Float32: return "Float32";
     case NumberKind::Float64: return "Float64";
     default: return "Number";

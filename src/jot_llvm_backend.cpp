@@ -1343,7 +1343,7 @@ std::any JotLLVMBackend::visit(BooleanExpression* node)
     return llvm_boolean_value(node->get_value().kind == TokenKind::TrueKeyword);
 }
 
-std::any JotLLVMBackend::visit([[maybe_unused]] NullExpression* node)
+std::any JotLLVMBackend::visit(NullExpression* node)
 {
     return llvm_type_null_value(node->null_base_type);
 }
@@ -1411,17 +1411,33 @@ inline llvm::Value* JotLLVMBackend::llvm_number_value(const std::string& value_l
         auto value = std::stoi(value_litearl.c_str());
         return llvm::ConstantInt::get(llvm_int8_type, value);
     }
+    case NumberKind::UInteger8: {
+        auto value = std::stoi(value_litearl.c_str());
+        return llvm::ConstantInt::get(llvm_int8_type, value, true);
+    }
     case NumberKind::Integer16: {
         auto value = std::stoi(value_litearl.c_str());
         return llvm::ConstantInt::get(llvm_int16_type, value);
+    }
+    case NumberKind::UInteger16: {
+        auto value = std::stoi(value_litearl.c_str());
+        return llvm::ConstantInt::get(llvm_int16_type, value, true);
     }
     case NumberKind::Integer32: {
         auto value = std::stoi(value_litearl.c_str());
         return llvm::ConstantInt::get(llvm_int32_type, value);
     }
+    case NumberKind::UInteger32: {
+        auto value = std::stoi(value_litearl.c_str());
+        return llvm::ConstantInt::get(llvm_int32_type, value, true);
+    }
     case NumberKind::Integer64: {
         auto value = std::strtoll(value_litearl.c_str(), NULL, 0);
         return llvm::ConstantInt::get(llvm_int64_type, value);
+    }
+    case NumberKind::UInteger64: {
+        auto value = std::strtoll(value_litearl.c_str(), NULL, 0);
+        return llvm::ConstantInt::get(llvm_int64_type, value, true);
     }
     case NumberKind::Float32: {
         auto value = std::stod(value_litearl.c_str());
@@ -1462,6 +1478,10 @@ llvm::Type* JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
         case NumberKind::Integer16: return llvm_int16_type;
         case NumberKind::Integer32: return llvm_int32_type;
         case NumberKind::Integer64: return llvm_int64_type;
+        case NumberKind::UInteger8: return llvm_int8_type;
+        case NumberKind::UInteger16: return llvm_int16_type;
+        case NumberKind::UInteger32: return llvm_int32_type;
+        case NumberKind::UInteger64: return llvm_int64_type;
         case NumberKind::Float32: return llvm_float32_type;
         case NumberKind::Float64: return llvm_float64_type;
         }

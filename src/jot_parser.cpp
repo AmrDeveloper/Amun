@@ -1131,6 +1131,10 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression()
     case TokenKind::Integer16Type:
     case TokenKind::Integer32Type:
     case TokenKind::Integer64Type:
+    case TokenKind::UInteger8Type:
+    case TokenKind::UInteger16Type:
+    case TokenKind::UInteger32Type:
+    case TokenKind::UInteger64Type:
     case TokenKind::Float:
     case TokenKind::Float32Type:
     case TokenKind::Float64Type: {
@@ -1420,12 +1424,24 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type()
         return jot_int16_ty;
     }
 
+    if (type_literal == "uint16") {
+        return jot_uint16_ty;
+    }
+
     if (type_literal == "int32") {
         return jot_int32_ty;
     }
 
+    if (type_literal == "uint32") {
+        return jot_uint32_ty;
+    }
+
     if (type_literal == "int64") {
         return jot_int64_ty;
+    }
+
+    if (type_literal == "uint64") {
+        return jot_uint64_ty;
     }
 
     if (type_literal == "float32") {
@@ -1438,6 +1454,10 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type()
 
     if (type_literal == "char" || type_literal == "int8") {
         return jot_int8_ty;
+    }
+
+    if (type_literal == "uchar" || type_literal == "uint8") {
+        return jot_uint8_ty;
     }
 
     if (type_literal == "bool" || type_literal == "int1") {
@@ -1483,6 +1503,10 @@ NumberKind JotParser::get_number_kind(TokenKind token)
     case TokenKind::Integer16Type: return NumberKind::Integer16;
     case TokenKind::Integer32Type: return NumberKind::Integer32;
     case TokenKind::Integer64Type: return NumberKind::Integer64;
+    case TokenKind::UInteger8Type: return NumberKind::UInteger8;
+    case TokenKind::UInteger16Type: return NumberKind::UInteger16;
+    case TokenKind::UInteger32Type: return NumberKind::UInteger32;
+    case TokenKind::UInteger64Type: return NumberKind::UInteger64;
     case TokenKind::Float: return NumberKind::Float64;
     case TokenKind::Float32Type: return NumberKind::Float32;
     case TokenKind::Float64Type: return NumberKind::Float64;
