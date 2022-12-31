@@ -1,0 +1,7 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var uc : uint8 = 255u8;
+    printf("%d\n", uc);
+    return 0;
+}
