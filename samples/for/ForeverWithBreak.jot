@@ -1,0 +1,9 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    for {
+        printf("Hello, World!\n");
+        break;
+    }
+    return 0;
+}

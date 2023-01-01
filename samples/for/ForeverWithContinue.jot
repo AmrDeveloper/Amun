@@ -1,0 +1,10 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    for {
+        printf("Before Continue\n");
+        continue;
+        printf("Unreactable after Continue\n");
+    }
+    return 0;
+}
