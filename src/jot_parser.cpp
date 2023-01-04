@@ -249,7 +249,7 @@ std::shared_ptr<FieldDeclaration> JotParser::parse_field_declaration(bool is_glo
     assert_kind(TokenKind::Equal, "Expect = after variable name.");
     auto value = parse_expression();
     assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after field declaration");
-    return std::make_shared<FieldDeclaration>(name, value->get_type_node(), value, is_global);
+    return std::make_shared<FieldDeclaration>(name, jot_none_ty, value, is_global);
 }
 
 std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionCallKind kind,

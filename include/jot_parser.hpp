@@ -33,8 +33,6 @@ class JotParser {
     std::shared_ptr<CompilationUnit> parse_compilation_unit();
 
   private:
-    int loop_stack_size = 0;
-
     std::vector<std::shared_ptr<Statement>> parse_import_declaration();
 
     std::vector<std::shared_ptr<Statement>> parse_load_declaration();
@@ -180,4 +178,5 @@ class JotParser {
     AstNodeScope                current_ast_scope = AstNodeScope::GlobalScope;
     std::string_view            current_struct_name = "";
     int                         current_struct_unknown_fields = 0;
+    int                         loop_stack_size = 0;
 };
