@@ -25,7 +25,7 @@ int execute_create_command(unused int argc, char** argv)
     create_new_directory(project_name);
 
     std::stringstream string_stream;
-    string_stream << "extern fun puts(c *char) int32;" << '\n';
+    string_stream << "import \"cstdio\"" << '\n';
     string_stream << "\n";
     string_stream << "fun main() int32 {" << '\n';
     string_stream << R"(    puts("Hello, World!\n");)" << '\n';
