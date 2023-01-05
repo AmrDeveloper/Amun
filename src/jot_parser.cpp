@@ -1021,53 +1021,101 @@ std::shared_ptr<Expression> JotParser::parse_prefix_call_expression()
         arguments.push_back(parse_prefix_expression());
         return std::make_shared<CallExpression>(symbol_token, literal, arguments);
     }
-    return parse_postfix_expression();
+    return parse_postfix_increment_or_decrement();
 }
 
-std::shared_ptr<Expression> JotParser::parse_postfix_expression()
+std::shared_ptr<Expression> JotParser::parse_postfix_increment_or_decrement()
 {
-    auto expression = parse_postfix_call_expression();
-    while (true) {
-        if (is_current_kind(TokenKind::OpenParen)) {
-            Token                                    position = peek_and_advance_token();
-            std::vector<std::shared_ptr<Expression>> arguments;
-            while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
-                arguments.push_back(parse_expression());
-                if (is_current_kind(TokenKind::Comma))
-                    advanced_token();
-            }
-            assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
-            expression = std::make_shared<CallExpression>(position, expression, arguments);
+    auto expression = parse_structure_access_expression();
+
+    if (is_current_kind(TokenKind::PlusPlus) or is_current_kind(TokenKind::MinusMinus)) {
+        auto token = peek_and_advance_token();
+        auto ast_node_type = expression->get_ast_node_type();
+        if ((ast_node_type == AstNodeType::LiteralExpr) or
+            (ast_node_type == AstNodeType::IndexExpr) or (ast_node_type == AstNodeType::DotExpr)) {
+            return std::make_shared<PostfixUnaryExpression>(token, expression);
         }
-        else if (is_current_kind(TokenKind::OpenBracket)) {
-            Token position = peek_and_advance_token();
-            auto  index = parse_expression();
-            assert_kind(TokenKind::CloseBracket, "Expect ] after index value");
-            expression = std::make_shared<IndexExpression>(position, expression, index);
-        }
-        else if (is_current_kind(TokenKind::PlusPlus) or is_current_kind(TokenKind::MinusMinus)) {
-            auto token = peek_and_advance_token();
-            auto ast_node_type = expression->get_ast_node_type();
-            if ((ast_node_type == AstNodeType::LiteralExpr) or
-                (ast_node_type == AstNodeType::IndexExpr) or
-                (ast_node_type == AstNodeType::DotExpr)) {
-                return std::make_shared<PostfixUnaryExpression>(token, expression);
+        context->diagnostics.add_diagnostic_error(
+            token.position,
+            "Unary ++ or -- expect left expression to be variable or index expression");
+        throw "Stop";
+    }
+
+    return expression;
+}
+
+std::shared_ptr<Expression> JotParser::parse_structure_access_expression()
+{
+    auto expression = parse_enumeration_attribute_expression();
+    while (is_current_kind(TokenKind::Dot)) {
+        // Parse structure field access expression
+        auto dot_token = peek_and_advance_token();
+        auto field_name = consume_kind(TokenKind::Symbol, "Expect literal as field name");
+        expression = std::make_shared<DotExpression>(dot_token, expression, field_name);
+    }
+    return expression;
+}
+
+std::shared_ptr<Expression> JotParser::parse_enumeration_attribute_expression()
+{
+    auto expression = parse_postfix_index_expression();
+    if (is_current_kind(TokenKind::Dot) and
+        expression->get_ast_node_type() == AstNodeType::LiteralExpr) {
+        auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression);
+        auto literal_str = literal->get_name().literal;
+        if (context->enumerations.count(literal_str)) {
+            auto dot_token = peek_and_advance_token();
+            auto attribute = consume_kind(TokenKind::Symbol, "Expect attribute name for enum");
+            auto attribute_str = attribute.literal;
+            if (attribute_str == "count") {
+                auto  count = context->enumerations[literal_str]->values.size();
+                Token number_token = {TokenKind::Integer, attribute.position,
+                                      std::to_string(count)};
+                auto  number_type = jot_int64_ty;
+                return std::make_shared<NumberExpression>(number_token, number_type);
             }
+
             context->diagnostics.add_diagnostic_error(
-                token.position,
-                "Unary ++ or -- expect left expression to be variable or index expression");
+                attribute.position, "Un supported attribute for enumeration type");
             throw "Stop";
         }
-        else {
-            break;
+    }
+    return expression;
+}
+
+std::shared_ptr<Expression> JotParser::parse_postfix_index_expression()
+{
+    auto expression = parse_function_call_expression();
+    while (is_current_kind(TokenKind::OpenBracket)) {
+        auto position = peek_and_advance_token();
+        auto index = parse_expression();
+        assert_kind(TokenKind::CloseBracket, "Expect ] after index value");
+        expression = std::make_shared<IndexExpression>(position, expression, index);
+    }
+    return expression;
+}
+
+std::shared_ptr<Expression> JotParser::parse_function_call_expression()
+{
+    auto expression = parse_postfix_call_expression();
+    while (is_current_kind(TokenKind::OpenParen)) {
+
+        auto                                     position = peek_and_advance_token();
+        std::vector<std::shared_ptr<Expression>> arguments;
+        while (not is_current_kind(TokenKind::CloseParen)) {
+            arguments.push_back(parse_expression());
+            if (is_current_kind(TokenKind::Comma))
+                advanced_token();
         }
+        assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
+        expression = std::make_shared<CallExpression>(position, expression, arguments);
     }
     return expression;
 }
 
 std::shared_ptr<Expression> JotParser::parse_postfix_call_expression()
 {
-    auto expression = parse_dot_expression();
+    auto expression = parse_primary_expression();
     auto current_token_literal = peek_current().literal;
     if (is_current_kind(TokenKind::Symbol) and
         context->is_postfix_function(current_token_literal)) {
@@ -1076,47 +1124,6 @@ std::shared_ptr<Expression> JotParser::parse_postfix_call_expression()
         std::vector<std::shared_ptr<Expression>> arguments;
         arguments.push_back(expression);
         return std::make_shared<CallExpression>(symbol_token, literal, arguments);
-    }
-    return expression;
-}
-
-std::shared_ptr<Expression> JotParser::parse_enum_type_attribute(std::string& enum_name)
-{
-    auto attribute = consume_kind(TokenKind::Symbol, "Expect attribute name for enum");
-    auto attribute_str = attribute.literal;
-    if (attribute_str == "count") {
-        auto  count = context->enumerations[enum_name]->values.size();
-        Token number_token = {TokenKind::Integer, attribute.position, std::to_string(count)};
-        auto  number_type = jot_int64_ty;
-        return std::make_shared<NumberExpression>(number_token, number_type);
-    }
-
-    context->diagnostics.add_diagnostic_error(attribute.position,
-                                              "Un supported attribute for enumeration type");
-    throw "Stop";
-}
-
-std::shared_ptr<Expression> JotParser::parse_dot_expression()
-{
-    auto expression = parse_primary_expression();
-    if (is_current_kind(TokenKind::Dot)) {
-
-        // Parse Enumeration attribute
-        if (expression->get_ast_node_type() == AstNodeType::LiteralExpr) {
-            auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression);
-            auto literal_str = literal->get_name().literal;
-            if (context->enumerations.count(literal_str)) {
-                auto dot_token = peek_and_advance_token();
-                return parse_enum_type_attribute(literal_str);
-            }
-        }
-
-        // Parse struct fields access
-        while (is_current_kind(TokenKind::Dot)) {
-            auto dot_token = peek_and_advance_token();
-            auto field_name = consume_kind(TokenKind::Symbol, "Expect literal as field name");
-            expression = std::make_shared<DotExpression>(dot_token, expression, field_name);
-        }
     }
     return expression;
 }

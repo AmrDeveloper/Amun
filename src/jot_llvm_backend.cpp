@@ -1210,6 +1210,12 @@ std::any JotLLVMBackend::visit(IndexExpression* node)
             auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_node_value(array));
             auto alloca_type = alloca->getAllocatedType();
             auto ptr = Builder.CreateGEP(alloca_type, alloca, {zero_int32_value, index});
+            auto element_type = alloca_type->getArrayElementType();
+
+            if (element_type->isPointerTy() or element_type->isStructTy()) {
+                return ptr;
+            }
+
             return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
         }
 
@@ -1775,6 +1781,7 @@ llvm::Value* JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<Express
 
 llvm::Value* JotLLVMBackend::access_struct_member_pointer(DotExpression* expression)
 {
+
     auto callee = expression->get_callee();
     auto callee_value = llvm_node_value(callee->accept(this));
     auto callee_llvm_type = llvm_type_from_jot_type(callee->get_type_node());
@@ -1797,6 +1804,17 @@ llvm::Value* JotLLVMBackend::access_struct_member_pointer(DotExpression* express
         auto struct_value = derefernecs_llvm_pointer(callee_value);
         // Return a pointer to struct member
         return Builder.CreateGEP(struct_type, struct_value, {zero_int32_value, index});
+    }
+
+    // Access struct field from function call
+    if (callee_llvm_type->isFunctionTy()) {
+        // Struct type used it to access member from it
+        auto struct_type = callee_value->getType();
+        assert(struct_type->isStructTy());
+        // Create alloca inst to save return value from function call
+        auto alloca = Builder.CreateAlloca(struct_type);
+        Builder.CreateStore(callee_value, alloca);
+        return Builder.CreateGEP(struct_type, alloca, {zero_int32_value, index});
     }
 
     internal_compiler_error("Invalid callee type in access_struct_member_pointer");
