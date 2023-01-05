@@ -1,0 +1,24 @@
+import "cstdio"
+
+struct IntRange {
+    start int64;
+    end int64;
+}
+
+infix fun to(s int64, e int64) IntRange {
+    var range : IntRange;
+    range.start = s;
+    range.end = e;
+    return range;
+}
+
+infix fun in(value int64, range IntRange) bool {
+   return value >= range.start && value <= range.end;
+}
+
+fun main() int64 {
+    if 1 in 0 to 10 {
+        printf("Yes!\n");
+    }
+    return 0;
+}
