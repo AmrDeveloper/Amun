@@ -17,12 +17,14 @@ A Statically typed, compiled general purpose low level programming language buil
 - If, else if and else statements
 - If Else Expression
 - While statement
+- For range, Forever statements
 - For Range statement with optional name and step
 - Switch Statement and Expression
 - Break and continue statements with optional times
 - Declare Prefix, Infix, Postfix functions
 - Binary, Logical, Comparisons, Bitwise Operators
 - Assignments Operatiors =, +=, -=, *=, /=
+- Singed and Un Singed Integer types
 - Standard C Headers as part of the Standard library
 - No implicit casting, every cast must be explicit to be clear
 - Defer Statement
