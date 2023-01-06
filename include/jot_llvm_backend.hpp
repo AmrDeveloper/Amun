@@ -222,7 +222,7 @@ class JotLLVMBackend : public TreeVisitor {
                                    llvm::BasicBlock*           basic_block,
                                    std::shared_ptr<SwitchCase> switch_case);
 
-    llvm::Function* lookup_function(std::string name);
+    llvm::Function* lookup_function(std::string& name);
 
     bool is_global_block();
 

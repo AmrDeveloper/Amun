@@ -1791,6 +1791,19 @@ llvm::Value* JotLLVMBackend::access_struct_member_pointer(DotExpression* express
     // Access struct member allocaed on the stack or derefernecs from pointer
     // struct.member or (*struct).member
     if (callee_llvm_type->isStructTy()) {
+
+        // Access struct member coming from pattern matching if or switch expression
+        if (auto phi_node = llvm::dyn_cast<llvm::PHINode>(callee_value)) {
+            // Struct type used it to access member from it
+            auto struct_type = callee_value->getType();
+            assert(struct_type->isStructTy());
+            // Store result from pattern matching Phi node in alloca
+            auto alloca = Builder.CreateAlloca(struct_type);
+            Builder.CreateStore(callee_value, alloca);
+            // Access stuct field from alloca inst
+            return Builder.CreateGEP(struct_type, alloca, {zero_int32_value, index});
+        }
+
         // Return a pointer to struct member
         return Builder.CreateGEP(callee_llvm_type, callee_value, {zero_int32_value, index});
     }
@@ -2011,7 +2024,7 @@ void JotLLVMBackend::create_switch_case_branch(llvm::SwitchInst*           switc
     switch_inst->setDefaultDest(branch_block);
 }
 
-llvm::Function* JotLLVMBackend::lookup_function(std::string name)
+llvm::Function* JotLLVMBackend::lookup_function(std::string& name)
 {
     if (auto function = llvm_module->getFunction(name)) {
         return function;

@@ -436,7 +436,7 @@ std::any JotTypeChecker::visit(IfExpression* node)
                                                       jot_type_literal(else_value));
         throw "Stop";
     }
-
+    node->set_type_node(if_value);
     return if_value;
 }
 
