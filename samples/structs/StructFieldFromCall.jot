@@ -1,0 +1,19 @@
+extern fun printf(format *char, varargs Any) int64;
+
+struct Node {
+    value int64;
+}
+
+fun get_node() Node {
+    var n : Node;
+    n.value = 10;
+    return n;
+}
+
+fun main() int64 {
+    var v = get_node().value;
+    printf("%d\n", v);
+    printf("%d\n", get_node().value);
+    printf("%d\n", (get_node()).value);
+    return 0;
+}
