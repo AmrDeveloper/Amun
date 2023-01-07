@@ -873,6 +873,37 @@ class CallExpression : public Expression {
     std::shared_ptr<JotType>                 type;
 };
 
+class InitializeExpression : public Expression {
+  public:
+    InitializeExpression(Token position, std::shared_ptr<JotType> type,
+                         std::vector<std::shared_ptr<Expression>> arguments)
+        : position(std::move(position)), type(std::move(type)), arguments(std::move(arguments))
+    {
+    }
+
+    std::shared_ptr<JotType> get_type_node() override { return type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { type = new_type; }
+
+    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override
+    {
+        for (auto& argument : arguments) {
+            if (not argument->is_constant()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::CallExpr; }
+
+    Token                                    position;
+    std::shared_ptr<JotType>                 type;
+    std::vector<std::shared_ptr<Expression>> arguments;
+};
+
 class DotExpression : public Expression {
   public:
     DotExpression(Token dot_token, std::shared_ptr<Expression> callee, Token field_name)

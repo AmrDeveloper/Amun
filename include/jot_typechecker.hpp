@@ -72,6 +72,8 @@ class JotTypeChecker : public TreeVisitor {
 
     std::any visit(CallExpression* node) override;
 
+    std::any visit(InitializeExpression* node) override;
+
     std::any visit(DotExpression* node) override;
 
     std::any visit(CastExpression* node) override;

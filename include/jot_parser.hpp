@@ -117,6 +117,8 @@ class JotParser {
 
     std::shared_ptr<Expression> parse_postfix_call_expression();
 
+    std::shared_ptr<Expression> parse_initializer_expression();
+
     std::shared_ptr<Expression> parse_primary_expression();
 
     std::shared_ptr<NumberExpression> parse_number_expression();

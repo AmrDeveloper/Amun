@@ -1119,7 +1119,7 @@ std::shared_ptr<Expression> JotParser::parse_function_call_expression()
 
 std::shared_ptr<Expression> JotParser::parse_postfix_call_expression()
 {
-    auto expression = parse_primary_expression();
+    auto expression = parse_initializer_expression();
     auto current_token_literal = peek_current().literal;
     if (is_current_kind(TokenKind::Symbol) and
         context->is_postfix_function(current_token_literal)) {
@@ -1130,6 +1130,29 @@ std::shared_ptr<Expression> JotParser::parse_postfix_call_expression()
         return std::make_shared<CallExpression>(symbol_token, literal, arguments);
     }
     return expression;
+}
+
+std::shared_ptr<Expression> JotParser::parse_initializer_expression()
+{
+    if (is_current_kind(TokenKind::Symbol) and is_next_kind(TokenKind::OpenBrace) and
+        context->structures.count(current_token->literal)) {
+        auto type = parse_type();
+        auto token = consume_kind(TokenKind::OpenBrace, "Expect { at the start of initializer");
+        std::vector<std::shared_ptr<Expression>> arguments;
+        while (not is_current_kind(TokenKind::CloseBrace)) {
+            arguments.push_back(parse_expression());
+            if (is_current_kind(TokenKind::Comma)) {
+                advanced_token();
+            }
+            else {
+                break;
+            }
+        }
+        assert_kind(TokenKind::CloseBrace, "Expect } at the end of initializer");
+        return std::make_shared<InitializeExpression>(token, type, arguments);
+    }
+
+    return parse_primary_expression();
 }
 
 std::shared_ptr<Expression> JotParser::parse_primary_expression()

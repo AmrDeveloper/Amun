@@ -853,6 +853,24 @@ std::any JotTypeChecker::visit(CallExpression* node)
     throw "Stop";
 }
 
+std::any JotTypeChecker::visit(InitializeExpression* node)
+{
+    auto type = node->type;
+
+    if (type->type_kind == TypeKind::Structure) {
+        auto struct_type = std::static_pointer_cast<JotStructType>(type);
+        auto parameters = struct_type->fields_types;
+        auto arguments = node->arguments;
+
+        check_parameters_types(node->position.position, arguments, parameters, false, nullptr);
+        return struct_type;
+    }
+
+    context->diagnostics.add_diagnostic_error(node->position.position,
+                                              "InitializeExpression work only with structures");
+    throw "Stop";
+}
+
 std::any JotTypeChecker::visit(DotExpression* node)
 {
     auto callee = node->get_callee()->accept(this);

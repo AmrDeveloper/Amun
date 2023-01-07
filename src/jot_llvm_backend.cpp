@@ -74,11 +74,18 @@ std::any JotLLVMBackend::visit(FieldDeclaration* node)
     // Globals code generation block can be moved into other function to be clear and handle more
     // cases and to handle also soem compile time evaluations
     if (node->is_global()) {
-        auto constants_value = resolve_constant_expression(node);
+        // if field has initalizer evaluate it, else initalize it with default value
+        llvm::Constant* constants_value;
+        if (node->get_value() == nullptr) {
+            constants_value = llvm::dyn_cast<llvm::Constant>(llvm_type_null_value(field_type));
+        }
+        else {
+            constants_value = resolve_constant_expression(node->get_value());
+        }
+
         auto global_variable = new llvm::GlobalVariable(*llvm_module, llvm_type, false,
                                                         llvm::GlobalValue::ExternalLinkage,
                                                         constants_value, var_name.c_str());
-
         global_variable->setAlignment(llvm::MaybeAlign(0));
         return 0;
     }
@@ -1107,6 +1114,41 @@ std::any JotLLVMBackend::visit(CallExpression* node)
     return Builder.CreateCall(function, arguments_values);
 }
 
+std::any JotLLVMBackend::visit(InitializeExpression* node)
+{
+    // If it on global scope, must initialize it as Constants Struct with constants values
+    if (is_global_block()) {
+        auto struct_type = llvm::dyn_cast<llvm::StructType>(llvm_type_from_jot_type(node->type));
+
+        // Resolve constants arguments
+        std::vector<llvm::Constant*> constants_arguments;
+        constants_arguments.reserve(node->arguments.size());
+        for (auto& argument : node->arguments) {
+            constants_arguments.push_back(resolve_constant_expression(argument));
+        }
+
+        // Return Constants struct instance
+        return llvm::ConstantStruct::get(struct_type, constants_arguments);
+    }
+
+    // Initialize struct
+    auto struct_type = llvm_type_from_jot_type(node->type);
+    auto alloc_inst = Builder.CreateAlloca(struct_type);
+
+    // Loop over arguments and set them by index
+    size_t argument_index = 0;
+    for (auto& argument : node->arguments) {
+        auto argument_value = llvm_node_value(argument->accept(this));
+        auto index = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, argument_index, true));
+        auto member_ptr = Builder.CreateGEP(struct_type, alloc_inst, {zero_int32_value, index});
+        Builder.CreateStore(argument_value, member_ptr);
+        argument_index++;
+    }
+
+    // Return refernce to the struct initializer
+    return alloc_inst;
+}
+
 std::any JotLLVMBackend::visit(DotExpression* node)
 {
     auto expected_llvm_type = llvm_type_from_jot_type(node->get_type_node());
@@ -1839,10 +1881,9 @@ inline llvm::Value* JotLLVMBackend::derefernecs_llvm_pointer(llvm::Value* pointe
     return Builder.CreateLoad(pointer_element_type, pointer);
 }
 
-llvm::Constant* JotLLVMBackend::resolve_constant_expression(FieldDeclaration* node)
+llvm::Constant* JotLLVMBackend::resolve_constant_expression(std::shared_ptr<Expression> value)
 {
-    auto value = node->get_value();
-    auto field_type = node->get_type();
+    auto field_type = value->get_type_node();
 
     // If there are no value, return default value
     if (value == nullptr) {
@@ -1862,7 +1903,7 @@ llvm::Constant* JotLLVMBackend::resolve_constant_expression(FieldDeclaration* no
     }
 
     // Resolve non index constants value
-    auto llvm_value = llvm_resolve_value(node->get_value()->accept(this));
+    auto llvm_value = llvm_resolve_value(value->accept(this));
     return llvm::dyn_cast<llvm::Constant>(llvm_value);
 }
 
