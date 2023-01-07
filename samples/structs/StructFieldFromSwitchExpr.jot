@@ -1,0 +1,21 @@
+extern fun printf(format *char, varargs Any) int64;
+
+struct Node {
+    value int64;
+}
+
+fun get_node() Node {
+    var n : Node;
+    n.value = 10;
+    return n;
+}
+
+fun main() int64 {
+    var node = switch (1) {
+        1 -> get_node();
+        else -> get_node();
+    };
+    printf("%d\n", node.value);
+    printf("%d\n", (switch (1) {1 -> get_node(); else -> get_node();}).value);
+    return 0;
+}
