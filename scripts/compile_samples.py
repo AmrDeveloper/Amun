@@ -22,6 +22,9 @@ def collect_all_files(path):
             yield file_path
 
 # Compile each jot file
+number_of_samples = 0
 for file in collect_all_files(samples_directory):
     command = executable + " compile " + file
     os.system(command)
+
+print("Compiled", number_of_samples, "source code file")
