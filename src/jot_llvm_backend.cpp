@@ -234,8 +234,7 @@ std::any JotLLVMBackend::visit(StructDeclaration* node)
         }
         struct_fields.push_back(llvm_type_from_jot_type(field));
     }
-    auto declare_with_padding = false;
-    struct_llvm_type->setBody(struct_fields, declare_with_padding);
+    struct_llvm_type->setBody(struct_fields, struct_type->is_packed);
     structures_types_map[struct_name] = struct_llvm_type;
     return 0;
 }

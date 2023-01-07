@@ -24,6 +24,7 @@ enum TokenKind {
     SwitchKeyword,
     CastKeyword,
     DeferKeyword,
+    PackedKeyword,
 
     BreakKeyword,
     ContinueKeyword,
@@ -129,6 +130,8 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::SwitchKeyword, "Switch"},
     {TokenKind::CastKeyword, "Cast"},
     {TokenKind::DeferKeyword, "Defer"},
+    {TokenKind::PackedKeyword, "Packed"},
+
     {TokenKind::TrueKeyword, "True"},
     {TokenKind::FalseKeyword, "False"},
     {TokenKind::NullKeyword, "Null"},
@@ -303,6 +306,8 @@ static TokenKind resolve_keyword_kind(const char* keyword)
             return TokenKind::PrefixKeyword;
         if (str6Equals("switch", keyword))
             return TokenKind::SwitchKeyword;
+        if (str6Equals("packed", keyword))
+            return TokenKind::PackedKeyword;
         return TokenKind::Symbol;
     }
     case 7: {

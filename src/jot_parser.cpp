@@ -179,7 +179,11 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement()
         return parse_field_declaration(true);
     }
     case TokenKind::StructKeyword: {
-        return parse_structure_declaration();
+        return parse_structure_declaration(false);
+    }
+    case TokenKind::PackedKeyword: {
+        advanced_token();
+        return parse_structure_declaration(true);
     }
     case TokenKind::EnumKeyword: {
         return parse_enum_declaration();
@@ -358,7 +362,7 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(Funct
     throw "Stop";
 }
 
-std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration()
+std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration(bool is_packed)
 {
     auto struct_token = consume_kind(TokenKind::StructKeyword, "Expect struct keyword");
     auto struct_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
@@ -394,7 +398,7 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration()
     }
     assert_kind(TokenKind::CloseBrace, "Expect } in the end of struct declaration");
     auto structure_type =
-        std::make_shared<JotStructType>(struct_name_str, fields_names, fields_types);
+        std::make_shared<JotStructType>(struct_name_str, fields_names, fields_types, is_packed);
 
     if (context->structures.count(struct_name_str)) {
         context->diagnostics.add_diagnostic_error(

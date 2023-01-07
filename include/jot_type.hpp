@@ -84,14 +84,15 @@ struct JotFunctionType : public JotType {
 
 struct JotStructType : public JotType {
     JotStructType(std::string name, std::unordered_map<std::string, int> fields_names,
-                  std::vector<std::shared_ptr<JotType>> types)
+                  std::vector<std::shared_ptr<JotType>> types, bool is_packed)
         : name(std::move(name)), fields_names(std::move(fields_names)),
-          fields_types(std::move(types))
+          fields_types(std::move(types)), is_packed(is_packed)
     {
         type_kind = TypeKind::Structure;
     }
 
     std::string                           name;
+    bool                                  is_packed;
     std::unordered_map<std::string, int>  fields_names;
     std::vector<std::shared_ptr<JotType>> fields_types;
 };
