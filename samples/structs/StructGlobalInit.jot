@@ -1,0 +1,16 @@
+extern fun printf(format *char, varargs Any) int64;
+
+struct Vector3 {
+    x int64;
+    y int64;
+    z int64;
+}
+
+var global_vec3 = Vector3 { 10, 20, 30 };
+
+fun main() int64 {
+    printf("%d\n", global_vec3.x);
+    printf("%d\n", global_vec3.y);
+    printf("%d\n", global_vec3.z);
+    return 0;
+}
