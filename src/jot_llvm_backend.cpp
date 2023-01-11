@@ -1138,7 +1138,7 @@ std::any JotLLVMBackend::visit(InitializeExpression* node)
     // Loop over arguments and set them by index
     size_t argument_index = 0;
     for (auto& argument : node->arguments) {
-        auto argument_value = llvm_node_value(argument->accept(this));
+        auto argument_value = llvm_resolve_value(argument->accept(this));
         auto index = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, argument_index, true));
         auto member_ptr = Builder.CreateGEP(struct_type, alloc_inst, {zero_int32_value, index});
         Builder.CreateStore(argument_value, member_ptr);
