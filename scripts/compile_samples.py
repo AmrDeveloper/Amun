@@ -26,5 +26,6 @@ number_of_samples = 0
 for file in collect_all_files(samples_directory):
     command = executable + " compile " + file
     os.system(command)
+    number_of_samples += 1
 
 print("Compiled", number_of_samples, "source code file")
