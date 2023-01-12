@@ -8,6 +8,7 @@ A Statically typed, compiled general purpose low level programming language buil
 - Functions
 - Pointers
 - Arrays
+- Struct and Packed struct
 - Multi Dimensional Arrays
 - Strong Enumeration
 - Function Pointer
