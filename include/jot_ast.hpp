@@ -42,6 +42,7 @@ enum class AstNodeType {
     PrefixUnaryExpr,
     PostfixUnaryExpr,
     CallExpr,
+    InitExpr,
     DotExpr,
     CastExpr,
     TypeSizeExpr,
@@ -897,7 +898,7 @@ class InitializeExpression : public Expression {
         return true;
     }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::CallExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::InitExpr; }
 
     Token                                    position;
     std::shared_ptr<JotType>                 type;
