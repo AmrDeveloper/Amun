@@ -43,6 +43,7 @@ enum class AstNodeType {
     PostfixUnaryExpr,
     CallExpr,
     InitExpr,
+    LambdaExpr,
     DotExpr,
     CastExpr,
     TypeSizeExpr,
@@ -903,6 +904,39 @@ class InitializeExpression : public Expression {
     Token                                    position;
     std::shared_ptr<JotType>                 type;
     std::vector<std::shared_ptr<Expression>> arguments;
+};
+
+class LambdaExpression : public Expression {
+  public:
+    LambdaExpression(Token position, std::vector<std::shared_ptr<Parameter>> parameters,
+                     std::shared_ptr<JotType> return_type, std::shared_ptr<BlockStatement> body)
+        : position(std::move(position)), explicit_parameters(std::move(parameters)),
+          return_type(return_type), body(std::move(body))
+    {
+        std::vector<std::shared_ptr<JotType>> parameters_types;
+        for (auto& parameter : explicit_parameters) {
+            parameters_types.push_back(parameter->get_type());
+        }
+        lambda_type = std::make_shared<JotFunctionType>(position, parameters_types, return_type);
+    }
+
+    std::shared_ptr<JotType> get_type_node() override { return lambda_type; }
+
+    void set_type_node(std::shared_ptr<JotType> new_type) override { lambda_type = new_type; }
+
+    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return false; }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::LambdaExpr; }
+
+    Token                                   position;
+    std::vector<std::shared_ptr<Parameter>> explicit_parameters;
+    std::vector<std::string>                implict_parameters_names;
+    std::vector<std::shared_ptr<JotType>>   implict_parameters_types;
+    std::shared_ptr<JotType>                return_type;
+    std::shared_ptr<BlockStatement>         body;
+    std::shared_ptr<JotType>                lambda_type;
 };
 
 class DotExpression : public Expression {

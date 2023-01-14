@@ -7,6 +7,7 @@
 #include "jot_type.hpp"
 
 #include <memory>
+#include <stack>
 #include <unordered_map>
 
 class JotTypeChecker : public TreeVisitor {
@@ -74,6 +75,8 @@ class JotTypeChecker : public TreeVisitor {
 
     std::any visit(InitializeExpression* node) override;
 
+    std::any visit(LambdaExpression* node) override;
+
     std::any visit(DotExpression* node) override;
 
     std::any visit(CastExpression* node) override;
@@ -118,5 +121,7 @@ class JotTypeChecker : public TreeVisitor {
   private:
     std::shared_ptr<JotContext>         context;
     JotScopedMap<std::string, std::any> types_table;
-    std::shared_ptr<JotType>            current_function_return_type;
+
+    // Used to track the return types of functions and inner lambda expression
+    std::stack<std::shared_ptr<JotType>> return_types_stack;
 };

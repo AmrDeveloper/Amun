@@ -121,6 +121,8 @@ class JotParser {
 
     std::shared_ptr<Expression> parse_primary_expression();
 
+    std::shared_ptr<LambdaExpression> parse_lambda_expression();
+
     std::shared_ptr<NumberExpression> parse_number_expression();
 
     std::shared_ptr<LiteralExpression> parse_literal_expression();

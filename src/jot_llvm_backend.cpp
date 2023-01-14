@@ -1149,6 +1149,43 @@ std::any JotLLVMBackend::visit(InitializeExpression* node)
     return alloc_inst;
 }
 
+std::any JotLLVMBackend::visit(LambdaExpression* node)
+{
+    auto lambda_name = "_lambda" + std::to_string(lambda_unique_id++);
+    auto node_llvm_type = llvm_type_from_jot_type(node->get_type_node());
+    auto function_type = llvm::dyn_cast<llvm::FunctionType>(node_llvm_type);
+
+    auto linkage = llvm::Function::InternalLinkage;
+    auto function = llvm::Function::Create(function_type, linkage, lambda_name, llvm_module.get());
+
+    auto previous_insert_block = Builder.GetInsertBlock();
+
+    auto entry_block = llvm::BasicBlock::Create(llvm_context, "entry", function);
+    Builder.SetInsertPoint(entry_block);
+
+    push_alloca_inst_scope();
+    int i = 0;
+    for (auto& arg : function->args()) {
+        arg.setName(node->explicit_parameters[i++]->get_name().literal);
+        const std::string arg_name_str = std::string(arg.getName());
+        auto* alloca_inst = create_entry_block_alloca(function, arg_name_str, arg.getType());
+        alloca_inst_table.define(arg_name_str, alloca_inst);
+        Builder.CreateStore(&arg, alloca_inst);
+    }
+
+    node->body->accept(this);
+
+    pop_alloca_inst_scope();
+
+    alloca_inst_table.define(lambda_name, function);
+
+    verifyFunction(*function);
+
+    Builder.SetInsertPoint(previous_insert_block);
+
+    return function;
+}
+
 std::any JotLLVMBackend::visit(DotExpression* node)
 {
     auto expected_llvm_type = llvm_type_from_jot_type(node->get_type_node());

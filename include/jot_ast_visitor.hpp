@@ -67,6 +67,7 @@ class PrefixUnaryExpression;
 class PostfixUnaryExpression;
 class CallExpression;
 class InitializeExpression;
+class LambdaExpression;
 class DotExpression;
 class CastExpression;
 class TypeSizeExpression;
@@ -106,6 +107,8 @@ class ExpressionVisitor {
     virtual std::any visit(CallExpression* node) = 0;
 
     virtual std::any visit(InitializeExpression* node) = 0;
+
+    virtual std::any visit(LambdaExpression* node) = 0;
 
     virtual std::any visit(DotExpression* node) = 0;
 

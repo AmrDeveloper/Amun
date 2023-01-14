@@ -143,6 +143,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(InitializeExpression* node) override;
 
+    std::any visit(LambdaExpression* node) override;
+
     std::any visit(DotExpression* node) override;
 
     std::any visit(CastExpression* node) override;
@@ -252,4 +254,6 @@ class JotLLVMBackend : public TreeVisitor {
 
     bool has_return_statement = false;
     bool has_break_or_continue_statement = false;
+
+    size_t lambda_unique_id = 0;
 };

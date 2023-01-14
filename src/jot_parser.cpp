@@ -1200,6 +1200,9 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression()
     case TokenKind::OpenBracket: {
         return parse_array_expression();
     }
+    case TokenKind::OpenBrace: {
+        return parse_lambda_expression();
+    }
     case TokenKind::IfKeyword: {
         return parse_if_expression();
     }
@@ -1221,6 +1224,44 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression()
         throw "Stop";
     }
     }
+}
+
+std::shared_ptr<LambdaExpression> JotParser::parse_lambda_expression()
+{
+    auto open_paren =
+        consume_kind(TokenKind::OpenBrace, "Expect { at the start of lambda expression");
+
+    assert_kind(TokenKind::OpenParen, "Expect ( before lambda parameters");
+
+    // Parse Parameters
+    std::vector<std::shared_ptr<Parameter>> parameters;
+    while (not is_current_kind(TokenKind::CloseParen)) {
+        parameters.push_back(parse_parameter());
+
+        if (is_current_kind(TokenKind::Comma)) {
+            advanced_token();
+        }
+        else {
+            break;
+        }
+    }
+
+    assert_kind(TokenKind::CloseParen, "Expect ) after lambda parameters");
+
+    // parse return type
+    auto return_type = parse_type();
+
+    assert_kind(TokenKind::RightArrow, "Expect -> after lambda return type");
+
+    std::vector<std::shared_ptr<Statement>> body;
+    while (not is_current_kind(TokenKind::CloseBrace)) {
+        body.push_back(parse_statement());
+    }
+
+    auto lambda_body = std::make_shared<BlockStatement>(body);
+
+    assert_kind(TokenKind::CloseBrace, "Expect } at the end of lambda expression");
+    return std::make_shared<LambdaExpression>(open_paren, parameters, return_type, lambda_body);
 }
 
 std::shared_ptr<NumberExpression> JotParser::parse_number_expression()

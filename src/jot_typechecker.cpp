@@ -138,7 +138,7 @@ std::any JotTypeChecker::visit(FunctionDeclaration* node)
     auto prototype = node->get_prototype();
     auto function_type = node_jot_type(node->get_prototype()->accept(this));
     auto function = std::static_pointer_cast<JotFunctionType>(function_type);
-    current_function_return_type = function->return_type;
+    return_types_stack.push(function->return_type);
 
     push_new_scope();
     for (auto& parameter : prototype->get_parameters()) {
@@ -146,6 +146,8 @@ std::any JotTypeChecker::visit(FunctionDeclaration* node)
     }
     node->get_body()->accept(this);
     pop_current_scope();
+
+    return_types_stack.pop();
 
     return function_type;
 }
@@ -349,10 +351,10 @@ std::any JotTypeChecker::visit(SwitchStatement* node)
 std::any JotTypeChecker::visit(ReturnStatement* node)
 {
     if (not node->has_value()) {
-        if (current_function_return_type->type_kind != TypeKind::Void) {
+        if (return_types_stack.top()->type_kind != TypeKind::Void) {
             context->diagnostics.add_diagnostic_error(
                 node->get_position().position, "Expect return value to be " +
-                                                   jot_type_literal(current_function_return_type) +
+                                                   jot_type_literal(return_types_stack.top()) +
                                                    " but got void");
             throw "Stop";
         }
@@ -361,27 +363,27 @@ std::any JotTypeChecker::visit(ReturnStatement* node)
 
     auto return_type = node_jot_type(node->return_value()->accept(this));
 
-    if (!is_jot_types_equals(current_function_return_type, return_type)) {
+    if (!is_jot_types_equals(return_types_stack.top(), return_type)) {
         // If Function return type is pointer and return value is null
         // set null pointer base type to function return type
-        if (is_pointer_type(current_function_return_type) and is_null_type(return_type)) {
+        if (is_pointer_type(return_types_stack.top()) and is_null_type(return_type)) {
             auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->return_value());
-            null_expr->null_base_type = current_function_return_type;
+            null_expr->null_base_type = return_types_stack.top();
             return 0;
         }
 
         // If function return type is not pointer, you can't return null
-        if (!is_pointer_type(current_function_return_type) and is_null_type(return_type)) {
+        if (!is_pointer_type(return_types_stack.top()) and is_null_type(return_type)) {
             context->diagnostics.add_diagnostic_error(
                 node->get_position().position,
                 "Can't return null from function that return non pointer type");
             throw "Stop";
         }
 
-        context->diagnostics.add_diagnostic_error(
-            node->get_position().position, "Expect return value to be " +
-                                               jot_type_literal(current_function_return_type) +
-                                               " but got " + jot_type_literal(return_type));
+        context->diagnostics.add_diagnostic_error(node->get_position().position,
+                                                  "Expect return value to be " +
+                                                      jot_type_literal(return_types_stack.top()) +
+                                                      " but got " + jot_type_literal(return_type));
         throw "Stop";
     }
 
@@ -869,6 +871,27 @@ std::any JotTypeChecker::visit(InitializeExpression* node)
     context->diagnostics.add_diagnostic_error(node->position.position,
                                               "InitializeExpression work only with structures");
     throw "Stop";
+}
+
+std::any JotTypeChecker::visit(LambdaExpression* node)
+{
+    auto function_type = std::static_pointer_cast<JotFunctionType>(node->get_type_node());
+    return_types_stack.push(function_type->return_type);
+
+    push_new_scope();
+
+    for (auto& parameter : node->explicit_parameters) {
+        types_table.define(parameter->get_name().literal, parameter->get_type());
+    }
+
+    node->body->accept(this);
+    pop_current_scope();
+
+    node->set_type_node(function_type);
+
+    return_types_stack.pop();
+
+    return function_type;
 }
 
 std::any JotTypeChecker::visit(DotExpression* node)
