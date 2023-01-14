@@ -1,0 +1,9 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var lambda = { () int64 -> return 0; };
+
+    lambda();
+
+    return 0;
+}
