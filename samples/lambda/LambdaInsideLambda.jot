@@ -1,0 +1,13 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var sumOfThree = { (x int64, y int64, z int64) int64 ->
+
+        var sumTwo = { (x int64, y int64) int64 -> return x + y; };
+
+        return sumTwo(x, y) + z; 
+    };
+
+    printf("Sum of 10, 20 and 30 = %d\n", sumOfThree(10, 20, 30));
+    return 0;
+}
