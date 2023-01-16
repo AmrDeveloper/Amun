@@ -1,0 +1,7 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var result = { (x int64, y int64) int64 -> return x + y; } (10, 20);
+    printf("Sum of 10 and 20 = %d\n", result);
+    return 0;
+}
