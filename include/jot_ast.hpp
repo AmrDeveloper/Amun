@@ -917,7 +917,9 @@ class LambdaExpression : public Expression {
         for (auto& parameter : explicit_parameters) {
             parameters_types.push_back(parameter->get_type());
         }
-        lambda_type = std::make_shared<JotFunctionType>(position, parameters_types, return_type);
+        auto function_type =
+            std::make_shared<JotFunctionType>(position, parameters_types, return_type);
+        lambda_type = std::make_shared<JotPointerType>(function_type);
     }
 
     std::shared_ptr<JotType> get_type_node() override { return lambda_type; }

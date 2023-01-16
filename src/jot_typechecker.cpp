@@ -2,6 +2,7 @@
 #include "../include/jot_ast_visitor.hpp"
 #include "../include/jot_logger.hpp"
 #include "../include/jot_type.hpp"
+#include "jot_ast.hpp"
 
 #include <any>
 #include <cstdint>
@@ -803,7 +804,12 @@ std::any JotTypeChecker::visit(PostfixUnaryExpression* node)
 
 std::any JotTypeChecker::visit(CallExpression* node)
 {
-    if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee())) {
+    auto callee = node->get_callee();
+    auto callee_ast_node_type = node->get_callee()->get_ast_node_type();
+
+    // Call function by name for example function();
+    if (callee_ast_node_type == AstNodeType::LiteralExpr) {
+        auto literal = std::dynamic_pointer_cast<LiteralExpression>(callee);
         auto name = literal->get_name().literal;
         if (types_table.is_defined(name)) {
             auto lookup = types_table.lookup(name);
@@ -836,16 +842,35 @@ std::any JotTypeChecker::visit(CallExpression* node)
         }
     }
 
-    if (auto call = std::dynamic_pointer_cast<CallExpression>(node->get_callee())) {
+    // Call function pointer returned from call expression for example function()();
+    if (callee_ast_node_type == AstNodeType::CallExpr) {
+        auto call = std::dynamic_pointer_cast<CallExpression>(callee);
         auto call_result = node_jot_type(call->accept(this));
         auto function_pointer_type = std::static_pointer_cast<JotPointerType>(call_result);
         auto function_type =
             std::static_pointer_cast<JotFunctionType>(function_pointer_type->base_type);
-        node->set_type_node(function_type);
         auto parameters = function_type->parameters;
         auto arguments = node->get_arguments();
         check_parameters_types(node->get_position().position, arguments, parameters,
                                function_type->has_varargs, function_type->varargs_type);
+        node->set_type_node(function_type);
+        return function_type->return_type;
+    }
+
+    // Call lambda expression for example { () void -> return; } ()
+    if (callee_ast_node_type == AstNodeType::LambdaExpr) {
+        auto lambda = std::dynamic_pointer_cast<LambdaExpression>(node->get_callee());
+        auto lambda_function_type = node_jot_type(lambda->accept(this));
+        auto function_ptr_type = std::static_pointer_cast<JotPointerType>(lambda_function_type);
+
+        auto function_type =
+            std::static_pointer_cast<JotFunctionType>(function_ptr_type->base_type);
+
+        auto parameters = function_type->parameters;
+        auto arguments = node->get_arguments();
+        check_parameters_types(node->get_position().position, arguments, parameters,
+                               function_type->has_varargs, function_type->varargs_type);
+        node->set_type_node(function_type);
         return function_type->return_type;
     }
 
@@ -875,7 +900,8 @@ std::any JotTypeChecker::visit(InitializeExpression* node)
 
 std::any JotTypeChecker::visit(LambdaExpression* node)
 {
-    auto function_type = std::static_pointer_cast<JotFunctionType>(node->get_type_node());
+    auto function_ptr_type = std::static_pointer_cast<JotPointerType>(node->get_type_node());
+    auto function_type = std::static_pointer_cast<JotFunctionType>(function_ptr_type->base_type);
     return_types_stack.push(function_type->return_type);
 
     push_new_scope();
@@ -887,11 +913,12 @@ std::any JotTypeChecker::visit(LambdaExpression* node)
     node->body->accept(this);
     pop_current_scope();
 
-    node->set_type_node(function_type);
+    function_ptr_type->base_type = function_type;
+    node->set_type_node(function_ptr_type);
 
     return_types_stack.pop();
 
-    return function_type;
+    return function_ptr_type;
 }
 
 std::any JotTypeChecker::visit(DotExpression* node)

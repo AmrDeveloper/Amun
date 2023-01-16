@@ -1020,9 +1020,11 @@ std::any JotLLVMBackend::visit(PostfixUnaryExpression* node)
 
 std::any JotLLVMBackend::visit(CallExpression* node)
 {
+    auto callee_ast_node_type = node->get_callee()->get_ast_node_type();
+
     // If callee is also a CallExpression this case when you have a function that return a
     // function pointer and you call it for example function()();
-    if (node->get_callee()->get_ast_node_type() == AstNodeType::CallExpr) {
+    if (callee_ast_node_type == AstNodeType::CallExpr) {
         auto callee_function = llvm_node_value(node->get_callee()->accept(this));
         auto call_instruction = llvm::dyn_cast<llvm::CallInst>(callee_function);
         auto function = call_instruction->getCalledFunction();
@@ -1048,70 +1050,117 @@ std::any JotLLVMBackend::visit(CallExpression* node)
         return Builder.CreateCall(function_pointer_type, call_instruction, arguments_values);
     }
 
-    auto callee = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee());
-    auto callee_literal = callee->get_name().literal;
-    auto function = lookup_function(callee_literal);
-    if (not function) {
-        auto value = llvm_node_value(alloca_inst_table.lookup(callee_literal));
-        if (auto alloca = llvm::dyn_cast<llvm::AllocaInst>(value)) {
-            auto loaded = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
-            auto function_type = llvm_type_from_jot_type(node->get_type_node());
-            if (auto function_pointer = llvm::dyn_cast<llvm::FunctionType>(function_type)) {
-                auto                      arguments = node->get_arguments();
-                size_t                    arguments_size = arguments.size();
-                std::vector<llvm::Value*> arguments_values;
-                arguments_values.reserve(arguments_size);
-                for (size_t i = 0; i < arguments_size; i++) {
-                    auto value = llvm_node_value(arguments[i]->accept(this));
-                    if (function_pointer->getParamType(i) == value->getType()) {
-                        arguments_values.push_back(value);
+    // If callee is literal expression that mean it a function call or function pointer call
+    if (callee_ast_node_type == AstNodeType::LiteralExpr) {
+        auto callee = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee());
+        auto callee_literal = callee->get_name().literal;
+        auto function = lookup_function(callee_literal);
+        if (not function) {
+            auto value = llvm_node_value(alloca_inst_table.lookup(callee_literal));
+            if (auto alloca = llvm::dyn_cast<llvm::AllocaInst>(value)) {
+                auto loaded = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
+                auto function_type = llvm_type_from_jot_type(node->get_type_node());
+                if (auto function_pointer = llvm::dyn_cast<llvm::FunctionType>(function_type)) {
+                    auto                      arguments = node->get_arguments();
+                    size_t                    arguments_size = arguments.size();
+                    std::vector<llvm::Value*> arguments_values;
+                    arguments_values.reserve(arguments_size);
+                    for (size_t i = 0; i < arguments_size; i++) {
+                        auto value = llvm_node_value(arguments[i]->accept(this));
+                        if (function_pointer->getParamType(i) == value->getType()) {
+                            arguments_values.push_back(value);
+                        }
+                        else {
+                            auto expected_type = function_pointer->getParamType(i);
+                            auto loaded_value = Builder.CreateLoad(expected_type, value);
+                            arguments_values.push_back(loaded_value);
+                        }
                     }
-                    else {
-                        auto expected_type = function_pointer->getParamType(i);
-                        auto loaded_value = Builder.CreateLoad(expected_type, value);
-                        arguments_values.push_back(loaded_value);
-                    }
+                    return Builder.CreateCall(function_pointer, loaded, arguments_values);
                 }
-                return Builder.CreateCall(function_pointer, loaded, arguments_values);
+                return loaded;
             }
-            return loaded;
         }
-    }
 
-    auto                      arguments = node->get_arguments();
-    auto                      arguments_size = arguments.size();
-    auto                      parameter_size = function->arg_size();
-    std::vector<llvm::Value*> arguments_values;
-    arguments_values.reserve(arguments_size);
-    for (size_t i = 0; i < arguments_size; i++) {
-        auto argument = arguments[i];
-        auto value = llvm_node_value(argument->accept(this));
+        auto                      arguments = node->get_arguments();
+        auto                      arguments_size = arguments.size();
+        auto                      parameter_size = function->arg_size();
+        std::vector<llvm::Value*> arguments_values;
+        arguments_values.reserve(arguments_size);
+        for (size_t i = 0; i < arguments_size; i++) {
+            auto argument = arguments[i];
+            auto value = llvm_node_value(argument->accept(this));
 
-        // This condition works only if this function has varargs flag
-        if (i >= parameter_size) {
-            if (argument->get_ast_node_type() == AstNodeType::LiteralExpr) {
-                auto argument_type = llvm_type_from_jot_type(argument->get_type_node());
-                auto loaded_value = Builder.CreateLoad(argument_type, value);
-                arguments_values.push_back(loaded_value);
+            // This condition works only if this function has varargs flag
+            if (i >= parameter_size) {
+                if (argument->get_ast_node_type() == AstNodeType::LiteralExpr) {
+                    auto argument_type = llvm_type_from_jot_type(argument->get_type_node());
+                    auto loaded_value = Builder.CreateLoad(argument_type, value);
+                    arguments_values.push_back(loaded_value);
+                    continue;
+                }
+
+                arguments_values.push_back(value);
                 continue;
             }
 
-            arguments_values.push_back(value);
-            continue;
-        }
+            // If argument type is the same parameter type just pass it directly
+            if (function->getArg(i)->getType() == value->getType()) {
+                arguments_values.push_back(value);
+                continue;
+            }
 
-        // If argument type is the same parameter type just pass it directly
-        if (function->getArg(i)->getType() == value->getType()) {
-            arguments_values.push_back(value);
-            continue;
+            // Load the constants first and then pass it to the arguments values
+            auto expected_type = function->getArg(i)->getType();
+            auto loaded_value = Builder.CreateLoad(expected_type, value);
+            arguments_values.push_back(loaded_value);
         }
-
-        // Load the constants first and then pass it to the arguments values
-        auto expected_type = function->getArg(i)->getType();
-        auto loaded_value = Builder.CreateLoad(expected_type, value);
-        arguments_values.push_back(loaded_value);
+        return Builder.CreateCall(function, arguments_values);
     }
-    return Builder.CreateCall(function, arguments_values);
+
+    // If callee is lambda expression that mean we can call it as function pointer
+    if (callee_ast_node_type == AstNodeType::LambdaExpr) {
+        auto lambda = std::dynamic_pointer_cast<LambdaExpression>(node->get_callee());
+        auto lambda_value = llvm_node_value(lambda->accept(this));
+        auto function = llvm::dyn_cast<llvm::Function>(lambda_value);
+
+        auto                      arguments = node->get_arguments();
+        auto                      arguments_size = arguments.size();
+        auto                      parameter_size = function->arg_size();
+        std::vector<llvm::Value*> arguments_values;
+        arguments_values.reserve(arguments_size);
+        for (size_t i = 0; i < arguments_size; i++) {
+            auto argument = arguments[i];
+            auto value = llvm_node_value(argument->accept(this));
+
+            // This condition works only if this function has varargs flag
+            if (i >= parameter_size) {
+                if (argument->get_ast_node_type() == AstNodeType::LiteralExpr) {
+                    auto argument_type = llvm_type_from_jot_type(argument->get_type_node());
+                    auto loaded_value = Builder.CreateLoad(argument_type, value);
+                    arguments_values.push_back(loaded_value);
+                    continue;
+                }
+
+                arguments_values.push_back(value);
+                continue;
+            }
+
+            // If argument type is the same parameter type just pass it directly
+            if (function->getArg(i)->getType() == value->getType()) {
+                arguments_values.push_back(value);
+                continue;
+            }
+
+            // Load the constants first and then pass it to the arguments values
+            auto expected_type = function->getArg(i)->getType();
+            auto loaded_value = Builder.CreateLoad(expected_type, value);
+            arguments_values.push_back(loaded_value);
+        }
+        return Builder.CreateCall(function, arguments_values);
+    }
+
+    internal_compiler_error("Invalid call expression callee type");
 }
 
 std::any JotLLVMBackend::visit(InitializeExpression* node)
@@ -1152,7 +1201,8 @@ std::any JotLLVMBackend::visit(InitializeExpression* node)
 std::any JotLLVMBackend::visit(LambdaExpression* node)
 {
     auto lambda_name = "_lambda" + std::to_string(lambda_unique_id++);
-    auto node_llvm_type = llvm_type_from_jot_type(node->get_type_node());
+    auto function_ptr_type = std::static_pointer_cast<JotPointerType>(node->get_type_node());
+    auto node_llvm_type = llvm_type_from_jot_type(function_ptr_type->base_type);
     auto function_type = llvm::dyn_cast<llvm::FunctionType>(node_llvm_type);
 
     auto linkage = llvm::Function::InternalLinkage;
