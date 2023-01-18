@@ -112,7 +112,8 @@ class JotTypeChecker : public TreeVisitor {
     void check_parameters_types(TokenSpan                                 location,
                                 std::vector<std::shared_ptr<Expression>>& arguments,
                                 std::vector<std::shared_ptr<JotType>>& parameters, bool has_varargs,
-                                std::shared_ptr<JotType> varargs_type);
+                                std::shared_ptr<JotType> varargs_type,
+                                int                      implicit_parameters_count);
 
     void push_new_scope();
 
@@ -124,4 +125,9 @@ class JotTypeChecker : public TreeVisitor {
 
     // Used to track the return types of functions and inner lambda expression
     std::stack<std::shared_ptr<JotType>> return_types_stack;
+
+    // Flag that tell us when we are inside lambda expression body
+    bool is_inside_lambda_body;
+    std::stack<std::vector<std::pair<std::string, std::shared_ptr<JotType>>>>
+        lambda_implicit_parameters;
 };

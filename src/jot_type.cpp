@@ -211,6 +211,20 @@ bool is_boolean_type(std::shared_ptr<JotType> type)
     return false;
 }
 
+bool is_function_type(std::shared_ptr<JotType> type)
+{
+    return type->type_kind == TypeKind::Function;
+}
+
+bool is_function_pointer_type(std::shared_ptr<JotType> type)
+{
+    if (is_pointer_type(type)) {
+        auto pointer = std::static_pointer_cast<JotPointerType>(type);
+        return is_function_type(pointer->base_type);
+    }
+    return false;
+}
+
 bool is_pointer_type(std::shared_ptr<JotType> type) { return type->type_kind == TypeKind::Pointer; }
 
 bool is_null_type(std::shared_ptr<JotType> type) { return type->type_kind == TypeKind::Null; }

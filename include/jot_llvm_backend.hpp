@@ -176,6 +176,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Value* llvm_resolve_value(std::any any_value);
 
+    llvm::Value* llvm_resolve_variable(const std::string& name);
+
     llvm::Value* llvm_number_value(const std::string& value_litearl, NumberKind size);
 
     llvm::Value* llvm_boolean_value(bool value);
@@ -228,6 +230,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Function* lookup_function(std::string& name);
 
+    bool is_lambda_function_name(const std::string& name);
+
     bool is_global_block();
 
     void execute_scope_defer_calls();
@@ -255,5 +259,8 @@ class JotLLVMBackend : public TreeVisitor {
     bool has_return_statement = false;
     bool has_break_or_continue_statement = false;
 
+    // counter to generate unquie lambda names
     size_t lambda_unique_id = 0;
+    // map lambda generated name to implicit parameters
+    std::unordered_map<std::string, std::vector<std::string>> lambda_extra_parameters;
 };

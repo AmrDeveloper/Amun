@@ -78,6 +78,7 @@ struct JotFunctionType : public JotType {
     Token                                 name;
     std::vector<std::shared_ptr<JotType>> parameters;
     std::shared_ptr<JotType>              return_type;
+    int                                   implicit_parameters_count = 0;
     bool                                  has_varargs;
     std::shared_ptr<JotType>              varargs_type;
 };
@@ -152,6 +153,10 @@ bool is_integer_type(std::shared_ptr<JotType> type);
 bool is_enum_element_type(std::shared_ptr<JotType> type);
 
 bool is_boolean_type(std::shared_ptr<JotType> type);
+
+bool is_function_type(std::shared_ptr<JotType> type);
+
+bool is_function_pointer_type(std::shared_ptr<JotType> type);
 
 bool is_pointer_type(std::shared_ptr<JotType> type);
 

@@ -363,27 +363,48 @@ std::any JotTypeChecker::visit(ReturnStatement* node)
     }
 
     auto return_type = node_jot_type(node->return_value()->accept(this));
+    auto function_return_type = return_types_stack.top();
 
-    if (!is_jot_types_equals(return_types_stack.top(), return_type)) {
+    if (!is_jot_types_equals(function_return_type, return_type)) {
         // If Function return type is pointer and return value is null
         // set null pointer base type to function return type
-        if (is_pointer_type(return_types_stack.top()) and is_null_type(return_type)) {
+        if (is_pointer_type(function_return_type) and is_null_type(return_type)) {
             auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->return_value());
-            null_expr->null_base_type = return_types_stack.top();
+            null_expr->null_base_type = function_return_type;
             return 0;
         }
 
         // If function return type is not pointer, you can't return null
-        if (!is_pointer_type(return_types_stack.top()) and is_null_type(return_type)) {
+        if (!is_pointer_type(function_return_type) and is_null_type(return_type)) {
             context->diagnostics.add_diagnostic_error(
                 node->get_position().position,
                 "Can't return null from function that return non pointer type");
             throw "Stop";
         }
 
+        // Prevent returning function with implicit capture from other functions
+        if (is_function_pointer_type(function_return_type) and
+            is_function_pointer_type(return_type)) {
+            auto expected_fun_ptr_type =
+                std::static_pointer_cast<JotPointerType>(function_return_type);
+            auto expected_fun_type =
+                std::static_pointer_cast<JotFunctionType>(expected_fun_ptr_type->base_type);
+
+            auto return_fun_ptr = std::static_pointer_cast<JotPointerType>(return_type);
+            auto return_fun = std::static_pointer_cast<JotFunctionType>(return_fun_ptr->base_type);
+
+            if (expected_fun_type->implicit_parameters_count !=
+                return_fun->implicit_parameters_count) {
+                context->diagnostics.add_diagnostic_error(
+                    node->get_position().position,
+                    "Can't return lambda that implicit capture values from function");
+                throw "Stop";
+            }
+        }
+
         context->diagnostics.add_diagnostic_error(node->get_position().position,
                                                   "Expect return value to be " +
-                                                      jot_type_literal(return_types_stack.top()) +
+                                                      jot_type_literal(function_return_type) +
                                                       " but got " + jot_type_literal(return_type));
         throw "Stop";
     }
@@ -825,8 +846,14 @@ std::any JotTypeChecker::visit(CallExpression* node)
                 node->set_type_node(type);
                 auto parameters = type->parameters;
                 auto arguments = node->get_arguments();
+                for (auto& argument : arguments) {
+                    argument->set_type_node(node_jot_type(argument->accept(this)));
+                }
+
                 check_parameters_types(node->get_position().position, arguments, parameters,
-                                       type->has_varargs, type->varargs_type);
+                                       type->has_varargs, type->varargs_type,
+                                       type->implicit_parameters_count);
+
                 return type->return_type;
             }
             else {
@@ -852,7 +879,8 @@ std::any JotTypeChecker::visit(CallExpression* node)
         auto parameters = function_type->parameters;
         auto arguments = node->get_arguments();
         check_parameters_types(node->get_position().position, arguments, parameters,
-                               function_type->has_varargs, function_type->varargs_type);
+                               function_type->has_varargs, function_type->varargs_type,
+                               function_type->implicit_parameters_count);
         node->set_type_node(function_type);
         return function_type->return_type;
     }
@@ -868,8 +896,14 @@ std::any JotTypeChecker::visit(CallExpression* node)
 
         auto parameters = function_type->parameters;
         auto arguments = node->get_arguments();
+        for (auto& argument : arguments) {
+            argument->set_type_node(node_jot_type(argument->accept(this)));
+        }
+
         check_parameters_types(node->get_position().position, arguments, parameters,
-                               function_type->has_varargs, function_type->varargs_type);
+                               function_type->has_varargs, function_type->varargs_type,
+                               function_type->implicit_parameters_count);
+
         node->set_type_node(function_type);
         return function_type->return_type;
     }
@@ -889,7 +923,7 @@ std::any JotTypeChecker::visit(InitializeExpression* node)
         auto parameters = struct_type->fields_types;
         auto arguments = node->arguments;
 
-        check_parameters_types(node->position.position, arguments, parameters, false, nullptr);
+        check_parameters_types(node->position.position, arguments, parameters, false, nullptr, 0);
         return struct_type;
     }
 
@@ -904,8 +938,12 @@ std::any JotTypeChecker::visit(LambdaExpression* node)
     auto function_type = std::static_pointer_cast<JotFunctionType>(function_ptr_type->base_type);
     return_types_stack.push(function_type->return_type);
 
+    is_inside_lambda_body = true;
+    lambda_implicit_parameters.push({});
+
     push_new_scope();
 
+    // Define Explicit parameter inside lambda body scope
     for (auto& parameter : node->explicit_parameters) {
         types_table.define(parameter->get_name().literal, parameter->get_type());
     }
@@ -913,9 +951,26 @@ std::any JotTypeChecker::visit(LambdaExpression* node)
     node->body->accept(this);
     pop_current_scope();
 
+    is_inside_lambda_body = false;
+
+    auto extra_parameter_pairs = lambda_implicit_parameters.top();
+
+    // Append Implicit Parameter at the start of function parameters
+    for (auto& parameter_pair : extra_parameter_pairs) {
+        node->implict_parameters_names.push_back(parameter_pair.first);
+        node->implict_parameters_types.push_back(parameter_pair.second);
+        function_type->implicit_parameters_count++;
+    }
+
+    function_type->parameters.insert(function_type->parameters.begin(),
+                                     node->implict_parameters_types.begin(),
+                                     node->implict_parameters_types.end());
+
+    // Modify function pointer type after appending implicit paramaters
     function_ptr_type->base_type = function_type;
     node->set_type_node(function_ptr_type);
 
+    lambda_implicit_parameters.pop();
     return_types_stack.pop();
 
     return function_ptr_type;
@@ -1034,25 +1089,51 @@ std::any JotTypeChecker::visit(EnumAccessExpression* node) { return node->get_ty
 
 std::any JotTypeChecker::visit(LiteralExpression* node)
 {
-    auto name = node->get_name().literal;
-    if (types_table.is_defined(name)) {
-        auto value = types_table.lookup(name);
-        auto type = node_jot_type(value);
-        node->set_type(type);
-
-        // TODO: Must optimized later and to be more accurate
-        if (type->type_kind == TypeKind::Number ||
-            type->type_kind == TypeKind::EnumerationElement) {
-            node->set_constant(true);
-        }
-        return type;
-    }
-    else {
+    const auto name = node->get_name().literal;
+    if (!types_table.is_defined(name)) {
         context->diagnostics.add_diagnostic_error(node->get_name().position,
                                                   "Can't resolve variable with name " +
                                                       node->get_name().literal);
         throw "Stop";
     }
+
+    std::any value = nullptr;
+    if (is_inside_lambda_body) {
+        auto local_variable = types_table.lookup_on_current(name);
+
+        // If not explicit parameter or local declared variable
+        std::string type_literal = local_variable.type().name();
+        if (type_literal == "Dn") {
+            // Check if it declared in any outer scope
+            auto outer_variable_pair = types_table.lookup_with_level(name);
+            auto declared_scope_level = outer_variable_pair.second;
+
+            value = outer_variable_pair.first;
+
+            // Check if it not global variable, need to perform implicit capture for this variable
+            if (declared_scope_level != 0 && declared_scope_level < types_table.size() - 2) {
+                auto type = node_jot_type(value);
+                types_table.define(name, type);
+                lambda_implicit_parameters.top().push_back({name, type});
+            }
+        }
+        // No need for implicit capture, it already local varaible
+        else {
+            value = local_variable;
+        }
+    }
+    else {
+        value = types_table.lookup(name);
+    }
+
+    auto type = node_jot_type(value);
+    node->set_type(type);
+
+    if (type->type_kind == TypeKind::Number || type->type_kind == TypeKind::EnumerationElement) {
+        node->set_constant(true);
+    }
+
+    return type;
 }
 
 std::any JotTypeChecker::visit(NumberExpression* node)
@@ -1151,26 +1232,28 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type)
 void JotTypeChecker::check_parameters_types(TokenSpan                                 location,
                                             std::vector<std::shared_ptr<Expression>>& arguments,
                                             std::vector<std::shared_ptr<JotType>>&    parameters,
-                                            bool has_varargs, std::shared_ptr<JotType> varargs_type)
+                                            bool has_varargs, std::shared_ptr<JotType> varargs_type,
+                                            int implicit_parameters_count)
 {
 
     const auto arguments_size = arguments.size();
+    const auto all_arguments_size = arguments_size + implicit_parameters_count;
     const auto parameters_size = parameters.size();
 
     // If hasent varargs, parameters and arguments must be the same size
-    if (not has_varargs && arguments_size != parameters_size) {
+    if (not has_varargs && all_arguments_size != parameters_size) {
         context->diagnostics.add_diagnostic_error(
             location, "Invalid number of arguments, expect " + std::to_string(parameters_size) +
-                          " but got " + std::to_string(arguments_size));
+                          " but got " + std::to_string(all_arguments_size));
         throw "Stop";
     }
 
     // If it has varargs, number of parameters must be bigger than arguments
-    if (has_varargs && parameters_size > arguments_size) {
-        context->diagnostics.add_diagnostic_error(location,
-                                                  "Invalid number of arguments, expect at last" +
-                                                      std::to_string(parameters_size) +
-                                                      " but got " + std::to_string(arguments_size));
+    if (has_varargs && parameters_size > all_arguments_size) {
+        context->diagnostics.add_diagnostic_error(
+            location, "Invalid number of arguments, expect at last" +
+                          std::to_string(parameters_size) + " but got " +
+                          std::to_string(all_arguments_size));
         throw "Stop";
     }
 
@@ -1180,21 +1263,25 @@ void JotTypeChecker::check_parameters_types(TokenSpan                           
         arguments_types.push_back(node_jot_type(argument->accept(this)));
     }
 
+    auto coun = parameters_size > arguments_size ? arguments_size : parameters_size;
+
     // Check non varargs parameters vs arguments
-    for (size_t i = 0; i < parameters_size; i++) {
-        if (!is_jot_types_equals(parameters[i], arguments_types[i])) {
+    for (size_t i = 0; i < coun; i++) {
+        size_t p = i + implicit_parameters_count;
+
+        if (!is_jot_types_equals(parameters[p], arguments_types[i])) {
 
             // if Parameter is pointer type and null pointer passed as argument
             // Change null pointer base type to parameter type
-            if (is_pointer_type(parameters[i]) and is_null_type(arguments_types[i])) {
+            if (is_pointer_type(parameters[p]) and is_null_type(arguments_types[i])) {
                 auto null_expr = std::dynamic_pointer_cast<NullExpression>(arguments[i]);
-                null_expr->null_base_type = parameters[i];
+                null_expr->null_base_type = parameters[p];
                 continue;
             }
 
             context->diagnostics.add_diagnostic_error(
                 location, "Argument type didn't match parameter type expect " +
-                              jot_type_literal(parameters[i]) + " got " +
+                              jot_type_literal(parameters[p]) + " got " +
                               jot_type_literal(arguments_types[i]));
             throw "Stop";
         }

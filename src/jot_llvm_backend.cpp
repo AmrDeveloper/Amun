@@ -19,6 +19,7 @@
 #include <any>
 #include <memory>
 #include <string>
+#include <vector>
 
 std::unique_ptr<llvm::Module>
 JotLLVMBackend::compile(std::string module_name, std::shared_ptr<CompilationUnit> compilation_unit)
@@ -557,7 +558,6 @@ std::any JotLLVMBackend::visit(DeferStatement* node)
                 }
                 auto defer_function_call = std::make_shared<DeferFunctionPtrCall>(
                     function_pointer, loaded, arguments_values);
-                // defer_calls_stack.insert(defer_calls_stack.begin(), defer_function_call);
                 defer_scoped_list.push_front(defer_function_call);
             }
         }
@@ -1086,7 +1086,27 @@ std::any JotLLVMBackend::visit(CallExpression* node)
         auto                      arguments_size = arguments.size();
         auto                      parameter_size = function->arg_size();
         std::vector<llvm::Value*> arguments_values;
-        arguments_values.reserve(arguments_size);
+        size_t                    implicit_arguments_count = 0;
+
+        if (is_lambda_function_name(function->getName().str())) {
+            auto extra_literal_parameters = lambda_extra_parameters[function->getName().str()];
+            implicit_arguments_count = extra_literal_parameters.size();
+
+            std::vector<llvm::Value*> implicit_values;
+            for (auto& outer_variable_name : extra_literal_parameters) {
+                auto value = llvm_resolve_variable(outer_variable_name);
+                auto resolved_value = llvm_resolve_value(value);
+                implicit_values.push_back(resolved_value);
+            }
+
+            arguments_values.insert(arguments_values.begin(), implicit_values.begin(),
+                                    implicit_values.end());
+        }
+        else {
+            arguments_values.reserve(arguments_size);
+        }
+
+        // Resolve explicit arguments
         for (size_t i = 0; i < arguments_size; i++) {
             auto argument = arguments[i];
             auto value = llvm_node_value(argument->accept(this));
@@ -1104,16 +1124,17 @@ std::any JotLLVMBackend::visit(CallExpression* node)
                 continue;
             }
 
+            auto function_argument_type = function->getArg(i + implicit_arguments_count)->getType();
+
             // If argument type is the same parameter type just pass it directly
-            if (function->getArg(i)->getType() == value->getType()) {
+            if (function_argument_type == value->getType()) {
                 arguments_values.push_back(value);
                 continue;
             }
 
             // Load the constants first and then pass it to the arguments values
-            auto expected_type = function->getArg(i)->getType();
-            auto loaded_value = Builder.CreateLoad(expected_type, value);
-            arguments_values.push_back(loaded_value);
+            auto resolved_value = Builder.CreateLoad(function_argument_type, value);
+            arguments_values.push_back(resolved_value);
         }
         return Builder.CreateCall(function, arguments_values);
     }
@@ -1214,9 +1235,26 @@ std::any JotLLVMBackend::visit(LambdaExpression* node)
     Builder.SetInsertPoint(entry_block);
 
     push_alloca_inst_scope();
-    int i = 0;
+
+    auto outer_parameter_names = node->implict_parameters_names;
+    auto outer_parameters_size = outer_parameter_names.size();
+
+    std::vector<std::string> implicit_parameters;
+    for (auto& outer_parameter_name : outer_parameter_names) {
+        implicit_parameters.push_back(outer_parameter_name);
+    }
+
+    lambda_extra_parameters[lambda_name] = implicit_parameters;
+
+    size_t i = 0;
+    size_t explicit_parameter_index = 0;
     for (auto& arg : function->args()) {
-        arg.setName(node->explicit_parameters[i++]->get_name().literal);
+        if (i < outer_parameters_size) {
+            arg.setName(implicit_parameters[i++]);
+        }
+        else {
+            arg.setName(node->explicit_parameters[explicit_parameter_index++]->get_name().literal);
+        }
         const std::string arg_name_str = std::string(arg.getName());
         auto* alloca_inst = create_entry_block_alloca(function, arg_name_str, arg.getType());
         alloca_inst_table.define(arg_name_str, alloca_inst);
@@ -1410,11 +1448,13 @@ std::any JotLLVMBackend::visit(EnumAccessExpression* node)
 
 std::any JotLLVMBackend::visit(LiteralExpression* node)
 {
-    auto name = node->get_name().literal;
+    const auto name = node->get_name().literal;
+    // If found in alloca inst table that mean it local variable
     auto alloca_inst = alloca_inst_table.lookup(name);
-    if (alloca_inst.type() != typeid(nullptr))
+    if (alloca_inst.type() != typeid(nullptr)) {
         return alloca_inst;
-    // If it not in alloca inst table,a maybe it global variable
+    }
+    // If it not in alloca inst table,that mean it global variable
     return llvm_module->getNamedGlobal(name);
 }
 
@@ -1531,6 +1571,17 @@ llvm::Value* JotLLVMBackend::llvm_resolve_value(std::any any_value)
     }
 
     return llvm_value;
+}
+
+llvm::Value* JotLLVMBackend::llvm_resolve_variable(const std::string& name)
+{
+    // If found in alloca inst table that mean it local variable
+    auto alloca_inst = alloca_inst_table.lookup(name);
+    if (alloca_inst.type() != typeid(nullptr)) {
+        return llvm_node_value(alloca_inst);
+    }
+    // If it not in alloca inst table,that mean it global variable
+    return llvm_module->getNamedGlobal(name);
 }
 
 inline llvm::Value* JotLLVMBackend::llvm_number_value(const std::string& value_litearl,
@@ -2163,6 +2214,11 @@ llvm::Function* JotLLVMBackend::lookup_function(std::string& name)
     }
 
     return llvm_functions[name];
+}
+
+inline bool JotLLVMBackend::is_lambda_function_name(const std::string& name)
+{
+    return name.starts_with("_lambda");
 }
 
 inline bool JotLLVMBackend::is_global_block() { return Builder.GetInsertBlock() == nullptr; }
