@@ -1231,28 +1231,35 @@ std::shared_ptr<LambdaExpression> JotParser::parse_lambda_expression()
     auto open_paren =
         consume_kind(TokenKind::OpenBrace, "Expect { at the start of lambda expression");
 
-    assert_kind(TokenKind::OpenParen, "Expect ( before lambda parameters");
-
-    // Parse Parameters
     std::vector<std::shared_ptr<Parameter>> parameters;
-    while (not is_current_kind(TokenKind::CloseParen)) {
-        parameters.push_back(parse_parameter());
 
-        if (is_current_kind(TokenKind::Comma)) {
-            advanced_token();
+    std::shared_ptr<JotType> return_type;
+
+    if (is_current_kind(TokenKind::OpenParen)) {
+        advanced_token();
+
+        // Parse Parameters
+        while (not is_current_kind(TokenKind::CloseParen)) {
+            parameters.push_back(parse_parameter());
+
+            if (is_current_kind(TokenKind::Comma)) {
+                advanced_token();
+            }
+            else {
+                break;
+            }
         }
-        else {
-            break;
-        }
+
+        assert_kind(TokenKind::CloseParen, "Expect ) after lambda parameters");
+        return_type = parse_type();
+        assert_kind(TokenKind::RightArrow, "Expect -> after lambda return type");
+    }
+    else {
+        // Default return type for lambda expression
+        return_type = jot_void_ty;
     }
 
-    assert_kind(TokenKind::CloseParen, "Expect ) after lambda parameters");
-
-    // parse return type
-    auto return_type = parse_type();
-
-    assert_kind(TokenKind::RightArrow, "Expect -> after lambda return type");
-
+    // Parse lambda expression body
     std::vector<std::shared_ptr<Statement>> body;
     while (not is_current_kind(TokenKind::CloseBrace)) {
         body.push_back(parse_statement());

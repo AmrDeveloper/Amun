@@ -1,0 +1,11 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var lambda = {
+        printf("Hello, World!\n");
+        return;
+    };
+    
+    lambda();
+    return 0;
+}
