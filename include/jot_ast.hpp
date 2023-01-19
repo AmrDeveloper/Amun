@@ -90,16 +90,15 @@ class CompilationUnit {
 
 class BlockStatement : public Statement {
   public:
-    BlockStatement(std::vector<std::shared_ptr<Statement>> nodes) : nodes(nodes) {}
+    BlockStatement(std::vector<std::shared_ptr<Statement>> nodes) : statements(nodes) {}
 
-    std::vector<std::shared_ptr<Statement>> get_nodes() { return nodes; }
+    std::vector<std::shared_ptr<Statement>> get_nodes() { return statements; }
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
     AstNodeType get_ast_node_type() override { return AstNodeType::Block; }
 
-  private:
-    std::vector<std::shared_ptr<Statement>> nodes;
+    std::vector<std::shared_ptr<Statement>> statements;
 };
 
 class Parameter {

@@ -1103,7 +1103,6 @@ std::shared_ptr<Expression> JotParser::parse_function_call_expression()
 {
     auto expression = parse_postfix_call_expression();
     while (is_current_kind(TokenKind::OpenParen)) {
-
         auto                                     position = peek_and_advance_token();
         std::vector<std::shared_ptr<Expression>> arguments;
         while (not is_current_kind(TokenKind::CloseParen)) {
@@ -1111,9 +1110,17 @@ std::shared_ptr<Expression> JotParser::parse_function_call_expression()
             if (is_current_kind(TokenKind::Comma))
                 advanced_token();
         }
+
         assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
+
+        // Add support for optional lambda after call expression
+        if (is_current_kind(TokenKind::OpenBrace)) {
+            arguments.push_back(parse_lambda_expression());
+        }
+
         expression = std::make_shared<CallExpression>(position, expression, arguments);
     }
+
     return expression;
 }
 
@@ -1267,7 +1274,18 @@ std::shared_ptr<LambdaExpression> JotParser::parse_lambda_expression()
 
     auto lambda_body = std::make_shared<BlockStatement>(body);
 
-    assert_kind(TokenKind::CloseBrace, "Expect } at the end of lambda expression");
+    auto close_brace =
+        consume_kind(TokenKind::CloseBrace, "Expect } at the end of lambda expression");
+
+    // If lambda body has no statements or end without return statement
+    // we can implicity insert return statement without value
+    if (return_type->type_kind == TypeKind::Void) {
+        if (body.empty() || body.back()->get_ast_node_type() != AstNodeType::Return) {
+            auto void_return = std::make_shared<ReturnStatement>(close_brace, nullptr, false);
+            lambda_body->statements.push_back(void_return);
+        }
+    }
+
     return std::make_shared<LambdaExpression>(open_paren, parameters, return_type, lambda_body);
 }
 
