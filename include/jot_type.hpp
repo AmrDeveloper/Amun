@@ -160,6 +160,8 @@ bool is_function_pointer_type(std::shared_ptr<JotType> type);
 
 bool is_pointer_type(std::shared_ptr<JotType> type);
 
+bool is_void_type(std::shared_ptr<JotType> type);
+
 bool is_null_type(std::shared_ptr<JotType> type);
 
 bool is_none_type(std::shared_ptr<JotType> type);

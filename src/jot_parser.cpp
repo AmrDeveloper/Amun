@@ -353,6 +353,17 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(Funct
 
     if (is_current_kind(TokenKind::OpenBrace)) {
         auto block = parse_block_statement();
+        auto close_brace = previous_token;
+
+        // If function return type is void and has no return at the end, emit one
+        if (is_void_type(prototype->get_return_type()) &&
+            (block->statements.empty() ||
+             block->statements.back()->get_ast_node_type() != AstNodeType::Return)) {
+            auto void_return =
+                std::make_shared<ReturnStatement>(close_brace.value(), nullptr, false);
+            block->statements.push_back(void_return);
+        }
+
         current_ast_scope = parent_node_scope;
         return std::make_shared<FunctionDeclaration>(prototype, block);
     }
@@ -1279,11 +1290,10 @@ std::shared_ptr<LambdaExpression> JotParser::parse_lambda_expression()
 
     // If lambda body has no statements or end without return statement
     // we can implicity insert return statement without value
-    if (return_type->type_kind == TypeKind::Void) {
-        if (body.empty() || body.back()->get_ast_node_type() != AstNodeType::Return) {
-            auto void_return = std::make_shared<ReturnStatement>(close_brace, nullptr, false);
-            lambda_body->statements.push_back(void_return);
-        }
+    if (is_void_type(return_type) &&
+        (body.empty() || body.back()->get_ast_node_type() != AstNodeType::Return)) {
+        auto void_return = std::make_shared<ReturnStatement>(close_brace, nullptr, false);
+        lambda_body->statements.push_back(void_return);
     }
 
     return std::make_shared<LambdaExpression>(open_paren, parameters, return_type, lambda_body);
