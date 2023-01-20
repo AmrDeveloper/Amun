@@ -1,0 +1,15 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    for 0 .. 10 {
+        printf("Outsize lambda\n");
+        var lambda = {
+            for 0 .. 10 {
+                printf("Inside lambda\n");
+                break;
+            }
+        };
+        lambda();
+    }
+    return 0;
+}
