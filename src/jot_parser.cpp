@@ -352,7 +352,9 @@ std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(Funct
     }
 
     if (is_current_kind(TokenKind::OpenBrace)) {
+        loop_levels_stack.push(0);
         auto block = parse_block_statement();
+        loop_levels_stack.pop();
         auto close_brace = previous_token;
 
         // If function return type is void and has no return at the end, emit one
@@ -576,7 +578,7 @@ std::shared_ptr<BreakStatement> JotParser::parse_break_statement()
 {
     auto break_token = consume_kind(TokenKind::BreakKeyword, "Expect break keyword.");
 
-    if (current_ast_scope != AstNodeScope::ConditionalScope or loop_stack_size == 0) {
+    if (current_ast_scope != AstNodeScope::ConditionalScope or loop_levels_stack.top() == 0) {
         context->diagnostics.add_diagnostic_error(
             break_token.position, "break keyword can only be used inside at last one while loop");
         throw "Stop";
@@ -604,11 +606,11 @@ std::shared_ptr<BreakStatement> JotParser::parse_break_statement()
             throw "Stop";
         }
 
-        if (times_int > loop_stack_size) {
+        if (times_int > loop_levels_stack.top()) {
             context->diagnostics.add_diagnostic_error(
                 break_token.position, "break times can't be bigger than the number of loops you "
                                       "have, expect less than or equals " +
-                                          std::to_string(loop_stack_size));
+                                          std::to_string(loop_levels_stack.top()));
             throw "Stop";
         }
 
@@ -625,7 +627,7 @@ std::shared_ptr<ContinueStatement> JotParser::parse_continue_statement()
 {
     auto continue_token = consume_kind(TokenKind::ContinueKeyword, "Expect continue keyword.");
 
-    if (current_ast_scope != AstNodeScope::ConditionalScope or loop_stack_size == 0) {
+    if (current_ast_scope != AstNodeScope::ConditionalScope or loop_levels_stack.top() == 0) {
         context->diagnostics.add_diagnostic_error(
             continue_token.position,
             "continue keyword can only be used inside at last one while loop");
@@ -658,12 +660,12 @@ std::shared_ptr<ContinueStatement> JotParser::parse_continue_statement()
             throw "Stop";
         }
 
-        if (times_int > loop_stack_size) {
+        if (times_int > loop_levels_stack.top()) {
             context->diagnostics.add_diagnostic_error(
                 continue_token.position,
                 "continue times can't be bigger than the number of loops you "
                 "have, expect less than or equals " +
-                    std::to_string(loop_stack_size));
+                    std::to_string(loop_levels_stack.top()));
             throw "Stop";
         }
 
@@ -721,9 +723,9 @@ std::shared_ptr<Statement> JotParser::parse_for_statement()
 
     // Parse for ever statement
     if (is_current_kind(TokenKind::OpenBrace)) {
-        loop_stack_size += 1;
+        loop_levels_stack.top() += 1;
         auto body = parse_statement();
-        loop_stack_size -= 1;
+        loop_levels_stack.top() -= 1;
         current_ast_scope = parent_node_scope;
         return std::make_shared<ForeverStatement>(keyword, body);
     }
@@ -758,9 +760,9 @@ std::shared_ptr<Statement> JotParser::parse_for_statement()
             step = parse_expression();
         }
 
-        loop_stack_size += 1;
+        loop_levels_stack.top() += 1;
         auto body = parse_statement();
-        loop_stack_size -= 1;
+        loop_levels_stack.top() -= 1;
 
         current_ast_scope = parent_node_scope;
         return std::make_shared<ForRangeStatement>(keyword, name, expr, range_end, step, body);
@@ -779,9 +781,9 @@ std::shared_ptr<WhileStatement> JotParser::parse_while_statement()
     auto keyword = consume_kind(TokenKind::WhileKeyword, "Expect while keyword.");
     auto condition = parse_expression();
 
-    loop_stack_size += 1;
+    loop_levels_stack.top() += 1;
     auto body = parse_statement();
-    loop_stack_size -= 1;
+    loop_levels_stack.top() -= 1;
 
     current_ast_scope = parent_node_scope;
     return std::make_shared<WhileStatement>(keyword, condition, body);
@@ -1277,11 +1279,15 @@ std::shared_ptr<LambdaExpression> JotParser::parse_lambda_expression()
         return_type = jot_void_ty;
     }
 
+    loop_levels_stack.push(0);
+
     // Parse lambda expression body
     std::vector<std::shared_ptr<Statement>> body;
     while (not is_current_kind(TokenKind::CloseBrace)) {
         body.push_back(parse_statement());
     }
+
+    loop_levels_stack.pop();
 
     auto lambda_body = std::make_shared<BlockStatement>(body);
 

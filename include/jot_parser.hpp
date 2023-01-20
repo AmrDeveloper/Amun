@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <optional>
+#include <stack>
 #include <string_view>
 #include <unordered_map>
 
@@ -179,12 +180,15 @@ class JotParser {
 
     std::string                 file_parent_path;
     std::shared_ptr<JotContext> context;
-    JotTokenizer&               tokenizer;
-    std::optional<Token>        previous_token;
-    std::optional<Token>        current_token;
-    std::optional<Token>        next_token;
-    AstNodeScope                current_ast_scope = AstNodeScope::GlobalScope;
-    std::string_view            current_struct_name = "";
-    int                         current_struct_unknown_fields = 0;
-    int                         loop_stack_size = 0;
+
+    JotTokenizer&        tokenizer;
+    std::optional<Token> previous_token;
+    std::optional<Token> current_token;
+    std::optional<Token> next_token;
+
+    AstNodeScope    current_ast_scope = AstNodeScope::GlobalScope;
+    std::stack<int> loop_levels_stack;
+
+    std::string_view current_struct_name = "";
+    int              current_struct_unknown_fields = 0;
 };
