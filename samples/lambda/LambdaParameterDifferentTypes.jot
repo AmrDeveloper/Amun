@@ -1,0 +1,17 @@
+extern fun printf(format *char, varargs Any) int64;
+
+
+fun main() int64 {
+    var i = 40;
+    var f = 10f64;
+
+    var print_values = { (s *char) void -> 
+        printf("Integer %d\n", i);
+        printf("Float %f\n", f);
+        printf("String %s\n", s);
+        return; 
+    };
+
+    print_values("Hello");
+    return 0;
+}
