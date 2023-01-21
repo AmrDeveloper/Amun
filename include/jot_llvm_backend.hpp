@@ -2,6 +2,7 @@
 
 #include "jot_ast.hpp"
 #include "jot_ast_visitor.hpp"
+#include "jot_llvm_defer.hpp"
 #include "jot_scoped_list.hpp"
 #include "jot_scoped_map.hpp"
 #include "jot_type.hpp"
@@ -18,11 +19,6 @@
 #include <stack>
 #include <unordered_map>
 #include <vector>
-
-class DeferCall {
-  public:
-    virtual void generate_call() = 0;
-};
 
 // LLVM Context, Builder and Current Module
 static llvm::LLVMContext llvm_context;
@@ -52,33 +48,6 @@ static auto false_value = Builder.getInt1(false);
 
 // LLVM 32 bit integer with zero value
 static auto zero_int32_value = Builder.getInt32(0);
-
-class DeferFunctionCall : public DeferCall {
-  public:
-    DeferFunctionCall(llvm::Function* function, std::vector<llvm::Value*> arguments)
-        : function(std::move(function)), arguments(std::move(arguments))
-    {
-    }
-    llvm::Function*           function;
-    std::vector<llvm::Value*> arguments;
-
-    void generate_call() override { Builder.CreateCall(function, arguments); }
-};
-
-class DeferFunctionPtrCall : public DeferCall {
-  public:
-    DeferFunctionPtrCall(llvm::FunctionType* function_type, llvm::Value* callee,
-                         std::vector<llvm::Value*> arguments)
-        : function_type(std::move(function_type)), callee(std::move(callee)),
-          arguments(std::move(arguments))
-    {
-    }
-    llvm::FunctionType*       function_type;
-    llvm::Value*              callee;
-    std::vector<llvm::Value*> arguments;
-
-    void generate_call() override { Builder.CreateCall(function_type, callee, arguments); }
-};
 
 class JotLLVMBackend : public TreeVisitor {
   public:
@@ -233,6 +202,8 @@ class JotLLVMBackend : public TreeVisitor {
     bool is_lambda_function_name(const std::string& name);
 
     bool is_global_block();
+
+    void execute_defer_call(std::shared_ptr<DeferCall>& defer_call);
 
     void execute_scope_defer_calls();
 

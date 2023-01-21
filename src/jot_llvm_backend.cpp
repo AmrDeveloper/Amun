@@ -2229,11 +2229,23 @@ inline bool JotLLVMBackend::is_lambda_function_name(const std::string& name)
 
 inline bool JotLLVMBackend::is_global_block() { return Builder.GetInsertBlock() == nullptr; }
 
+inline void JotLLVMBackend::execute_defer_call(std::shared_ptr<DeferCall>& defer_call)
+{
+    if (defer_call->defer_kind == DeferCallKind::DEFER_FUNCTION_CALL) {
+        auto fun_call = std::static_pointer_cast<DeferFunctionCall>(defer_call);
+        Builder.CreateCall(fun_call->function, fun_call->arguments);
+    }
+    else if (defer_call->defer_kind == DeferCallKind::DEFER_FUNCTION_CALL) {
+        auto fun_ptr = std::static_pointer_cast<DeferFunctionPtrCall>(defer_call);
+        Builder.CreateCall(fun_ptr->function_type, fun_ptr->callee, fun_ptr->arguments);
+    }
+}
+
 inline void JotLLVMBackend::execute_scope_defer_calls()
 {
     auto defer_calls = defer_calls_stack.top().get_scope_elements();
     for (auto& defer_call : defer_calls) {
-        defer_call->generate_call();
+        execute_defer_call(defer_call);
     }
 }
 
@@ -2245,7 +2257,7 @@ inline void JotLLVMBackend::execute_all_defer_calls()
     for (int i = size - 1; i >= 0; i--) {
         auto defer_calls = current_defer_stack.get_scope_elements(i);
         for (auto& defer_call : defer_calls) {
-            defer_call->generate_call();
+            execute_defer_call(defer_call);
         }
     }
 }
