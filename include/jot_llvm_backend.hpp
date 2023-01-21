@@ -251,10 +251,11 @@ class JotLLVMBackend : public TreeVisitor {
     std::unordered_map<std::string, llvm::Constant*>                    constants_string_pool;
     std::unordered_map<std::string, llvm::Type*>                        structures_types_map;
 
-    JotScopedList<std::shared_ptr<DeferCall>> defer_scoped_list;
-    JotScopedMap<std::string, std::any>       alloca_inst_table;
-    std::stack<llvm::BasicBlock*>             break_blocks_stack;
-    std::stack<llvm::BasicBlock*>             continue_blocks_stack;
+    std::stack<JotScopedList<std::shared_ptr<DeferCall>>> defer_calls_stack;
+
+    JotScopedMap<std::string, std::any> alloca_inst_table;
+    std::stack<llvm::BasicBlock*>       break_blocks_stack;
+    std::stack<llvm::BasicBlock*>       continue_blocks_stack;
 
     bool has_return_statement = false;
     bool has_break_or_continue_statement = false;

@@ -39,7 +39,7 @@ JotLLVMBackend::compile(std::string module_name, std::shared_ptr<CompilationUnit
 std::any JotLLVMBackend::visit(BlockStatement* node)
 {
     push_alloca_inst_scope();
-    defer_scoped_list.push_new_scope();
+    defer_calls_stack.top().push_new_scope();
     bool should_execute_defers = true;
     for (auto& statement : node->get_nodes()) {
         const auto ast_node_type = statement->get_ast_node_type();
@@ -61,7 +61,7 @@ std::any JotLLVMBackend::visit(BlockStatement* node)
         execute_scope_defer_calls();
     }
 
-    defer_scoped_list.pop_current_scope();
+    defer_calls_stack.top().pop_current_scope();
     pop_alloca_inst_scope();
     return 0;
 }
@@ -200,6 +200,7 @@ std::any JotLLVMBackend::visit(FunctionDeclaration* node)
     auto entry_block = llvm::BasicBlock::Create(llvm_context, "entry", function);
     Builder.SetInsertPoint(entry_block);
 
+    defer_calls_stack.push({});
     push_alloca_inst_scope();
     for (auto& arg : function->args()) {
         const std::string arg_name_str = std::string(arg.getName());
@@ -211,6 +212,7 @@ std::any JotLLVMBackend::visit(FunctionDeclaration* node)
     node->get_body()->accept(this);
 
     pop_alloca_inst_scope();
+    defer_calls_stack.pop();
 
     alloca_inst_table.define(name, function);
 
@@ -558,7 +560,7 @@ std::any JotLLVMBackend::visit(DeferStatement* node)
                 }
                 auto defer_function_call = std::make_shared<DeferFunctionPtrCall>(
                     function_pointer, loaded, arguments_values);
-                defer_scoped_list.push_front(defer_function_call);
+                defer_calls_stack.top().push_front(defer_function_call);
             }
         }
         return 0;
@@ -597,7 +599,7 @@ std::any JotLLVMBackend::visit(DeferStatement* node)
     auto defer_function_call = std::make_shared<DeferFunctionCall>(function, arguments_values);
 
     // Inser must be at the begin to simulate stack but in vector to easy traverse and clear
-    defer_scoped_list.push_front(defer_function_call);
+    defer_calls_stack.top().push_front(defer_function_call);
     return 0;
 }
 
@@ -1261,7 +1263,11 @@ std::any JotLLVMBackend::visit(LambdaExpression* node)
         Builder.CreateStore(&arg, alloca_inst);
     }
 
+    defer_calls_stack.push({});
+
     node->body->accept(this);
+
+    defer_calls_stack.pop();
 
     pop_alloca_inst_scope();
 
@@ -2225,7 +2231,7 @@ inline bool JotLLVMBackend::is_global_block() { return Builder.GetInsertBlock() 
 
 inline void JotLLVMBackend::execute_scope_defer_calls()
 {
-    auto defer_calls = defer_scoped_list.get_scope_elements();
+    auto defer_calls = defer_calls_stack.top().get_scope_elements();
     for (auto& defer_call : defer_calls) {
         defer_call->generate_call();
     }
@@ -2233,9 +2239,11 @@ inline void JotLLVMBackend::execute_scope_defer_calls()
 
 inline void JotLLVMBackend::execute_all_defer_calls()
 {
-    const auto size = defer_scoped_list.size();
+    auto current_defer_stack = defer_calls_stack.top();
+
+    const auto size = current_defer_stack.size();
     for (int i = size - 1; i >= 0; i--) {
-        auto defer_calls = defer_scoped_list.get_scope_elements(i);
+        auto defer_calls = current_defer_stack.get_scope_elements(i);
         for (auto& defer_call : defer_calls) {
             defer_call->generate_call();
         }

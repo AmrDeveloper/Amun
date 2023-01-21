@@ -1,0 +1,15 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    defer printf("Defered Hello outside lambda\n");
+    printf("Normal Hello outside lambda\n");
+
+    var lambda = {
+        defer printf("Defered Hello inside lambda\n");
+        printf("Normal Hello inside lambda\n");
+    };
+
+    lambda();
+
+    return 0;
+}
