@@ -1,0 +1,32 @@
+extern fun printf(format *char, varargs Any) int64;
+
+extern fun malloc(size int64) *void;
+
+extern fun free(ptr *void) void;
+
+struct Point {
+    x int64;
+    y int64;
+}
+
+fun let(p *Point, callback *() void) void {
+    if p != null {
+        callback();
+    }
+}
+
+fun main() int64 {
+    var point = cast(*Point) malloc(type_size(Point));
+
+    let(point) {
+        printf("Point instance is not null\n");
+    };
+
+    let(null) {
+        printf("Will never print\n");
+    };
+
+    free(cast(*void) point);
+
+    return 0;
+}
