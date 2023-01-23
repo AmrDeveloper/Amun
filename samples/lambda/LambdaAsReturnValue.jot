@@ -1,0 +1,10 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun return_lambda() *(int64, int64) int64 {
+    return { (x int64, y int64) int64 -> return x + y; };
+}
+
+fun main() int64 {
+    printf("Sum of 10 and 20 = %d\n", return_lambda()(10, 20));
+    return 0;
+}
