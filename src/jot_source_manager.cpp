@@ -1,20 +1,13 @@
 #include "../include/jot_source_manager.hpp"
-#include <cstring>
 
-int JotSourceManager::register_source_path(const char* path)
+int JotSourceManager::register_source_path(std::string path)
 {
     last_source_file_id++;
     files_map[last_source_file_id] = path;
+    files_set.insert(path);
     return last_source_file_id;
 }
 
-const char* JotSourceManager::resolve_source_path(int source_id) { return files_map[source_id]; }
+std::string JotSourceManager::resolve_source_path(int source_id) { return files_map[source_id]; }
 
-bool JotSourceManager::is_path_registered(const char* path)
-{
-    for (int i = 0; i <= last_source_file_id; i++) {
-        if (std::strcmp(files_map[last_source_file_id], path) == 0)
-            return true;
-    }
-    return false;
-}
+bool JotSourceManager::is_path_registered(std::string path) { return files_set.contains(path); }

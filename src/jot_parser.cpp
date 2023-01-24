@@ -47,7 +47,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration()
                 TokenKind::String, "Expect string as library name after import statement");
             std::string library_path = "../lib/" + library_name.literal + ".jot";
 
-            if (context->source_manager.is_path_registered(library_path.c_str()))
+            if (context->source_manager.is_path_registered(library_path))
                 continue;
 
             if (not is_file_exists(library_path)) {
@@ -114,7 +114,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration()
 
     std::string library_path = file_parent_path + library_name.literal + ".jot";
 
-    if (context->source_manager.is_path_registered(library_path.c_str())) {
+    if (context->source_manager.is_path_registered(library_path)) {
         return std::vector<std::shared_ptr<Statement>>();
     }
 
@@ -131,7 +131,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_single_source_file(std:
 {
     const char*  file_name = path.c_str();
     std::string  source_content = read_file_content(file_name);
-    int          file_id = context->source_manager.register_source_path(file_name);
+    int          file_id = context->source_manager.register_source_path(path);
     JotTokenizer tokenizer(file_id, source_content);
     JotParser    parser(context, tokenizer);
     auto         compilation_unit = parser.parse_compilation_unit();

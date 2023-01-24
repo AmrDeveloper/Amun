@@ -1,17 +1,19 @@
 #pragma once
 
-#include <string_view>
+#include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 class JotSourceManager {
   public:
-    int register_source_path(const char* path);
+    int register_source_path(std::string path);
 
-    const char* resolve_source_path(int source_id);
+    std::string resolve_source_path(int source_id);
 
-    bool is_path_registered(const char* path);
+    bool is_path_registered(std::string path);
 
   private:
-    std::unordered_map<int, const char*> files_map;
+    std::unordered_map<int, std::string> files_map;
+    std::unordered_set<std::string>      files_set;
     int                                  last_source_file_id = -1;
 };

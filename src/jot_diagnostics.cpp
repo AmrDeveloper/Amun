@@ -24,7 +24,7 @@ void JotDiagnosticEngine::report_diagnostic(JotDiagnostic& diagnostic)
     auto message = diagnostic.get_message();
     auto file_name = source_manager.resolve_source_path(location.file_id);
     auto line_number = location.line_number;
-    auto source_line = read_file_line(file_name, line_number);
+    auto source_line = read_file_line(file_name.c_str(), line_number);
 
     std::cout << diagnostic.get_level_literal() << " in " << file_name << ':'
               << std::to_string(line_number) << ':' << std::to_string(location.column_start)
