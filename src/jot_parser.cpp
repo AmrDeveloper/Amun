@@ -47,7 +47,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration()
                 TokenKind::String, "Expect string as library name after import statement");
             std::string library_path = "../lib/" + library_name.literal + ".jot";
 
-            if (context->source_manager.is_path_registered(library_path))
+            if (context->source_manager.is_path_registered(library_path.c_str()))
                 continue;
 
             if (not is_file_exists(library_path)) {
@@ -1043,7 +1043,7 @@ std::shared_ptr<Expression> JotParser::parse_prefix_call_expression()
 
 std::shared_ptr<Expression> JotParser::parse_postfix_increment_or_decrement()
 {
-    auto expression = parse_structure_access_expression();
+    auto expression = parse_call_or_access_expression();
 
     if (is_current_kind(TokenKind::PlusPlus) or is_current_kind(TokenKind::MinusMinus)) {
         auto token = peek_and_advance_token();
@@ -1061,14 +1061,40 @@ std::shared_ptr<Expression> JotParser::parse_postfix_increment_or_decrement()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_structure_access_expression()
+std::shared_ptr<Expression> JotParser::parse_call_or_access_expression()
 {
     auto expression = parse_enumeration_attribute_expression();
-    while (is_current_kind(TokenKind::Dot)) {
+    while (is_current_kind(TokenKind::Dot) || is_current_kind(TokenKind::OpenParen)) {
+
         // Parse structure field access expression
-        auto dot_token = peek_and_advance_token();
-        auto field_name = consume_kind(TokenKind::Symbol, "Expect literal as field name");
-        expression = std::make_shared<DotExpression>(dot_token, expression, field_name);
+        if (is_current_kind(TokenKind::Dot)) {
+            auto dot_token = peek_and_advance_token();
+            auto field_name = consume_kind(TokenKind::Symbol, "Expect literal as field name");
+            expression = std::make_shared<DotExpression>(dot_token, expression, field_name);
+            continue;
+        }
+
+        // Parse function call expression
+        if (is_current_kind(TokenKind::OpenParen)) {
+            auto                                     position = peek_and_advance_token();
+            std::vector<std::shared_ptr<Expression>> arguments;
+            while (not is_current_kind(TokenKind::CloseParen)) {
+                arguments.push_back(parse_expression());
+                if (is_current_kind(TokenKind::Comma)) {
+                    advanced_token();
+                }
+            }
+
+            assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
+
+            // Add support for optional lambda after call expression
+            if (is_current_kind(TokenKind::OpenBrace)) {
+                arguments.push_back(parse_lambda_expression());
+            }
+
+            expression = std::make_shared<CallExpression>(position, expression, arguments);
+            continue;
+        }
     }
     return expression;
 }
@@ -1102,38 +1128,13 @@ std::shared_ptr<Expression> JotParser::parse_enumeration_attribute_expression()
 
 std::shared_ptr<Expression> JotParser::parse_postfix_index_expression()
 {
-    auto expression = parse_function_call_expression();
+    auto expression = parse_postfix_call_expression();
     while (is_current_kind(TokenKind::OpenBracket)) {
         auto position = peek_and_advance_token();
         auto index = parse_expression();
         assert_kind(TokenKind::CloseBracket, "Expect ] after index value");
         expression = std::make_shared<IndexExpression>(position, expression, index);
     }
-    return expression;
-}
-
-std::shared_ptr<Expression> JotParser::parse_function_call_expression()
-{
-    auto expression = parse_postfix_call_expression();
-    while (is_current_kind(TokenKind::OpenParen)) {
-        auto                                     position = peek_and_advance_token();
-        std::vector<std::shared_ptr<Expression>> arguments;
-        while (not is_current_kind(TokenKind::CloseParen)) {
-            arguments.push_back(parse_expression());
-            if (is_current_kind(TokenKind::Comma))
-                advanced_token();
-        }
-
-        assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
-
-        // Add support for optional lambda after call expression
-        if (is_current_kind(TokenKind::OpenBrace)) {
-            arguments.push_back(parse_lambda_expression());
-        }
-
-        expression = std::make_shared<CallExpression>(position, expression, arguments);
-    }
-
     return expression;
 }
 

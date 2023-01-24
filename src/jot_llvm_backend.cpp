@@ -1183,6 +1183,54 @@ std::any JotLLVMBackend::visit(CallExpression* node)
         return Builder.CreateCall(function, arguments_values);
     }
 
+    // If callee is dot expression that mean we call function pointer from struct element
+    if (callee_ast_node_type == AstNodeType::DotExpr) {
+        auto dot = std::dynamic_pointer_cast<DotExpression>(node->get_callee());
+        auto struct_fun_ptr = llvm_node_value(dot->accept(this));
+
+        auto function_value = derefernecs_llvm_pointer(struct_fun_ptr);
+
+        auto function_ptr_type = std::static_pointer_cast<JotPointerType>(dot->get_type_node());
+        auto llvm_type = llvm_type_from_jot_type(function_ptr_type->base_type);
+        auto llvm_fun_type = llvm::dyn_cast<llvm::FunctionType>(llvm_type);
+
+        auto                      arguments = node->get_arguments();
+        auto                      arguments_size = arguments.size();
+        auto                      parameter_size = llvm_fun_type->getNumParams();
+        std::vector<llvm::Value*> arguments_values;
+        arguments_values.reserve(arguments_size);
+        for (size_t i = 0; i < arguments_size; i++) {
+            auto argument = arguments[i];
+            auto value = llvm_node_value(argument->accept(this));
+
+            // This condition works only if this function has varargs flag
+            if (i >= parameter_size) {
+                if (argument->get_ast_node_type() == AstNodeType::LiteralExpr) {
+                    auto argument_type = llvm_type_from_jot_type(argument->get_type_node());
+                    auto loaded_value = Builder.CreateLoad(argument_type, value);
+                    arguments_values.push_back(loaded_value);
+                    continue;
+                }
+
+                arguments_values.push_back(value);
+                continue;
+            }
+
+            // If argument type is the same parameter type just pass it directly
+            if (llvm_fun_type->getParamType(i) == value->getType()) {
+                arguments_values.push_back(value);
+                continue;
+            }
+
+            // Load the constants first and then pass it to the arguments values
+            auto expected_type = llvm_fun_type->getParamType(i);
+            auto loaded_value = Builder.CreateLoad(expected_type, value);
+            arguments_values.push_back(loaded_value);
+        }
+
+        return Builder.CreateCall(llvm_fun_type, function_value, arguments_values);
+    }
+
     internal_compiler_error("Invalid call expression callee type");
 }
 

@@ -908,9 +908,31 @@ std::any JotTypeChecker::visit(CallExpression* node)
         return function_type->return_type;
     }
 
-    context->diagnostics.add_diagnostic_error(
-        node->get_position().position,
-        "Call expression callee must be a literal or another call expression");
+    // Call struct field with function pointer for example type struct.field()
+    if (callee_ast_node_type == AstNodeType::DotExpr) {
+        auto dot_expression = std::dynamic_pointer_cast<DotExpression>(node->get_callee());
+        auto dot_function_type = node_jot_type(dot_expression->accept(this));
+        auto function_ptr_type = std::static_pointer_cast<JotPointerType>(dot_function_type);
+
+        auto function_type =
+            std::static_pointer_cast<JotFunctionType>(function_ptr_type->base_type);
+
+        auto parameters = function_type->parameters;
+        auto arguments = node->get_arguments();
+        for (auto& argument : arguments) {
+            argument->set_type_node(node_jot_type(argument->accept(this)));
+        }
+
+        check_parameters_types(node->get_position().position, arguments, parameters,
+                               function_type->has_varargs, function_type->varargs_type,
+                               function_type->implicit_parameters_count);
+
+        node->set_type_node(function_type);
+        return function_type->return_type;
+    }
+
+    context->diagnostics.add_diagnostic_error(node->get_position().position,
+                                              "Unexpected callee type for Call Expression");
     throw "Stop";
 }
 

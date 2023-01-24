@@ -1,0 +1,16 @@
+extern fun printf(format *char, varargs Any) int64;
+
+struct Functional {
+    action *() void;
+} 
+
+fun main() int64 {
+    var lambda = {
+        printf("Hello, World\n");
+    };
+
+    var functional = Functional { lambda };
+    functional.action();
+    
+    return 0;
+}

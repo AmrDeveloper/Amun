@@ -110,11 +110,9 @@ class JotParser {
 
     std::shared_ptr<Expression> parse_enumeration_attribute_expression();
 
-    std::shared_ptr<Expression> parse_structure_access_expression();
+    std::shared_ptr<Expression> parse_call_or_access_expression();
 
     std::shared_ptr<Expression> parse_postfix_index_expression();
-
-    std::shared_ptr<Expression> parse_function_call_expression();
 
     std::shared_ptr<Expression> parse_postfix_call_expression();
 
