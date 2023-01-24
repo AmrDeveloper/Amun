@@ -1,5 +1,24 @@
+# Part of the Jot Language project, under the MIT with LLVM
+
+# Directories created by python.
+**/__pycache__/
+
+# Ignore the user's VSCode settings.
+/.vscode/settings.json
+
+# Ignore the user's Idea settings.
+/.idea/
+
+# Directories created by Cmake
 build
 bin
-.vscode
+
+# Directory created by ccache
 .cache
-.idea
+
+# Emacs temporary files
+*~
+\#*\#
+
+# vim temporary files
+.*.swp
