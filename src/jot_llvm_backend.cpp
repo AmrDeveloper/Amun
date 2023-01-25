@@ -103,17 +103,16 @@ std::any JotLLVMBackend::visit(FieldDeclaration* node)
     auto current_function = Builder.GetInsertBlock()->getParent();
     if (value.type() == typeid(llvm::Value*)) {
         auto init_value = std::any_cast<llvm::Value*>(value);
-        // auto init_value_type = init_value->getType();
+        auto init_value_type = init_value->getType();
 
         // This case if you assign derefernced variable for example
         // Case in C Language
         // int* ptr = (int*) malloc(sizeof(int));
         // int value = *ptr;
         // Clang compiler emit load instruction twice to resolve this problem
-        //  if (init_value_type != llvm_type && init_value_type->getPointerElementType() ==
-        //  llvm_type) {
-        //    init_value = derefernecs_llvm_pointer(init_value);
-        // }
+        if (init_value_type != llvm_type && init_value_type->getPointerElementType() == llvm_type) {
+            init_value = derefernecs_llvm_pointer(init_value);
+        }
 
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
         Builder.CreateStore(init_value, alloc_inst);
