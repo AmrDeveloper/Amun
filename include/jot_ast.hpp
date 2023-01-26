@@ -961,9 +961,10 @@ class DotExpression : public Expression {
 
     AstNodeType get_ast_node_type() override { return AstNodeType::DotExpr; }
 
-    bool is_constant() override { return false; }
+    bool is_constant() override { return is_constants_; }
 
-    int field_index = 0;
+    int  field_index = 0;
+    bool is_constants_ = false;
 
   private:
     Token                       dot_token;

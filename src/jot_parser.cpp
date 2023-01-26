@@ -1464,48 +1464,64 @@ std::shared_ptr<JotType> JotParser::parse_type_with_prefix()
 {
     // Parse pointer type
     if (is_current_kind(TokenKind::Star)) {
-        auto star_token = peek_and_advance_token();
-        auto operand = parse_type_with_prefix();
-        return std::make_shared<JotPointerType>(operand);
-    }
-
-    // Parse refernse type
-    if (is_current_kind(TokenKind::And)) {
-        auto and_token = peek_and_advance_token();
-        auto operand = parse_type_with_prefix();
-        return jot_int64_ty;
+        return parse_pointer_to_type();
     }
 
     // Parse function pointer type
     if (is_current_kind(TokenKind::OpenParen)) {
-        auto                                  paren_token = peek_and_advance_token();
-        std::vector<std::shared_ptr<JotType>> parameters_types;
-        while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
-            parameters_types.push_back(parse_type());
-            if (is_current_kind(TokenKind::Comma))
-                advanced_token();
-        }
-        assert_kind(TokenKind::CloseParen, "Expect ) after function type parameters");
-        auto return_type = parse_type();
-        return std::make_shared<JotFunctionType>(paren_token, parameters_types, return_type);
+        return parse_function_type();
     }
 
     // Parse Fixed size array type
     if (is_current_kind(TokenKind::OpenBracket)) {
-        auto bracket_token = peek_and_advance_token();
-        auto size = parse_number_expression();
-        if (!is_integer_type(size->get_type_node())) {
-            context->diagnostics.add_diagnostic_error(bracket_token.position,
-                                                      "Array size must be an integer constants");
-            throw "Stop";
-        }
-        auto number_value = std::atoi(size->get_value().literal.c_str());
-        assert_kind(TokenKind::CloseBracket, "Expect ] after array size.");
-        auto element_type = parse_type();
-        return std::make_shared<JotArrayType>(element_type, number_value);
+        return parse_fixed_size_array_type();
     }
 
     return parse_type_with_postfix();
+}
+
+std::shared_ptr<JotType> JotParser::parse_pointer_to_type()
+{
+    auto star_token = consume_kind(TokenKind::Star, "Pointer type must start with *");
+    auto base_type = parse_type_with_prefix();
+    return std::make_shared<JotPointerType>(base_type);
+}
+
+std::shared_ptr<JotType> JotParser::parse_function_type()
+{
+    auto paren = consume_kind(TokenKind::OpenParen, "Function type expect to start with {");
+
+    std::vector<std::shared_ptr<JotType>> parameters_types;
+    while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
+        parameters_types.push_back(parse_type());
+        if (is_current_kind(TokenKind::Comma))
+            advanced_token();
+    }
+    assert_kind(TokenKind::CloseParen, "Expect ) after function type parameters");
+    auto return_type = parse_type();
+    return std::make_shared<JotFunctionType>(paren, parameters_types, return_type);
+}
+
+std::shared_ptr<JotType> JotParser::parse_fixed_size_array_type()
+{
+    auto bracket = consume_kind(TokenKind::OpenBracket, "Expect [ for fixed size array type");
+
+    if (is_current_kind(TokenKind::CloseBracket)) {
+        context->diagnostics.add_diagnostic_error(peek_current().position,
+                                                  "Fixed array type must have implicit size [n]");
+        throw "Stop";
+    }
+
+    auto size = parse_number_expression();
+    if (!is_integer_type(size->get_type_node())) {
+        context->diagnostics.add_diagnostic_error(bracket.position,
+                                                  "Array size must be an integer constants");
+        throw "Stop";
+    }
+    auto number_value = std::atoi(size->get_value().literal.c_str());
+    assert_kind(TokenKind::CloseBracket, "Expect ] after array size.");
+    auto element_type = parse_type();
+    return std::make_shared<JotArrayType>(element_type, number_value);
 }
 
 std::shared_ptr<JotType> JotParser::parse_type_with_postfix()

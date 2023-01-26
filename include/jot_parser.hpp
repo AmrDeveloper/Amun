@@ -144,6 +144,12 @@ class JotParser {
 
     std::shared_ptr<JotType> parse_type_with_prefix();
 
+    std::shared_ptr<JotType> parse_pointer_to_type();
+
+    std::shared_ptr<JotType> parse_function_type();
+
+    std::shared_ptr<JotType> parse_fixed_size_array_type();
+
     std::shared_ptr<JotType> parse_type_with_postfix();
 
     std::shared_ptr<JotType> parse_primary_type();

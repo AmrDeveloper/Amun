@@ -1329,7 +1329,21 @@ std::any JotLLVMBackend::visit(LambdaExpression* node)
 
 std::any JotLLVMBackend::visit(DotExpression* node)
 {
+    auto callee = node->get_callee();
+    auto callee_llvm_type = llvm_type_from_jot_type(callee->get_type_node());
+
     auto expected_llvm_type = llvm_type_from_jot_type(node->get_type_node());
+
+    if (callee_llvm_type->isArrayTy()) {
+        if (node->get_field_name().literal == "count") {
+            auto llvm_array_type = llvm::dyn_cast<llvm::ArrayType>(callee_llvm_type);
+            auto length = llvm_array_type->getArrayNumElements();
+            return llvm_number_value(std::to_string(length), NumberKind::Integer64);
+        }
+
+        internal_compiler_error("Invalid Array Attribute");
+    }
+
     auto member_ptr = access_struct_member_pointer(node);
 
     // If expected type is pointer no need for loading it for example node.next.data

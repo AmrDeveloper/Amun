@@ -1,0 +1,12 @@
+extern fun printf(format *char, varargs Any) int64;
+                  
+fun main() int64 {
+    var matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+    for 0 .. matrix.count - 1 {
+        for i : 0 .. matrix[it].count - 1 {
+            printf("%d\t", matrix[it][i]);
+        }
+        printf("\n");
+    }
+    return 0;
+}

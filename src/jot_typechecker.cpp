@@ -1048,6 +1048,21 @@ std::any JotTypeChecker::visit(DotExpression* node)
         throw "Stop";
     }
 
+    if (callee_type_kind == TypeKind::Array) {
+        auto attribute_token = node->get_field_name();
+        auto literal = attribute_token.literal;
+
+        if (literal == "count") {
+            node->is_constants_ = true;
+            node->set_type_node(jot_int64_ty);
+            return jot_int64_ty;
+        }
+
+        context->diagnostics.add_diagnostic_error(node->get_position().position,
+                                                  "Unkown Array attribute with name " + literal);
+        throw "Stop";
+    }
+
     context->diagnostics.add_diagnostic_error(
         node->get_position().position, "Dot expression expect struct or enum type as lvalue");
     throw "Stop";
