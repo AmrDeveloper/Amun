@@ -22,6 +22,7 @@ enum class AstNodeType {
     Enum,
     If,
     ForRange,
+    ForEach,
     Forever,
     While,
     Switch,
@@ -47,6 +48,7 @@ enum class AstNodeType {
     DotExpr,
     CastExpr,
     TypeSizeExpr,
+    ValueSizeExpr,
     IndexExpr,
     EnumElementExpr,
     ArrayExpr,
@@ -305,6 +307,25 @@ class ForRangeStatement : public Statement {
     std::shared_ptr<Expression> range_start;
     std::shared_ptr<Expression> range_end;
     std::shared_ptr<Expression> step;
+    std::shared_ptr<Statement>  body;
+};
+
+class ForEachStatement : public Statement {
+  public:
+    ForEachStatement(Token position, std::string element_name,
+                     std::shared_ptr<Expression> collection, std::shared_ptr<Statement> body)
+        : position(position), element_name(std::move(element_name)), collection(collection),
+          body(body)
+    {
+    }
+
+    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::ForRange; }
+
+    Token                       position;
+    std::string                 element_name;
+    std::shared_ptr<Expression> collection;
     std::shared_ptr<Statement>  body;
 };
 
@@ -1046,7 +1067,7 @@ class ValueSizeExpression : public Expression {
 
     bool is_constant() override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::TypeSizeExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::ValueSizeExpr; }
 
   private:
     Token                       position;

@@ -730,7 +730,7 @@ std::shared_ptr<Statement> JotParser::parse_for_statement()
         return std::make_shared<ForeverStatement>(keyword, body);
     }
 
-    // Parse for each or for range statement
+    // Parse optional element name or it as default
     std::string name = "it";
     auto        expr = parse_expression();
     if (is_current_kind(TokenKind::Colon)) {
@@ -768,9 +768,15 @@ std::shared_ptr<Statement> JotParser::parse_for_statement()
         return std::make_shared<ForRangeStatement>(keyword, name, expr, range_end, step, body);
     }
 
-    context->diagnostics.add_diagnostic_error(keyword.position,
-                                              "For range expect .. between start and end of range");
-    throw "Stop";
+    // Parse For each statement
+
+    loop_levels_stack.top() += 1;
+    auto body = parse_statement();
+    loop_levels_stack.top() -= 1;
+
+    current_ast_scope = parent_node_scope;
+
+    return std::make_shared<ForEachStatement>(keyword, name, expr, body);
 }
 
 std::shared_ptr<WhileStatement> JotParser::parse_while_statement()

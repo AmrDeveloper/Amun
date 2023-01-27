@@ -2,7 +2,6 @@
 #include "../include/jot_ast_visitor.hpp"
 #include "../include/jot_logger.hpp"
 #include "../include/jot_type.hpp"
-#include "jot_ast.hpp"
 
 #include <any>
 #include <cstdint>
@@ -239,6 +238,30 @@ std::any JotTypeChecker::visit(ForRangeStatement* node)
     context->diagnostics.add_diagnostic_error(node->position.position,
                                               "For range start and end must be integers");
     throw "Stop";
+}
+
+std::any JotTypeChecker::visit(ForEachStatement* node)
+{
+    auto collection_type = node_jot_type(node->collection->accept(this));
+
+    if (collection_type->type_kind != TypeKind::Array) {
+        context->diagnostics.add_diagnostic_error(node->position.position,
+                                                  "For each expect array as paramter");
+        throw "Stop";
+    }
+
+    auto array_type = std::static_pointer_cast<JotArrayType>(collection_type);
+    auto element_type = array_type->element_type;
+
+    push_new_scope();
+
+    // Define element name only inside loop scope
+    types_table.define(node->element_name, element_type);
+    types_table.define("it_index", jot_int64_ty);
+
+    node->body->accept(this);
+    pop_current_scope();
+    return 0;
 }
 
 std::any JotTypeChecker::visit(ForeverStatement* node)

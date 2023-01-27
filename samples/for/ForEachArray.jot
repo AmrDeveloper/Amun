@@ -1,0 +1,20 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var array = [ 1, 2, 3 ];
+    for array {
+        printf("Index = %d, value = %d\n", it_index, it);
+    }
+
+    printf("\n");
+
+    // Can add explicit name for example -> for array : matrix {}
+    var matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+    for matrix {
+        for it {
+            printf("%d\t", it);
+        }
+        printf("\n");
+    }
+    return 0;
+}

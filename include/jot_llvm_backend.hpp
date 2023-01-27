@@ -74,6 +74,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     std::any visit(ForRangeStatement* node) override;
 
+    std::any visit(ForEachStatement* node) override;
+
     std::any visit(ForeverStatement* node) override;
 
     std::any visit(WhileStatement* node) override;
@@ -176,6 +178,8 @@ class JotLLVMBackend : public TreeVisitor {
     llvm::Value* create_llvm_value_decrement(std::shared_ptr<Expression> right, bool is_prefix);
 
     llvm::Value* access_struct_member_pointer(DotExpression* expression);
+
+    llvm::Value* access_array_element(std::shared_ptr<Expression> array, llvm::Value* index);
 
     llvm::Value* derefernecs_llvm_pointer(llvm::Value* pointer);
 
