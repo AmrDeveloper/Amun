@@ -1581,6 +1581,21 @@ std::any JotLLVMBackend::visit(IndexExpression* node)
         }
     }
 
+    // Index expression from array expression for example [1, 2, 3][0]
+    if (auto array_expession = std::dynamic_pointer_cast<ArrayExpression>(node_value)) {
+        auto array = llvm_node_value(array_expession->accept(this));
+        if (auto load_inst = dyn_cast<llvm::LoadInst>(array)) {
+            auto ptr = Builder.CreateGEP(array->getType(), load_inst->getPointerOperand(),
+                                         {zero_int32_value, index});
+            return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
+        }
+
+        if (auto constants_array = llvm::dyn_cast<llvm::Constant>(array)) {
+            auto constants_index = llvm::dyn_cast<llvm::ConstantInt>(index);
+            return constants_array->getAggregateElement(constants_index);
+        }
+    }
+
     internal_compiler_error("Invalid Index expression");
 }
 
@@ -2226,6 +2241,21 @@ llvm::Value* JotLLVMBackend::access_array_element(std::shared_ptr<Expression> no
     // Multidimensional Array Index Expression
     if (auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node_value)) {
         auto array = llvm_node_value(node_value->accept(this));
+        if (auto load_inst = dyn_cast<llvm::LoadInst>(array)) {
+            auto ptr = Builder.CreateGEP(array->getType(), load_inst->getPointerOperand(),
+                                         {zero_int32_value, index});
+            return derefernecs_llvm_pointer(ptr);
+        }
+
+        if (auto constants_array = llvm::dyn_cast<llvm::Constant>(array)) {
+            auto constants_index = llvm::dyn_cast<llvm::ConstantInt>(index);
+            return constants_array->getAggregateElement(constants_index);
+        }
+    }
+
+    // Index expression from array expression for example [1, 2, 3][0]
+    if (auto array_expession = std::dynamic_pointer_cast<ArrayExpression>(node_value)) {
+        auto array = llvm_node_value(array_expession->accept(this));
         if (auto load_inst = dyn_cast<llvm::LoadInst>(array)) {
             auto ptr = Builder.CreateGEP(array->getType(), load_inst->getPointerOperand(),
                                          {zero_int32_value, index});
