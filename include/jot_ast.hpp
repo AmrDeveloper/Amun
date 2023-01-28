@@ -1170,6 +1170,8 @@ class ArrayExpression : public Expression {
 
     bool is_constant() override { return is_constants_array; }
 
+    AstNodeType get_ast_node_type() override { return AstNodeType::ArrayExpr; }
+
   private:
     Token                                    position;
     std::vector<std::shared_ptr<Expression>> values;

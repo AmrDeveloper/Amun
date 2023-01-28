@@ -380,6 +380,7 @@ std::any JotLLVMBackend::visit(ForRangeStatement* node)
 
 std::any JotLLVMBackend::visit(ForEachStatement* node)
 {
+    auto node_ast_type = node->get_ast_node_type();
     auto collection_value = llvm_node_value(node->collection->accept(this));
     auto collection = llvm_resolve_value(collection_value);
     auto collection_type = collection->getType();
@@ -430,9 +431,25 @@ std::any JotLLVMBackend::visit(ForEachStatement* node)
     auto new_value = create_llvm_numbers_bianry(TokenKind::Plus, value_ptr, step);
     Builder.CreateStore(new_value, index_alloca);
 
+    auto collection_expression = node->collection;
+
+    // If array expression is passed directly we should first save it on temp variable
+    if (node->collection->get_ast_node_type() == AstNodeType::ArrayExpr) {
+        auto temp_name = "_temp";
+        auto temp_alloca = create_entry_block_alloca(current_function, temp_name, collection_type);
+        Builder.CreateStore(collection, temp_alloca);
+        alloca_inst_table.define(temp_name, temp_alloca);
+
+        auto collection_jot_type = node->collection->get_type_node();
+
+        auto location = TokenSpan();
+        auto token = Token{TokenKind::Symbol, location, temp_name};
+        collection_expression = std::make_shared<LiteralExpression>(token, collection_jot_type);
+    }
+
     // Update it variable with the element in the current index
     auto current_index = derefernecs_llvm_pointer(index_alloca);
-    auto value = access_array_element(node->collection, current_index);
+    auto value = access_array_element(collection_expression, current_index);
     Builder.CreateStore(value, element_alloca);
     alloca_inst_table.define(element_name, element_alloca);
 
@@ -1503,100 +1520,7 @@ std::any JotLLVMBackend::visit(ValueSizeExpression* node)
 std::any JotLLVMBackend::visit(IndexExpression* node)
 {
     auto index = llvm_resolve_value(node->get_index()->accept(this));
-    auto node_value = node->get_value();
-    auto values = node_value->get_type_node();
-
-    if (values->type_kind == TypeKind::Pointer) {
-        auto element_type = llvm_type_from_jot_type(node->get_type_node());
-        auto value = llvm_resolve_value(node_value->accept(this));
-        auto ptr = Builder.CreateGEP(element_type, value, index);
-        return Builder.CreateLoad(element_type, ptr);
-    }
-
-    // One dimension Array Index Expression
-    if (auto array_literal = std::dynamic_pointer_cast<LiteralExpression>(node_value)) {
-        auto array = array_literal->accept(this);
-
-        if (array.type() == typeid(llvm::AllocaInst*)) {
-            auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_node_value(array));
-            auto alloca_type = alloca->getAllocatedType();
-            auto ptr = Builder.CreateGEP(alloca_type, alloca, {zero_int32_value, index});
-            auto element_type = alloca_type->getArrayElementType();
-
-            if (element_type->isPointerTy() or element_type->isStructTy()) {
-                return ptr;
-            }
-
-            return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
-        }
-
-        if (array.type() == typeid(llvm::GlobalVariable*)) {
-            auto global_variable_array =
-                llvm::dyn_cast<llvm::GlobalVariable>(llvm_node_value(array));
-
-            auto local_insert_block = Builder.GetInsertBlock();
-
-            // Its local
-            if (local_insert_block) {
-                auto ptr = Builder.CreateGEP(global_variable_array->getValueType(),
-                                             global_variable_array, {zero_int32_value, index});
-                return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
-            }
-
-            // Resolve index expression for constants array
-            auto initalizer = global_variable_array->getInitializer();
-            auto constants_index = llvm::dyn_cast<llvm::ConstantInt>(index);
-
-            // Index expression for array with constants data types such as integers, floats
-            if (auto data_array = llvm::dyn_cast<llvm::ConstantDataArray>(initalizer)) {
-                return data_array->getElementAsConstant(constants_index->getLimitedValue());
-            }
-
-            // Index expression for array with non constants data types
-            if (auto constants_array = llvm::dyn_cast<llvm::ConstantArray>(initalizer)) {
-                return constants_array->getAggregateElement(constants_index);
-            }
-
-            // Index Expression for array that initalized with default values
-            if (auto constants_array = llvm::dyn_cast<llvm::Constant>(initalizer)) {
-                return constants_array->getAggregateElement(constants_index);
-            }
-        }
-
-        internal_compiler_error("Index expr with literal must have alloca or global variable");
-    }
-
-    // Multidimensional Array Index Expression
-    if (auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node_value)) {
-        auto array = llvm_node_value(node_value->accept(this));
-        if (auto load_inst = dyn_cast<llvm::LoadInst>(array)) {
-            auto ptr = Builder.CreateGEP(array->getType(), load_inst->getPointerOperand(),
-                                         {zero_int32_value, index});
-            return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
-        }
-
-        if (auto constants_array = llvm::dyn_cast<llvm::Constant>(array)) {
-            auto constants_index = llvm::dyn_cast<llvm::ConstantInt>(index);
-            return constants_array->getAggregateElement(constants_index);
-        }
-    }
-
-    // Index expression from array expression for example [1, 2, 3][0]
-    if (auto array_expession = std::dynamic_pointer_cast<ArrayExpression>(node_value)) {
-        auto array = llvm_node_value(array_expession->accept(this));
-        if (auto load_inst = dyn_cast<llvm::LoadInst>(array)) {
-            auto ptr = Builder.CreateGEP(array->getType(), load_inst->getPointerOperand(),
-                                         {zero_int32_value, index});
-            return Builder.CreateLoad(llvm_type_from_jot_type(node->get_type_node()), ptr);
-        }
-
-        if (auto constants_array = llvm::dyn_cast<llvm::Constant>(array)) {
-            auto constants_index = llvm::dyn_cast<llvm::ConstantInt>(index);
-            return constants_array->getAggregateElement(constants_index);
-        }
-    }
-
-    internal_compiler_error("Invalid Index expression");
+    return access_array_element(node, index);
 }
 
 std::any JotLLVMBackend::visit(EnumAccessExpression* node)
