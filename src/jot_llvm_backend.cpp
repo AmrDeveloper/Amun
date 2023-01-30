@@ -1520,7 +1520,7 @@ std::any JotLLVMBackend::visit(ValueSizeExpression* node)
 std::any JotLLVMBackend::visit(IndexExpression* node)
 {
     auto index = llvm_resolve_value(node->get_index()->accept(this));
-    return access_array_element(node, index);
+    return access_array_element(node->get_value(), index);
 }
 
 std::any JotLLVMBackend::visit(EnumAccessExpression* node)
