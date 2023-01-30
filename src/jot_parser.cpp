@@ -1518,7 +1518,7 @@ std::shared_ptr<JotType> JotParser::parse_fixed_size_array_type()
         throw "Stop";
     }
 
-    auto size = parse_number_expression();
+    const auto size = parse_number_expression();
     if (!is_integer_type(size->get_type_node())) {
         context->diagnostics.add_diagnostic_error(bracket.position,
                                                   "Array size must be an integer constants");
@@ -1527,6 +1527,15 @@ std::shared_ptr<JotType> JotParser::parse_fixed_size_array_type()
     auto number_value = std::atoi(size->get_value().literal.c_str());
     assert_kind(TokenKind::CloseBracket, "Expect ] after array size.");
     auto element_type = parse_type();
+
+    // Check if array element type is not void
+    if (is_void_type(element_type)) {
+        auto void_token = peek_previous();
+        context->diagnostics.add_diagnostic_error(
+            void_token.position, "Can't declare array with incomplete type 'void'");
+        throw "Stop";
+    }
+
     return std::make_shared<JotArrayType>(element_type, number_value);
 }
 
