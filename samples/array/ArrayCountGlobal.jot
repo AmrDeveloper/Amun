@@ -1,0 +1,13 @@
+extern fun printf(format *char, varargs Any) int64;
+
+var array = [1, 2, 3];
+var len = array.count;
+
+var matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+var matrix_len = matrix.count;
+
+fun main() int64 {
+    printf("%d\n", len);
+    printf("%d\n", matrix_len);
+    return 0;
+}
