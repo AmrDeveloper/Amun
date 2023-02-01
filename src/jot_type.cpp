@@ -150,6 +150,8 @@ std::string jot_type_literal(const std::shared_ptr<JotType>& type)
     }
 
     if (type_kind == TypeKind::EnumerationElement) {
+        auto enum_element = std::static_pointer_cast<JotEnumElementType>(type);
+        return enum_element->name;
     }
 
     if (type_kind == TypeKind::None) {
