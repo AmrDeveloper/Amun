@@ -4,6 +4,7 @@
 #include "../include/jot_type.hpp"
 
 #include <algorithm>
+#include <cassert>
 #include <memory>
 #include <set>
 #include <string>
@@ -430,17 +431,31 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration(bool i
         const auto fields_size = fields_types.size();
         for (size_t i = 0; i < fields_size; i++) {
             const auto field_type = fields_types[i];
+
             // If Field type is pointer to none that mean it point to struct itself
-            if (is_jot_types_equals(field_type, jot_none_ptr_ty)) {
+            if (is_pointer_of_type(field_type, jot_none_ty)) {
                 // Update field type from *None to *Itself
                 structure_type->fields_types[i] = struct_pointer_ty;
+                current_struct_unknown_fields--;
+                continue;
+            }
+
+            // Update field type from [?]*None to [?]*Itself
+            if (is_array_of_type(field_type, jot_none_ptr_ty)) {
+                auto array_type = std::static_pointer_cast<JotArrayType>(field_type);
+                array_type->element_type = struct_pointer_ty;
+
+                structure_type->fields_types[i] = array_type;
+                current_struct_unknown_fields--;
+                continue;
             }
         }
     }
 
+    assert(current_struct_unknown_fields == 0);
+
     context->structures[struct_name_str] = structure_type;
     current_struct_name = "";
-    current_struct_unknown_fields = 0;
     return std::make_shared<StructDeclaration>(structure_type);
 }
 
@@ -1533,6 +1548,14 @@ std::shared_ptr<JotType> JotParser::parse_fixed_size_array_type()
         auto void_token = peek_previous();
         context->diagnostics.add_diagnostic_error(
             void_token.position, "Can't declare array with incomplete type 'void'");
+        throw "Stop";
+    }
+
+    // Check if array element type is none (incomplete)
+    if (is_jot_types_equals(element_type, jot_none_ty)) {
+        auto type_token = peek_previous();
+        context->diagnostics.add_diagnostic_error(type_token.position,
+                                                  "Can't declare array with incomplete type");
         throw "Stop";
     }
 

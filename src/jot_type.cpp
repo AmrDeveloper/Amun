@@ -249,3 +249,21 @@ bool is_none_type(std::shared_ptr<JotType> type)
 
     return type->type_kind == TypeKind::None;
 }
+
+bool is_pointer_of_type(std::shared_ptr<JotType> type, std::shared_ptr<JotType> base)
+{
+    if (type->type_kind != TypeKind::Pointer) {
+        return false;
+    }
+    auto pointer_type = std::static_pointer_cast<JotPointerType>(type);
+    return is_jot_types_equals(pointer_type->base_type, base);
+}
+
+bool is_array_of_type(std::shared_ptr<JotType> type, std::shared_ptr<JotType> base)
+{
+    if (type->type_kind != TypeKind::Array) {
+        return false;
+    }
+    auto array_type = std::static_pointer_cast<JotArrayType>(type);
+    return is_jot_types_equals(array_type->element_type, base);
+}

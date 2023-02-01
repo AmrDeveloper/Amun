@@ -165,3 +165,7 @@ bool is_void_type(std::shared_ptr<JotType> type);
 bool is_null_type(std::shared_ptr<JotType> type);
 
 bool is_none_type(std::shared_ptr<JotType> type);
+
+bool is_pointer_of_type(std::shared_ptr<JotType> type, std::shared_ptr<JotType> base);
+
+bool is_array_of_type(std::shared_ptr<JotType> type, std::shared_ptr<JotType> base);

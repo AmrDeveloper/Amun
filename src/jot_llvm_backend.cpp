@@ -227,10 +227,13 @@ std::any JotLLVMBackend::visit(StructDeclaration* node)
     const auto struct_name = struct_type->name;
     const auto struct_llvm_type = llvm::StructType::create(llvm_context);
     struct_llvm_type->setName(struct_name);
+
     const auto               fields = struct_type->fields_types;
     std::vector<llvm::Type*> struct_fields;
     struct_fields.reserve(fields.size());
     for (auto& field : fields) {
+
+        // Handle case where field type is pointer to the current struct
         if (field->type_kind == TypeKind::Pointer) {
             auto pointer = std::static_pointer_cast<JotPointerType>(field);
             if (pointer->base_type->type_kind == TypeKind::Structure) {
@@ -241,8 +244,25 @@ std::any JotLLVMBackend::visit(StructDeclaration* node)
                 }
             }
         }
+
+        // Handle case where field type is array of pointers to the current struct
+        if (field->type_kind == TypeKind::Array) {
+            auto array = std::static_pointer_cast<JotArrayType>(field);
+            if (array->element_type->type_kind == TypeKind::Pointer) {
+                auto pointer = std::static_pointer_cast<JotPointerType>(array->element_type);
+                if (pointer->base_type->type_kind == TypeKind::Structure) {
+                    auto struct_ty = std::static_pointer_cast<JotStructType>(pointer->base_type);
+                    if (struct_ty->name == struct_name) {
+                        struct_fields.push_back(struct_llvm_type->getPointerTo());
+                        continue;
+                    }
+                }
+            }
+        }
+
         struct_fields.push_back(llvm_type_from_jot_type(field));
     }
+
     struct_llvm_type->setBody(struct_fields, struct_type->is_packed);
     structures_types_map[struct_name] = struct_llvm_type;
     return 0;

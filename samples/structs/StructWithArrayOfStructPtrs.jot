@@ -1,0 +1,11 @@
+extern fun printf(format *char, varargs Any) int64;
+
+struct TrieNode {
+    children [26]*TrieNode;
+    isEndOfWord bool;
+}
+
+fun main() int64 {
+    var trie : TrieNode;
+    return 0;
+}
