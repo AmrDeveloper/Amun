@@ -1082,10 +1082,12 @@ std::shared_ptr<Expression> JotParser::parse_postfix_increment_or_decrement()
     return expression;
 }
 
+// TODO: Need a better name
 std::shared_ptr<Expression> JotParser::parse_call_or_access_expression()
 {
     auto expression = parse_enumeration_attribute_expression();
-    while (is_current_kind(TokenKind::Dot) || is_current_kind(TokenKind::OpenParen)) {
+    while (is_current_kind(TokenKind::Dot) || is_current_kind(TokenKind::OpenParen) ||
+           is_current_kind(TokenKind::OpenBracket)) {
 
         // Parse structure field access expression
         if (is_current_kind(TokenKind::Dot)) {
@@ -1114,6 +1116,15 @@ std::shared_ptr<Expression> JotParser::parse_call_or_access_expression()
             }
 
             expression = std::make_shared<CallExpression>(position, expression, arguments);
+            continue;
+        }
+
+        // Parse Index Expression
+        if (is_current_kind(TokenKind::OpenBracket)) {
+            auto position = peek_and_advance_token();
+            auto index = parse_expression();
+            assert_kind(TokenKind::CloseBracket, "Expect ] after index value");
+            expression = std::make_shared<IndexExpression>(position, expression, index);
             continue;
         }
     }
@@ -1149,6 +1160,8 @@ std::shared_ptr<Expression> JotParser::parse_enumeration_attribute_expression()
 
 std::shared_ptr<Expression> JotParser::parse_postfix_index_expression()
 {
+    // TOOD: Revamp
+    /*
     auto expression = parse_postfix_call_expression();
     while (is_current_kind(TokenKind::OpenBracket)) {
         auto position = peek_and_advance_token();
@@ -1157,6 +1170,8 @@ std::shared_ptr<Expression> JotParser::parse_postfix_index_expression()
         expression = std::make_shared<IndexExpression>(position, expression, index);
     }
     return expression;
+    */
+    return parse_postfix_call_expression();
 }
 
 std::shared_ptr<Expression> JotParser::parse_postfix_call_expression()
