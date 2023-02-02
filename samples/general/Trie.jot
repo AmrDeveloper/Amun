@@ -1,0 +1,66 @@
+extern fun printf(format *char, varargs Any) int64;
+
+extern fun malloc(size int64) *void;
+
+extern fun free(ptr *void) void;
+
+extern fun strlen(str *char) int64;
+
+struct TrieNode {
+    children [26]*TrieNode;
+    isEnd bool;
+}
+
+fun trie_make() *TrieNode {
+    var node = cast(*TrieNode) malloc(type_size(TrieNode));
+    node.isEnd = false;
+    for 0 .. 25 {
+        node.children[it] = null;
+    }
+    return node;
+}
+
+fun trie_insert(t *TrieNode, s *char) void {
+    var node = t;
+    for 0 .. strlen(s) - 1 {
+        var index = s[it] - 'a';
+        if node.children[index] == null {
+            node.children[index] = trie_make();
+        }
+        node = node.children[index];
+    }
+    node.isEnd = true;
+}
+
+fun trie_search(t *TrieNode, s *char) bool {
+    var node = t;
+    for 0 .. strlen(s) - 1 {
+        var index = s[it] - 'a';
+        if (node.children[index] == null) return false;
+        node = node.children[index];
+    }
+    return node.isEnd;
+}
+
+fun trie_free(t *TrieNode) void {
+    if (t == null) return;
+    for 0 .. 25 {
+        trie_free(t.children[it]);
+    }
+    free(cast(*void) t);
+}
+
+fun main() int64 {
+    var trie = trie_make();
+    defer trie_free(trie);
+
+    trie_insert(trie, "one");
+    trie_insert(trie, "two");
+    trie_insert(trie, "three");
+
+    printf("Is found %d\n", trie_search(trie, "one"));
+    printf("Is found %d\n", trie_search(trie, "two"));
+    printf("Is found %d\n", trie_search(trie, "three"));
+    printf("Is found %d\n", trie_search(trie, "four"));
+    return 0;
+}
