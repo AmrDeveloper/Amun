@@ -1,5 +1,31 @@
 #pragma once
 
+#include <iostream>
+#include <memory>
+
+// Singed integers types
+using int8 = std::int8_t;
+using int16 = std::int16_t;
+using int32 = std::int32_t;
+using int64 = std::int64_t;
+
+// Un Singed integers types
+using uint8 = std::uint8_t;
+using uint16 = std::uint16_t;
+using uint32 = std::uint32_t;
+using uint64 = std::uint64_t;
+
+// Float types
+using float32 = float;
+using float64 = double;
+
+// Smart pointers types
+template <class T>
+using Shared = std::shared_ptr<T>;
+
+template <class T>
+using Unique = std::unique_ptr<T>;
+
 // Compare two char* with length of 2
 #define str2Equals(first, other) first[0] == other[0] && first[1] == other[1]
 
@@ -26,3 +52,9 @@
 
 // Compare two char* with length of 10
 #define str10Equals(first, other) str9Equals(first, other) && first[9] == other[9]
+
+// Convert string to integer
+int64 str_to_int(const char* p);
+
+// Convert string to float
+float64 str_to_float(const char* p);

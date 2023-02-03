@@ -1,10 +1,10 @@
 #include "../include/jot_typechecker.hpp"
 #include "../include/jot_ast_visitor.hpp"
+#include "../include/jot_basic.hpp"
 #include "../include/jot_logger.hpp"
 #include "../include/jot_type.hpp"
 
 #include <any>
-#include <cstdint>
 #include <limits>
 #include <memory>
 #include <string>
@@ -1118,31 +1118,61 @@ std::any JotTypeChecker::visit(ValueSizeExpression* node) { return node->get_typ
 
 std::any JotTypeChecker::visit(IndexExpression* node)
 {
-    auto callee_type = node_jot_type(node->get_value()->accept(this));
-    if (callee_type->type_kind == TypeKind::Array) {
-        auto array_type = std::static_pointer_cast<JotArrayType>(callee_type);
-        node->set_type_node(array_type->element_type);
-    }
-    else if (callee_type->type_kind == TypeKind::Pointer) {
-        auto pointer_type = std::static_pointer_cast<JotPointerType>(callee_type);
-        node->set_type_node(pointer_type->base_type);
-    }
-    else {
-        context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                                  "Index expression require array but got " +
-                                                      jot_type_literal(callee_type));
-        throw "Stop";
-    }
+    auto index_expression = node->get_index();
+    auto index_type = node_jot_type(index_expression->accept(this));
 
-    auto index_type = node_jot_type(node->get_index()->accept(this));
-    if (index_type->type_kind != TypeKind::Number) {
+    // Make sure index is integer type with any size
+    if (!is_integer_type(index_type)) {
         context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                                  "Index must be a number but got " +
+                                                  "Index must be an integer but got " +
                                                       jot_type_literal(index_type));
         throw "Stop";
     }
 
-    return node->get_type_node();
+    // Check if index is number expression to perform compile time checks
+    bool   has_constant_index = index_expression->get_ast_node_type() == AstNodeType::NumberExpr;
+    size_t constant_index = -1;
+
+    if (has_constant_index) {
+        auto number_expr = std::dynamic_pointer_cast<NumberExpression>(index_expression);
+        auto number_literal = number_expr->get_value().literal;
+        constant_index = str_to_int(number_literal.c_str());
+
+        // Check that index is not negative
+        if (constant_index < 0) {
+            context->diagnostics.add_diagnostic_error(node->get_position().position,
+                                                      "Index can't be negative number");
+            throw "Stop";
+        }
+    }
+
+    auto callee_expression = node->get_value();
+    auto callee_type = node_jot_type(callee_expression->accept(this));
+
+    if (callee_type->type_kind == TypeKind::Array) {
+        auto array_type = std::static_pointer_cast<JotArrayType>(callee_type);
+        node->set_type_node(array_type->element_type);
+
+        // Check that index is not larger or equal array size
+        if (has_constant_index && constant_index >= array_type->size) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_position().position, "Index can't be bigger than or equal array size");
+            throw "Stop";
+        }
+
+        return array_type->element_type;
+    }
+
+    if (callee_type->type_kind == TypeKind::Pointer) {
+        auto pointer_type = std::static_pointer_cast<JotPointerType>(callee_type);
+        node->set_type_node(pointer_type->base_type);
+        return pointer_type->base_type;
+    }
+
+    context->diagnostics.add_diagnostic_error(node->get_position().position,
+                                              "Index expression require array but got " +
+                                                  jot_type_literal(callee_type));
+    throw "Stop";
 }
 
 std::any JotTypeChecker::visit(EnumAccessExpression* node) { return node->get_type_node(); }
@@ -1374,56 +1404,64 @@ bool JotTypeChecker::check_number_limits(const char* literal, NumberKind kind)
 {
     switch (kind) {
     case NumberKind::Integer1: {
-        auto value = strtoll(literal, NULL, 0);
+        auto value = str_to_int(literal);
         return value == 0 or value == 1;
     }
     case NumberKind::Integer8: {
-        auto value = strtoll(literal, NULL, 0);
+        auto value = str_to_int(literal);
+        ;
         return value >= std::numeric_limits<int8_t>::min() and
                value <= std::numeric_limits<int8_t>::max();
     }
     case NumberKind::UInteger8: {
-        auto value = strtoll(literal, NULL, 0);
+        auto value = str_to_int(literal);
+        ;
         return value >= std::numeric_limits<uint8_t>::min() and
                value <= std::numeric_limits<uint8_t>::max();
     }
     case NumberKind::Integer16: {
-        auto value = strtoll(literal, NULL, 0);
+        auto value = str_to_int(literal);
+        ;
         return value >= std::numeric_limits<int16_t>::min() and
                value <= std::numeric_limits<int16_t>::max();
     }
     case NumberKind::UInteger16: {
-        auto value = strtoll(literal, NULL, 0);
+        auto value = str_to_int(literal);
+        ;
         return value >= std::numeric_limits<uint16_t>::min() and
                value <= std::numeric_limits<uint16_t>::max();
     }
     case NumberKind::Integer32: {
-        auto value = strtoll(literal, NULL, 0);
+        auto value = str_to_int(literal);
+        ;
         return value >= std::numeric_limits<int32_t>::min() and
                value <= std::numeric_limits<int32_t>::max();
     }
     case NumberKind::UInteger32: {
-        auto value = strtoll(literal, NULL, 0);
+        auto value = str_to_int(literal);
+        ;
         return value >= std::numeric_limits<uint32_t>::min() and
                value <= std::numeric_limits<uint32_t>::max();
     }
     case NumberKind::Integer64: {
-        auto value = strtoll(literal, NULL, 0);
+        auto value = str_to_int(literal);
+        ;
         return value >= std::numeric_limits<int64_t>::min() and
                value <= std::numeric_limits<int64_t>::max();
     }
     case NumberKind::UInteger64: {
-        auto value = strtoll(literal, NULL, 0);
+        auto value = str_to_int(literal);
+        ;
         return value >= std::numeric_limits<uint64_t>::min() and
                value <= std::numeric_limits<uint64_t>::max();
     }
     case NumberKind::Float32: {
-        auto value = std::atof(literal);
+        auto value = str_to_float(literal);
         return value >= -std::numeric_limits<float>::max() and
                value <= std::numeric_limits<float>::max();
     }
     case NumberKind::Float64: {
-        auto value = std::atof(literal);
+        auto value = str_to_float(literal);
         return value >= -std::numeric_limits<double>::max() and
                value <= std::numeric_limits<double>::max();
     }

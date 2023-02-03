@@ -78,7 +78,7 @@ std::any JotLLVMBackend::visit(FieldDeclaration* node)
         // if field has initalizer evaluate it, else initalize it with default value
         llvm::Constant* constants_value;
         if (node->get_value() == nullptr) {
-            constants_value = llvm::dyn_cast<llvm::Constant>(llvm_type_null_value(field_type));
+            constants_value = create_llvm_null(llvm_type_from_jot_type(field_type));
         }
         else {
             constants_value = resolve_constant_expression(node->get_value());
@@ -94,7 +94,7 @@ std::any JotLLVMBackend::visit(FieldDeclaration* node)
     // if field has initalizer evaluate it, else initalize it with default value
     std::any value;
     if (node->get_value() == nullptr) {
-        value = llvm_type_null_value(field_type);
+        value = create_llvm_null(llvm_type_from_jot_type(field_type));
     }
     else {
         value = node->get_value()->accept(this);
@@ -131,6 +131,12 @@ std::any JotLLVMBackend::visit(FieldDeclaration* node)
     }
     else if (value.type() == typeid(llvm::Constant*)) {
         auto constant = std::any_cast<llvm::Constant*>(value);
+        auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
+        Builder.CreateStore(constant, alloc_inst);
+        alloca_inst_table.define(var_name, alloc_inst);
+    }
+    else if (value.type() == typeid(llvm::ConstantInt*)) {
+        auto constant = std::any_cast<llvm::ConstantInt*>(value);
         auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
         Builder.CreateStore(constant, alloc_inst);
         alloca_inst_table.define(var_name, alloc_inst);
@@ -255,7 +261,7 @@ std::any JotLLVMBackend::visit(StructDeclaration* node)
                     auto struct_ty = std::static_pointer_cast<JotStructType>(pointer->base_type);
                     if (struct_ty->name == struct_name) {
                         auto struct_ptr_ty = struct_llvm_type->getPointerTo();
-                        auto array_type = llvm::ArrayType::get(struct_ptr_ty, array->size);
+                        auto array_type = create_llvm_array_type(struct_ptr_ty, array->size);
                         struct_fields.push_back(array_type);
                         continue;
                     }
@@ -403,16 +409,15 @@ std::any JotLLVMBackend::visit(ForRangeStatement* node)
 
 std::any JotLLVMBackend::visit(ForEachStatement* node)
 {
-    auto node_ast_type = node->get_ast_node_type();
     auto collection_value = llvm_node_value(node->collection->accept(this));
     auto collection = llvm_resolve_value(collection_value);
     auto collection_type = collection->getType();
 
     auto size = collection_type->getArrayNumElements();
 
-    auto zero_value = llvm_number_value("-1", NumberKind::Integer64);
-    auto step = llvm_number_value("1", NumberKind::Integer64);
-    auto end = llvm_number_value(std::to_string(size - 1), NumberKind::Integer64);
+    auto zero_value = create_llvm_int64(-1, true);
+    auto step = create_llvm_int64(1, true);
+    auto end = create_llvm_int64(size - 1, true);
 
     auto condition_block = llvm::BasicBlock::Create(llvm_context, "for.cond");
     auto body_block = llvm::BasicBlock::Create(llvm_context, "for");
@@ -629,6 +634,10 @@ std::any JotLLVMBackend::visit(ReturnStatement* node)
     }
     else if (value.type() == typeid(llvm::Constant*)) {
         auto init_value = std::any_cast<llvm::Constant*>(value);
+        return Builder.CreateRet(init_value);
+    }
+    else if (value.type() == typeid(llvm::ConstantInt*)) {
+        auto init_value = std::any_cast<llvm::ConstantInt*>(value);
         return Builder.CreateRet(init_value);
     }
     else if (value.type() == typeid(llvm::LoadInst*)) {
@@ -1470,7 +1479,7 @@ std::any JotLLVMBackend::visit(DotExpression* node)
         if (node->get_field_name().literal == "count") {
             auto llvm_array_type = llvm::dyn_cast<llvm::ArrayType>(callee_llvm_type);
             auto length = llvm_array_type->getArrayNumElements();
-            return llvm_number_value(std::to_string(length), NumberKind::Integer64);
+            return create_llvm_int64(length, true);
         }
 
         internal_compiler_error("Invalid Array Attribute");
@@ -1630,17 +1639,18 @@ std::any JotLLVMBackend::visit(StringExpression* node)
 std::any JotLLVMBackend::visit(CharacterExpression* node)
 {
     char char_asci_value = node->get_value().literal[0];
-    return llvm_character_value(char_asci_value);
+    return create_llvm_int8(char_asci_value, false);
 }
 
 std::any JotLLVMBackend::visit(BooleanExpression* node)
 {
-    return llvm_boolean_value(node->get_value().kind == TokenKind::TrueKeyword);
+    return create_llvm_int1(node->get_value().kind == TokenKind::TrueKeyword);
 }
 
 std::any JotLLVMBackend::visit(NullExpression* node)
 {
-    return llvm_type_null_value(node->null_base_type);
+    auto llvm_type = llvm_type_from_jot_type(node->null_base_type);
+    return create_llvm_null(llvm_type);
 }
 
 llvm::Value* JotLLVMBackend::llvm_node_value(std::any any_value)
@@ -1754,22 +1764,6 @@ inline llvm::Value* JotLLVMBackend::llvm_number_value(const std::string& value_l
         return llvm::ConstantFP::get(llvm_float64_type, value);
     }
     }
-}
-
-inline llvm::Value* JotLLVMBackend::llvm_boolean_value(bool value)
-{
-    return llvm::ConstantInt::get(llvm_int1_type, value);
-}
-
-inline llvm::Value* JotLLVMBackend::llvm_character_value(char character)
-{
-    return llvm::ConstantInt::get(llvm_int8_type, character);
-}
-
-inline llvm::Value* JotLLVMBackend::llvm_type_null_value(std::shared_ptr<JotType>& type)
-{
-    // Return null value for the base type
-    return llvm::Constant::getNullValue(llvm_type_from_jot_type(type));
 }
 
 llvm::Type* JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> type)
@@ -2086,7 +2080,7 @@ llvm::Value* JotLLVMBackend::access_struct_member_pointer(DotExpression* express
     auto callee_value = llvm_node_value(callee->accept(this));
     auto callee_llvm_type = llvm_type_from_jot_type(callee->get_type_node());
 
-    auto index = llvm_number_value(std::to_string(expression->field_index), NumberKind::Integer32);
+    auto index = create_llvm_int32(expression->field_index, true);
 
     // Access struct member allocaed on the stack or derefernecs from pointer
     // struct.member or (*struct).member
@@ -2242,20 +2236,13 @@ llvm::Value* JotLLVMBackend::access_array_element(std::shared_ptr<Expression> no
     internal_compiler_error("Invalid Index expression");
 }
 
-inline llvm::Value* JotLLVMBackend::derefernecs_llvm_pointer(llvm::Value* pointer)
-{
-    assert(pointer->getType()->isPointerTy());
-    auto pointer_element_type = pointer->getType()->getPointerElementType();
-    return Builder.CreateLoad(pointer_element_type, pointer);
-}
-
 llvm::Constant* JotLLVMBackend::resolve_constant_expression(std::shared_ptr<Expression> value)
 {
     auto field_type = value->get_type_node();
 
     // If there are no value, return default value
     if (value == nullptr) {
-        return llvm::dyn_cast<llvm::Constant>(llvm_type_null_value(field_type));
+        return create_llvm_null(llvm_type_from_jot_type(field_type));
     }
 
     // If right value is index expression resolve it and return constant value

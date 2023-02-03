@@ -2,52 +2,18 @@
 
 #include "jot_ast.hpp"
 #include "jot_ast_visitor.hpp"
+#include "jot_llvm_builder.hpp"
 #include "jot_llvm_defer.hpp"
+#include "jot_llvm_type.hpp"
 #include "jot_scoped_list.hpp"
 #include "jot_scoped_map.hpp"
 #include "jot_type.hpp"
-
-#include <llvm/IR/Constant.h>
-#include <llvm/IR/Constants.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Type.h>
 
 #include <any>
 #include <memory>
 #include <stack>
 #include <unordered_map>
 #include <vector>
-
-// LLVM Context, Builder and Current Module
-static llvm::LLVMContext llvm_context;
-static llvm::IRBuilder<> Builder(llvm_context);
-
-// LLVM Integer types
-static auto llvm_int1_type = llvm::Type::getInt1Ty(llvm_context);
-static auto llvm_int8_type = llvm::Type::getInt8Ty(llvm_context);
-static auto llvm_int16_type = llvm::Type::getInt16Ty(llvm_context);
-static auto llvm_int32_type = llvm::Type::getInt32Ty(llvm_context);
-static auto llvm_int64_type = llvm::Type::getInt64Ty(llvm_context);
-
-static auto llvm_int64_ptr_type = llvm::Type::getInt64PtrTy(llvm_context);
-
-// LLVM Floating pointer types
-static auto llvm_float32_type = llvm::Type::getFloatTy(llvm_context);
-static auto llvm_float64_type = llvm::Type::getDoubleTy(llvm_context);
-
-// LLVM Void type
-static auto llvm_void_type = llvm::Type::getVoidTy(llvm_context);
-
-// LLVM void pointer type as *i8 not *void
-static auto llvm_void_ptr_type = llvm::PointerType::get(llvm_int8_type, 0);
-
-// LLVM 1 bit integer with zero value (false)
-static auto false_value = Builder.getInt1(false);
-
-// LLVM 32 bit integer with zero value
-static auto zero_int32_value = Builder.getInt32(0);
 
 class JotLLVMBackend : public TreeVisitor {
   public:
@@ -151,12 +117,6 @@ class JotLLVMBackend : public TreeVisitor {
 
     llvm::Value* llvm_number_value(const std::string& value_litearl, NumberKind size);
 
-    llvm::Value* llvm_boolean_value(bool value);
-
-    llvm::Value* llvm_character_value(char character);
-
-    llvm::Value* llvm_type_null_value(std::shared_ptr<JotType>& type);
-
     llvm::Type* llvm_type_from_jot_type(std::shared_ptr<JotType> type);
 
     llvm::Value* create_llvm_numbers_bianry(TokenKind op, llvm::Value* left, llvm::Value* right);
@@ -180,8 +140,6 @@ class JotLLVMBackend : public TreeVisitor {
     llvm::Value* access_struct_member_pointer(DotExpression* expression);
 
     llvm::Value* access_array_element(std::shared_ptr<Expression> array, llvm::Value* index);
-
-    llvm::Value* derefernecs_llvm_pointer(llvm::Value* pointer);
 
     llvm::Constant* resolve_constant_expression(std::shared_ptr<Expression> value);
 
