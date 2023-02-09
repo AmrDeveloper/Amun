@@ -260,8 +260,10 @@ std::shared_ptr<FieldDeclaration> JotParser::parse_field_declaration(bool is_glo
 std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionCallKind kind,
                                                                        bool             is_external)
 {
-    if (is_external)
+    if (is_external) {
         assert_kind(TokenKind::ExternKeyword, "Expect external keyword");
+    }
+
     assert_kind(TokenKind::FunKeyword, "Expect function keyword.");
     Token name = consume_kind(TokenKind::Symbol, "Expect identifier as function name.");
 
@@ -320,7 +322,15 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
     auto name_literal = name.literal;
     register_function_call(kind, name_literal);
 
-    auto return_type = parse_type();
+    // If function prototype has no explicit return type,
+    // make return type to be void
+    Shared<JotType> return_type;
+    if (is_current_kind(TokenKind::Semicolon) || is_current_kind(TokenKind::OpenBrace)) {
+        return_type = jot_void_ty;
+    }
+    else {
+        return_type = parse_type();
+    }
 
     // Function can't return fixed size array, you can use pointer format to return allocated array
     if (return_type->type_kind == TypeKind::Array) {

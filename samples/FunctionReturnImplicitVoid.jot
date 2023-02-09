@@ -1,0 +1,10 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun hello() {
+    printf("Hello, world\n");
+}
+
+fun main() int64 {
+    hello();
+    return 0;
+}
