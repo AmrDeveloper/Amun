@@ -5,6 +5,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -37,6 +38,16 @@ enum class NumberKind : short {
     UInteger64,
     Float32,
     Float64,
+};
+
+static std::unordered_map<NumberKind, int> number_kind_width = {
+    {NumberKind::Integer1, 1},    {NumberKind::Integer8, 8},    {NumberKind::Integer16, 16},
+    {NumberKind::Integer32, 32},  {NumberKind::Integer64, 64},
+
+    {NumberKind::UInteger8, 8},   {NumberKind::UInteger16, 16}, {NumberKind::UInteger32, 32},
+    {NumberKind::UInteger64, 64},
+
+    {NumberKind::Float32, 32},    {NumberKind::Float64, 64},
 };
 
 struct JotNumberType : public JotType {

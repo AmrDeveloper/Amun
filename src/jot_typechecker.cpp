@@ -613,12 +613,17 @@ std::any JotTypeChecker::visit(BinaryExpression* node)
 
 std::any JotTypeChecker::visit(ShiftExpression* node)
 {
-    auto left_type = node_jot_type(node->get_left()->accept(this));
-    auto right_type = node_jot_type(node->get_right()->accept(this));
+    const auto& lhs = node->get_left();
+    const auto& rhs = node->get_right();
+
+    auto left_type = node_jot_type(lhs->accept(this));
+    auto right_type = node_jot_type(rhs->accept(this));
 
     bool is_left_number = is_integer_type(left_type);
     bool is_right_number = is_integer_type(right_type);
     bool is_the_same = is_jot_types_equals(left_type, right_type);
+
+    // Check that they are both the integers and with the same size
     if (not is_left_number || not is_right_number || not is_the_same) {
         if (not is_left_number) {
             context->diagnostics.add_diagnostic_error(
@@ -643,6 +648,36 @@ std::any JotTypeChecker::visit(ShiftExpression* node)
 
         throw "Stop";
     }
+
+    // Check for compile time integer overflow if possiable
+    if (rhs->get_ast_node_type() == AstNodeType::NumberExpr) {
+        auto crhs = std::dynamic_pointer_cast<NumberExpression>(rhs);
+        auto str_value = crhs->get_value().literal;
+        auto num = str_to_int(str_value.c_str());
+        auto number_kind = std::static_pointer_cast<JotNumberType>(left_type)->number_kind;
+        auto first_operand_width = number_kind_width[number_kind];
+        if (num >= first_operand_width) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_operator_token().position,
+                "Shift Expressions second operand can't be bigger than or equal first operand bit "
+                "width (" +
+                    std::to_string(first_operand_width) + ")");
+            throw "Stop";
+        }
+    }
+
+    // Check that scond operand is a positive number
+    if (rhs->get_ast_node_type() == AstNodeType::PrefixUnaryExpr) {
+        auto unary = std::dynamic_pointer_cast<PrefixUnaryExpression>(rhs);
+        if (unary->get_operator_token().kind == TokenKind::Minus &&
+            unary->get_right()->get_ast_node_type() == AstNodeType::NumberExpr) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_operator_token().position,
+                "Shift Expressions second operand can't be a negative number");
+            throw "Stop";
+        }
+    }
+
     return node_jot_type(node->get_type_node());
 }
 
