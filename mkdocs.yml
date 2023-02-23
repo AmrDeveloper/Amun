@@ -1,0 +1,97 @@
+site_name: Jot Programming Language
+
+site_url: https://amrdeveloper.github.io/jot
+site_description: General purpose system programming language written using C++ and LLVM
+site_author: AmrDeveloper
+
+copyright: Copyright &copy; 2022 Amr Heshan
+
+repo_name: AmrDeveloper/Jot
+repo_url: https://github.com/amrdeveloper/jot
+edit_uri: blob/master/docs/
+
+theme:
+  name: material
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
+
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+
+  font:
+    code: JetBrains Mono
+
+  palette: 
+    - scheme: default
+      primary: amber
+      accent: amber
+      toggle:
+        icon: material/brightness-7 
+        name: Switch to dark mode
+
+    - scheme: slate
+      primary: amber
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+  features:
+    - navigation.sections
+  
+  features:
+    - header.autohide
+    - content.code.annotate
+
+  plugins:
+    - offline
+
+nav:
+  - Home: index.md
+  - Build: build.md
+  - Compiler Options: compiler_options.md
+
+  - Documentation:
+    - Hello World: reference/hello.md
+    - Comments: reference/comments.md
+    - Values: reference/values.md
+    - Assignment: reference/assignments.md
+    - Variables: reference/variables.md
+    - Struct: reference/struct.md
+    - Enum: reference/enum.md
+    - Arrays: reference/arrays.md
+    - Switch: reference/switch.md
+    - For: reference/for.md
+    - While: reference/while.md
+    - Break: reference/break.md
+    - Continue: reference/continue.md
+    - If: reference/if.md
+    - Defer: reference/defer.md
+    - Function: reference/function.md
+    - Infix Function: reference/infix_function.md
+    - Prefix Function: reference/prefix_function.md
+    - Postfix Function: reference/postfix_function.md
+    - Lambda: reference/lambda.md
+    - Memory: reference/memory.md
+    - Varargs: reference/varargs.md
+    - Cast: reference/cast.md
+    - Type Size: reference/type_size.md
+    - Value Size: reference/value_size.md
+
+  - Contribute: contribution.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/amrdeveloper
+      name: AmrDeveloper on Github
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/AmrDeveloper
+      name: AmrDeveloper on Twitter
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/amrdeveloper
+      name: AmrDeveloper on Linkedin
+    - icon: fontawesome/brands/medium
+      link: https://amrdeveloper.medium.com
+      name: AmrDeveloper on Medium
