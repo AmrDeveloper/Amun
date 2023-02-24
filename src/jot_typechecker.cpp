@@ -554,6 +554,14 @@ std::any JotTypeChecker::visit(AssignExpression* node)
         }
     }
 
+    // Prevent Assign expression with lhs with type Enum Element
+    if (left_node->get_ast_node_type() == AstNodeType::EnumElementExpr) {
+        context->diagnostics.add_diagnostic_error(
+            node->get_operator_token().position,
+            "Enum field is un mutable constants and can't be changed at runtime");
+        throw "Stop";
+    }
+
     auto right_type = node_jot_type(node->get_right()->accept(this));
 
     // if Variable type is pointer and rvalue is null, change null base type to lvalue type
