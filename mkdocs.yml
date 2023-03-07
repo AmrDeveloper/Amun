@@ -38,11 +38,12 @@ theme:
         name: Switch to light mode
 
   features:
-    - navigation.sections
-  
-  features:
     - header.autohide
+    - navigation.instant
+    - navigation.tracking
+    - navigation.indexes
     - content.code.annotate
+    - content.code.copy
 
   plugins:
     - offline
