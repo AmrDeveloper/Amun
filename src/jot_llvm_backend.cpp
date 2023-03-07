@@ -1094,6 +1094,9 @@ std::any JotLLVMBackend::visit(PrefixUnaryExpression* node)
     // Unary - minus operator
     if (operator_kind == TokenKind::Minus) {
         auto right = llvm_resolve_value(operand->accept(this));
+        if (right->getType()->isFloatingPointTy()) {
+            return Builder.CreateFNeg(right);
+        }
         return Builder.CreateNeg(right);
     }
 
