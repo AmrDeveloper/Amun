@@ -2,6 +2,15 @@
 
 A Statically typed, compiled general purpose low level programming language built using C++ and LLVM Infrastructure framework, the design inspired from many programming languages such as C/C++, Swift, Go, Kotlin, Rust.
 
+```
+import "cstdio"
+
+fun main() int64 {
+    printf("Hello, World!\n");
+    return 0;
+}
+```
+
 ### Features
 - Static Types
 - Type inference
@@ -32,43 +41,11 @@ A Statically typed, compiled general purpose low level programming language buil
 - Default initalization value for global and local variables
 - Resolving Constants Index, If Expressions at Compile time
 
-### Requirements for Developments
-- C++ Compiler (GCC or Clang) that support C++20
-- LLVM 14
-- Cmake
-- Python
-- Clang Format
-- Ninja (Optional)
-- CCashe (Optional)
-
-### Download and Build
-
-```
-git clone https://github.com/AmrDeveloper/Jot
-cd Jot
-mkdir build
-cd build
-cmake ..
-make
-```
-
-### Format the C/C++ Code
-
-```
-python scripts/format_code.py
-```
-
-### Check the front end for all samples
-
-```
-python scripts/check_samples.py
-```
-
-### Check that all samples are compiled without error on the LLVM Backend
-
-```
-python scripts/compile_samples.py
-```
+### Documentations:
+  - [Build](https://amrdeveloper.github.io/Jot/build/)
+  - [Compile Options](https://amrdeveloper.github.io/Jot/compiler_options/)
+  - [Reference](https://amrdeveloper.github.io/Jot/)
+  - [Contribution](https://amrdeveloper.github.io/Jot/contribution/)
 
 ### License
 ```
