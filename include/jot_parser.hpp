@@ -49,10 +49,10 @@ class JotParser {
 
     std::shared_ptr<FieldDeclaration> parse_field_declaration(bool is_global);
 
-    std::shared_ptr<FunctionPrototype> parse_function_prototype(FunctionCallKind kind,
-                                                                bool             is_external);
+    std::shared_ptr<FunctionPrototype> parse_function_prototype(FunctionDeclarationKind kind,
+                                                                bool is_external);
 
-    std::shared_ptr<FunctionDeclaration> parse_function_declaration(FunctionCallKind kind);
+    std::shared_ptr<FunctionDeclaration> parse_function_declaration(FunctionDeclarationKind kind);
 
     std::shared_ptr<StructDeclaration> parse_structure_declaration(bool is_packed);
 
@@ -112,11 +112,11 @@ class JotParser {
 
     std::shared_ptr<Expression> parse_call_or_access_expression();
 
-    std::shared_ptr<Expression> parse_postfix_index_expression();
-
     std::shared_ptr<Expression> parse_postfix_call_expression();
 
     std::shared_ptr<Expression> parse_initializer_expression();
+
+    std::shared_ptr<Expression> parse_function_call_with_lambda_argument();
 
     std::shared_ptr<Expression> parse_primary_expression();
 
@@ -158,7 +158,7 @@ class JotParser {
 
     NumberKind get_number_kind(TokenKind token);
 
-    void register_function_call(FunctionCallKind kind, std::string& name);
+    bool is_function_declaration_kind(std::string& fun_name, FunctionDeclarationKind kind);
 
     void advanced_token();
 

@@ -154,11 +154,11 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement()
     case TokenKind::PrefixKeyword:
     case TokenKind::InfixKeyword:
     case TokenKind::PostfixKeyword: {
-        auto call_kind = FunctionCallKind::Prefix;
+        auto call_kind = PREFIX_FUNCTION;
         if (peek_current().kind == TokenKind::InfixKeyword)
-            call_kind = FunctionCallKind::Infix;
+            call_kind = INFIX_FUNCTION;
         else if (peek_current().kind == TokenKind::PostfixKeyword)
-            call_kind = FunctionCallKind::Postfix;
+            call_kind = POSTFIX_FUNCTION;
         advanced_token();
 
         if (is_current_kind(TokenKind::ExternKeyword))
@@ -171,10 +171,10 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement()
         throw "Stop";
     }
     case TokenKind::ExternKeyword: {
-        return parse_function_prototype(FunctionCallKind::Normal, true);
+        return parse_function_prototype(NORMAL_FUNCTION, true);
     }
     case TokenKind::FunKeyword: {
-        return parse_function_declaration(FunctionCallKind::Normal);
+        return parse_function_declaration(NORMAL_FUNCTION);
     }
     case TokenKind::VarKeyword: {
         return parse_field_declaration(true);
@@ -257,8 +257,8 @@ std::shared_ptr<FieldDeclaration> JotParser::parse_field_declaration(bool is_glo
     return std::make_shared<FieldDeclaration>(name, jot_none_ty, value, is_global);
 }
 
-std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionCallKind kind,
-                                                                       bool             is_external)
+std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionDeclarationKind kind,
+                                                                       bool is_external)
 {
     if (is_external) {
         assert_kind(TokenKind::ExternKeyword, "Expect external keyword");
@@ -301,26 +301,26 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
 
     auto parameters_size = parameters.size();
 
-    if (kind == FunctionCallKind::Prefix && parameters_size != 1) {
+    if (kind == PREFIX_FUNCTION && parameters_size != 1) {
         context->diagnostics.add_diagnostic_error(
             name.position, "Prefix function must have exactly one parameter");
         throw "Stop";
     }
 
-    if (kind == FunctionCallKind::Infix && parameters_size != 2) {
+    if (kind == INFIX_FUNCTION && parameters_size != 2) {
         context->diagnostics.add_diagnostic_error(name.position,
                                                   "Infix function must have exactly Two parameter");
         throw "Stop";
     }
 
-    if (kind == FunctionCallKind::Postfix && parameters_size != 1) {
+    if (kind == POSTFIX_FUNCTION && parameters_size != 1) {
         context->diagnostics.add_diagnostic_error(
             name.position, "Postfix function must have exactly one parameter");
         throw "Stop";
     }
 
-    auto name_literal = name.literal;
-    register_function_call(kind, name_literal);
+    // Register current function declaration kind
+    context->functions[name.literal] = kind;
 
     // If function prototype has no explicit return type,
     // make return type to be void
@@ -341,12 +341,12 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionC
 
     if (is_external)
         assert_kind(TokenKind::Semicolon, "Expect ; after external function declaration");
-    return std::make_shared<FunctionPrototype>(name, parameters, return_type,
-                                               FunctionCallKind::Normal, is_external, has_varargs,
-                                               varargs_type);
+    return std::make_shared<FunctionPrototype>(name, parameters, return_type, is_external,
+                                               has_varargs, varargs_type);
 }
 
-std::shared_ptr<FunctionDeclaration> JotParser::parse_function_declaration(FunctionCallKind kind)
+std::shared_ptr<FunctionDeclaration>
+JotParser::parse_function_declaration(FunctionDeclarationKind kind)
 {
     auto parent_node_scope = current_ast_scope;
     current_ast_scope = AstNodeScope::FunctionScope;
@@ -1021,7 +1021,8 @@ std::shared_ptr<Expression> JotParser::parse_infix_call_expression()
     auto current_token_literal = peek_current().literal;
 
     // Parse Infix function call as a call expression
-    if (is_current_kind(TokenKind::Symbol) and context->is_infix_function(current_token_literal)) {
+    if (is_current_kind(TokenKind::Symbol) and
+        is_function_declaration_kind(current_token_literal, INFIX_FUNCTION)) {
         auto                                     symbol_token = peek_current();
         auto                                     literal = parse_literal_expression();
         std::vector<std::shared_ptr<Expression>> arguments;
@@ -1062,7 +1063,8 @@ std::shared_ptr<Expression> JotParser::parse_prefix_expression()
 std::shared_ptr<Expression> JotParser::parse_prefix_call_expression()
 {
     auto current_token_literal = peek_current().literal;
-    if (is_current_kind(TokenKind::Symbol) and context->is_prefix_function(current_token_literal)) {
+    if (is_current_kind(TokenKind::Symbol) and
+        is_function_declaration_kind(current_token_literal, PREFIX_FUNCTION)) {
         Token                                    symbol_token = peek_current();
         auto                                     literal = parse_literal_expression();
         std::vector<std::shared_ptr<Expression>> arguments;
@@ -1143,7 +1145,7 @@ std::shared_ptr<Expression> JotParser::parse_call_or_access_expression()
 
 std::shared_ptr<Expression> JotParser::parse_enumeration_attribute_expression()
 {
-    auto expression = parse_postfix_index_expression();
+    auto expression = parse_postfix_call_expression();
     if (is_current_kind(TokenKind::Dot) and
         expression->get_ast_node_type() == AstNodeType::LiteralExpr) {
         auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression);
@@ -1168,28 +1170,12 @@ std::shared_ptr<Expression> JotParser::parse_enumeration_attribute_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_postfix_index_expression()
-{
-    // TOOD: Revamp
-    /*
-    auto expression = parse_postfix_call_expression();
-    while (is_current_kind(TokenKind::OpenBracket)) {
-        auto position = peek_and_advance_token();
-        auto index = parse_expression();
-        assert_kind(TokenKind::CloseBracket, "Expect ] after index value");
-        expression = std::make_shared<IndexExpression>(position, expression, index);
-    }
-    return expression;
-    */
-    return parse_postfix_call_expression();
-}
-
 std::shared_ptr<Expression> JotParser::parse_postfix_call_expression()
 {
     auto expression = parse_initializer_expression();
     auto current_token_literal = peek_current().literal;
     if (is_current_kind(TokenKind::Symbol) and
-        context->is_postfix_function(current_token_literal)) {
+        is_function_declaration_kind(current_token_literal, POSTFIX_FUNCTION)) {
         Token                                    symbol_token = peek_current();
         auto                                     literal = parse_literal_expression();
         std::vector<std::shared_ptr<Expression>> arguments;
@@ -1219,6 +1205,20 @@ std::shared_ptr<Expression> JotParser::parse_initializer_expression()
         return std::make_shared<InitializeExpression>(token, type, arguments);
     }
 
+    return parse_function_call_with_lambda_argument();
+}
+
+std::shared_ptr<Expression> JotParser::parse_function_call_with_lambda_argument()
+{
+    if (is_current_kind(TokenKind::Symbol) and is_next_kind(TokenKind::OpenBrace) and
+        is_function_declaration_kind(current_token->literal, NORMAL_FUNCTION)) {
+        auto symbol_token = peek_current();
+        auto literal = parse_literal_expression();
+
+        std::vector<std::shared_ptr<Expression>> arguments;
+        arguments.push_back(parse_lambda_expression());
+        return std::make_shared<CallExpression>(symbol_token, literal, arguments);
+    }
     return parse_primary_expression();
 }
 
@@ -1714,23 +1714,12 @@ NumberKind JotParser::get_number_kind(TokenKind token)
     }
 }
 
-void JotParser::register_function_call(FunctionCallKind kind, std::string& name)
+bool JotParser::is_function_declaration_kind(std::string& fun_name, FunctionDeclarationKind kind)
 {
-    switch (kind) {
-    case FunctionCallKind::Prefix: {
-        context->set_prefix_function(name);
-        break;
+    if (context->functions.count(fun_name)) {
+        return context->functions[fun_name] == kind;
     }
-    case FunctionCallKind::Infix: {
-        context->set_infix_function(name);
-        break;
-    }
-    case FunctionCallKind::Postfix: {
-        context->set_postfix_function(name);
-        break;
-    }
-    default: return;
-    }
+    return false;
 }
 
 void JotParser::advanced_token()

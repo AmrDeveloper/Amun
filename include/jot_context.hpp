@@ -6,32 +6,24 @@
 #include "jot_type.hpp"
 
 #include <memory>
-#include <unordered_set>
+#include <unordered_map>
 
-class JotContext {
-  public:
-    JotContext();
+enum FunctionDeclarationKind {
+    NORMAL_FUNCTION,
+    PREFIX_FUNCTION,
+    INFIX_FUNCTION,
+    POSTFIX_FUNCTION,
+};
 
-    bool is_prefix_function(std::string& name);
+struct JotContext {
+    JotContext() : diagnostics(JotDiagnosticEngine(source_manager)) {}
 
-    void set_prefix_function(std::string& name);
+    JotOptions          options;
+    JotDiagnosticEngine diagnostics;
+    JotSourceManager    source_manager;
 
-    bool is_infix_function(std::string& name);
-
-    void set_infix_function(std::string& name);
-
-    bool is_postfix_function(std::string& name);
-
-    void set_postfix_function(std::string& name);
-
-    JotOptions                                                      options;
-    JotDiagnosticEngine                                             diagnostics;
-    JotSourceManager                                                source_manager;
+    // Declarations Informations
+    std::unordered_map<std::string, FunctionDeclarationKind>        functions;
     std::unordered_map<std::string, std::shared_ptr<JotStructType>> structures;
     std::unordered_map<std::string, std::shared_ptr<JotEnumType>>   enumerations;
-
-  private:
-    std::unordered_set<std::string> prefix_functions;
-    std::unordered_set<std::string> infix_functions;
-    std::unordered_set<std::string> postfix_functions;
 };

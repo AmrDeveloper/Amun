@@ -145,20 +145,13 @@ class FieldDeclaration : public Statement {
     bool                        global;
 };
 
-enum FunctionCallKind {
-    Normal,
-    Prefix,
-    Infix,
-    Postfix,
-};
-
 class FunctionPrototype : public Statement {
   public:
     FunctionPrototype(Token name, std::vector<std::shared_ptr<Parameter>> parameters,
-                      std::shared_ptr<JotType> return_type, FunctionCallKind call_kind,
-                      bool external, bool varargs, std::shared_ptr<JotType> varargs_type)
-        : name(name), parameters(parameters), return_type(return_type), call_kind(call_kind),
-          external(external), varargs(varargs), varargs_type(varargs_type)
+                      std::shared_ptr<JotType> return_type, bool external, bool varargs,
+                      std::shared_ptr<JotType> varargs_type)
+        : name(name), parameters(parameters), return_type(return_type), external(external),
+          varargs(varargs), varargs_type(varargs_type)
     {
     }
 
@@ -169,8 +162,6 @@ class FunctionPrototype : public Statement {
     std::shared_ptr<JotType> get_return_type() { return return_type; }
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    FunctionCallKind get_call_kind() { return call_kind; }
 
     bool is_external() { return external; }
 
@@ -184,7 +175,6 @@ class FunctionPrototype : public Statement {
     Token                                   name;
     std::vector<std::shared_ptr<Parameter>> parameters;
     std::shared_ptr<JotType>                return_type;
-    FunctionCallKind                        call_kind;
     bool                                    external;
 
     bool                     varargs;
