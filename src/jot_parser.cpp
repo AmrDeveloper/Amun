@@ -744,7 +744,7 @@ std::shared_ptr<IfStatement> JotParser::parse_if_statement()
         has_else_branch = true;
     }
     current_ast_scope = parent_node_scope;
-    return std::make_shared<IfStatement>(conditional_blocks);
+    return std::make_shared<IfStatement>(conditional_blocks, has_else_branch);
 }
 
 std::shared_ptr<Statement> JotParser::parse_for_statement()

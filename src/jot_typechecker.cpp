@@ -144,10 +144,20 @@ std::any JotTypeChecker::visit(FunctionDeclaration* node)
     for (auto& parameter : prototype->get_parameters()) {
         types_table.define(parameter->get_name().literal, parameter->get_type());
     }
-    node->get_body()->accept(this);
+
+    auto function_body = node->get_body();
+    function_body->accept(this);
     pop_current_scope();
 
     return_types_stack.pop();
+
+    // If Function return type is not void, should check for missing return statement
+    if (!is_void_type(function->return_type) && !check_missing_return_statement(function_body)) {
+        const auto& span = node->get_prototype()->get_name().position;
+        context->diagnostics.add_diagnostic_error(
+            span, "A 'return' statement required in a function with a block body ('{...}')");
+        throw "Stop";
+    }
 
     return function_type;
 }
@@ -1509,6 +1519,78 @@ bool JotTypeChecker::check_number_limits(const char* literal, NumberKind kind)
                value <= std::numeric_limits<double>::max();
     }
     }
+}
+
+bool JotTypeChecker::check_missing_return_statement(Shared<Statement> node)
+{
+    // This case for single node function declaration
+    if (node->get_ast_node_type() == AstNodeType::Return) {
+        return true;
+    }
+
+    const auto& body = std::dynamic_pointer_cast<BlockStatement>(node);
+    const auto& statements = body->statements;
+
+    // This check called only for non void function so it must have return statement in empty body
+    if (statements.empty()) {
+        return false;
+    }
+
+    // Check that last node is return statement
+    if (statements.back()->get_ast_node_type() == AstNodeType::Return) {
+        return true;
+    }
+
+    // Iterate down to up to find a fully covered node that will always return
+    for (auto it = std::rbegin(statements); it != std::rend(statements); ++it) {
+        const auto& statement = *it;
+
+        auto node_kind = statement->get_ast_node_type();
+        if (node_kind == AstNodeType::Block && check_missing_return_statement(statement)) {
+            return true;
+        }
+
+        else if (node_kind == AstNodeType::If) {
+            bool is_covered = false;
+            auto if_statement = std::dynamic_pointer_cast<IfStatement>(statement);
+            for (const auto& branch : if_statement->get_conditional_blocks()) {
+                is_covered = check_missing_return_statement(branch->get_body());
+                if (!is_covered) {
+                    break;
+                }
+            }
+
+            if (is_covered && if_statement->has_else_branch()) {
+                return true;
+            }
+        }
+
+        else if (node_kind == AstNodeType::Switch) {
+            auto switch_statement = std::dynamic_pointer_cast<SwitchStatement>(statement);
+            auto default_body = switch_statement->get_default_case();
+            if (default_body == nullptr) {
+                return false;
+            }
+
+            if (!check_missing_return_statement(default_body->get_body())) {
+                continue;
+            }
+
+            bool is_cases_covered = false;
+            for (const auto& switch_case : switch_statement->get_cases()) {
+                is_cases_covered = check_missing_return_statement(switch_case->get_body());
+                if (!is_cases_covered) {
+                    break;
+                }
+            }
+
+            if (is_cases_covered) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 inline void JotTypeChecker::push_new_scope() { types_table.push_new_scope(); }

@@ -214,12 +214,22 @@ std::any JotLLVMBackend::visit(FunctionDeclaration* node)
         Builder.CreateStore(&arg, alloca_inst);
     }
 
-    node->get_body()->accept(this);
+    const auto& body = node->get_body();
+    body->accept(this);
 
     pop_alloca_inst_scope();
     defer_calls_stack.pop();
 
     alloca_inst_table.define(name, function);
+
+    // Assert that this block end with return statement or unreachable
+    if (body->get_ast_node_type() == AstNodeType::Block) {
+        const auto& body_statement = std::dynamic_pointer_cast<BlockStatement>(body);
+        const auto& statements = body_statement->statements;
+        if (statements.empty() || statements.back()->get_ast_node_type() != AstNodeType::Return) {
+            Builder.CreateUnreachable();
+        }
+    }
 
     verifyFunction(*function);
 

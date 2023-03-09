@@ -258,8 +258,8 @@ class ConditionalBlock {
 
 class IfStatement : public Statement {
   public:
-    IfStatement(std::vector<std::shared_ptr<ConditionalBlock>> conditional_blocks)
-        : conditional_blocks(conditional_blocks)
+    IfStatement(std::vector<std::shared_ptr<ConditionalBlock>> conditional_blocks, bool has_else)
+        : conditional_blocks(conditional_blocks), has_else(has_else)
     {
     }
 
@@ -272,8 +272,11 @@ class IfStatement : public Statement {
 
     AstNodeType get_ast_node_type() override { return AstNodeType::If; }
 
+    bool has_else_branch() { return has_else; }
+
   private:
     std::vector<std::shared_ptr<ConditionalBlock>> conditional_blocks;
+    bool                                           has_else;
 };
 
 class ForRangeStatement : public Statement {

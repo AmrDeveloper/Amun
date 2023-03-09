@@ -111,6 +111,8 @@ class JotTypeChecker : public TreeVisitor {
 
     bool check_number_limits(const char* literal, NumberKind kind);
 
+    bool check_missing_return_statement(Shared<Statement> node);
+
     void check_parameters_types(TokenSpan                                 location,
                                 std::vector<std::shared_ptr<Expression>>& arguments,
                                 std::vector<std::shared_ptr<JotType>>& parameters, bool has_varargs,
