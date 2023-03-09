@@ -715,6 +715,7 @@ std::shared_ptr<IfStatement> JotParser::parse_if_statement()
     std::vector<std::shared_ptr<ConditionalBlock>> conditional_blocks;
     conditional_blocks.push_back(conditional_block);
 
+    bool has_else_branch = false;
     while (is_source_available() && is_current_kind(TokenKind::ElseKeyword)) {
         auto else_token = consume_kind(TokenKind::ElseKeyword, "Expect else keyword.");
         if (is_current_kind(TokenKind::IfKeyword)) {
@@ -724,16 +725,23 @@ std::shared_ptr<IfStatement> JotParser::parse_if_statement()
             auto elif_condition_block =
                 std::make_shared<ConditionalBlock>(else_token, elif_condition, elif_block);
             conditional_blocks.push_back(elif_condition_block);
+            continue;
         }
-        else {
-            auto true_value_token = else_token;
-            true_value_token.kind = TokenKind::TrueKeyword;
-            auto true_expression = std::make_shared<BooleanExpression>(true_value_token);
-            auto else_block = parse_statement();
-            auto elif_condition_block =
-                std::make_shared<ConditionalBlock>(else_token, true_expression, else_block);
-            conditional_blocks.push_back(elif_condition_block);
+
+        if (has_else_branch) {
+            context->diagnostics.add_diagnostic_error(else_token.position,
+                                                      "You already declared else branch");
+            throw "Stop";
         }
+
+        auto true_value_token = else_token;
+        true_value_token.kind = TokenKind::TrueKeyword;
+        auto true_expression = std::make_shared<BooleanExpression>(true_value_token);
+        auto else_block = parse_statement();
+        auto else_condition_block =
+            std::make_shared<ConditionalBlock>(else_token, true_expression, else_block);
+        conditional_blocks.push_back(else_condition_block);
+        has_else_branch = true;
     }
     current_ast_scope = parent_node_scope;
     return std::make_shared<IfStatement>(conditional_blocks);
