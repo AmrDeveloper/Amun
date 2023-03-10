@@ -424,7 +424,7 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration(bool i
     auto structure_type =
         std::make_shared<JotStructType>(struct_name_str, fields_names, fields_types, is_packed);
 
-    if (context->structures.count(struct_name_str)) {
+    if (context->structures.contains(struct_name_str)) {
         context->diagnostics.add_diagnostic_error(
             struct_name.position, "There is already struct with name " + struct_name_str);
         throw "Stop";
@@ -523,7 +523,7 @@ std::shared_ptr<EnumDeclaration> JotParser::parse_enum_declaration()
             }
 
             auto explicit_value = std::stoi(number_value_token.literal);
-            if (explicit_values.count(explicit_value)) {
+            if (explicit_values.contains(explicit_value)) {
                 context->diagnostics.add_diagnostic_error(
                     enum_value.position, "There is also one enum field with explicit value " +
                                              std::to_string(explicit_value));
@@ -988,13 +988,13 @@ std::shared_ptr<Expression> JotParser::parse_enum_access_expression()
         auto colons_token = peek_and_advance_token();
         if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression)) {
             auto enum_name = literal->get_name();
-            if (context->enumerations.count(enum_name.literal)) {
+            if (context->enumerations.contains(enum_name.literal)) {
                 auto enum_type = context->enumerations[enum_name.literal];
                 auto element =
                     consume_kind(TokenKind::Symbol, "Expect identifier as enum field name");
 
                 auto enum_values = enum_type->values;
-                if (not enum_values.count(element.literal)) {
+                if (not enum_values.contains(element.literal)) {
                     context->diagnostics.add_diagnostic_error(
                         element.position, "Can't find element with name " + element.literal +
                                               " in enum " + enum_name.literal);
@@ -1158,7 +1158,7 @@ std::shared_ptr<Expression> JotParser::parse_enumeration_attribute_expression()
         expression->get_ast_node_type() == AstNodeType::LiteralExpr) {
         auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression);
         auto literal_str = literal->get_name().literal;
-        if (context->enumerations.count(literal_str)) {
+        if (context->enumerations.contains(literal_str)) {
             auto dot_token = peek_and_advance_token();
             auto attribute = consume_kind(TokenKind::Symbol, "Expect attribute name for enum");
             auto attribute_str = attribute.literal;
@@ -1196,7 +1196,7 @@ std::shared_ptr<Expression> JotParser::parse_postfix_call_expression()
 std::shared_ptr<Expression> JotParser::parse_initializer_expression()
 {
     if (is_current_kind(TokenKind::Symbol) and is_next_kind(TokenKind::OpenBrace) and
-        context->structures.count(current_token->literal)) {
+        context->structures.contains(current_token->literal)) {
         auto type = parse_type();
         auto token = consume_kind(TokenKind::OpenBrace, "Expect { at the start of initializer");
         std::vector<std::shared_ptr<Expression>> arguments;
@@ -1673,12 +1673,12 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type()
     }
 
     // Check if this type is structure type
-    if (context->structures.count(type_literal)) {
+    if (context->structures.contains(type_literal)) {
         return context->structures[type_literal];
     }
 
     // Check if this type is enumeration type
-    if (context->enumerations.count(type_literal)) {
+    if (context->enumerations.contains(type_literal)) {
         auto enum_type = context->enumerations[type_literal];
         auto enum_element_type =
             std::make_shared<JotEnumElementType>(symbol_token.literal, enum_type->element_type);
@@ -1724,7 +1724,7 @@ NumberKind JotParser::get_number_kind(TokenKind token)
 
 bool JotParser::is_function_declaration_kind(std::string& fun_name, FunctionDeclarationKind kind)
 {
-    if (context->functions.count(fun_name)) {
+    if (context->functions.contains(fun_name)) {
         return context->functions[fun_name] == kind;
     }
     return false;

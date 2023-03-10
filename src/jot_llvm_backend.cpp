@@ -2351,7 +2351,7 @@ JotLLVMBackend::resolve_constant_switch_expression(std::shared_ptr<SwitchExpress
 llvm::Constant* JotLLVMBackend::resolve_constant_string_expression(const std::string& literal)
 {
     // Resolve constants string from string pool if it generated before
-    if (constants_string_pool.count(literal)) {
+    if (constants_string_pool.contains(literal)) {
         return constants_string_pool[literal];
     }
 

@@ -14,7 +14,7 @@ int JotCommands::executeCommand(int argc, char** argv)
     }
 
     const char* command = argv[1];
-    if (not commands_map.count(command)) {
+    if (not commands_map.contains(command)) {
         printf("Can't find command with name %s\n", command);
         printf("Please run jot help to get the list of available commands\n");
         return EXIT_FAILURE;
