@@ -84,9 +84,9 @@ std::any JotLLVMBackend::visit(FieldDeclaration* node)
             constants_value = resolve_constant_expression(node->get_value());
         }
 
-        auto global_variable = new llvm::GlobalVariable(*llvm_module, llvm_type, false,
-                                                        llvm::GlobalValue::ExternalLinkage,
-                                                        constants_value, var_name.c_str());
+        auto global_variable =
+            new llvm::GlobalVariable(*llvm_module, llvm_type, false,
+                                     llvm::GlobalValue::ExternalLinkage, constants_value, var_name);
         global_variable->setAlignment(llvm::MaybeAlign(0));
         return 0;
     }
@@ -1733,47 +1733,47 @@ inline llvm::Value* JotLLVMBackend::llvm_number_value(const std::string& value_l
 {
     switch (size) {
     case NumberKind::Integer1: {
-        auto value = std::stoi(value_litearl.c_str());
+        auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int1_type, value);
     }
     case NumberKind::Integer8: {
-        auto value = std::stoi(value_litearl.c_str());
+        auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int8_type, value);
     }
     case NumberKind::UInteger8: {
-        auto value = std::stoi(value_litearl.c_str());
+        auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int8_type, value, true);
     }
     case NumberKind::Integer16: {
-        auto value = std::stoi(value_litearl.c_str());
+        auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int16_type, value);
     }
     case NumberKind::UInteger16: {
-        auto value = std::stoi(value_litearl.c_str());
+        auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int16_type, value, true);
     }
     case NumberKind::Integer32: {
-        auto value = std::stoi(value_litearl.c_str());
+        auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int32_type, value);
     }
     case NumberKind::UInteger32: {
-        auto value = std::stoi(value_litearl.c_str());
+        auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int32_type, value, true);
     }
     case NumberKind::Integer64: {
-        auto value = std::strtoll(value_litearl.c_str(), NULL, 0);
+        auto value = std::strtoll(value_litearl.c_str(), nullptr, 0);
         return llvm::ConstantInt::get(llvm_int64_type, value);
     }
     case NumberKind::UInteger64: {
-        auto value = std::strtoll(value_litearl.c_str(), NULL, 0);
+        auto value = std::strtoll(value_litearl.c_str(), nullptr, 0);
         return llvm::ConstantInt::get(llvm_int64_type, value, true);
     }
     case NumberKind::Float32: {
-        auto value = std::stod(value_litearl.c_str());
+        auto value = std::stod(value_litearl);
         return llvm::ConstantFP::get(llvm_float32_type, value);
     }
     case NumberKind::Float64: {
-        auto value = std::stod(value_litearl.c_str());
+        auto value = std::stod(value_litearl);
         return llvm::ConstantFP::get(llvm_float64_type, value);
     }
     }
@@ -2378,7 +2378,7 @@ inline llvm::AllocaInst* JotLLVMBackend::create_entry_block_alloca(llvm::Functio
                                                                    llvm::Type*       type)
 {
     llvm::IRBuilder<> builder_object(&function->getEntryBlock(), function->getEntryBlock().begin());
-    return builder_object.CreateAlloca(type, 0, var_name.c_str());
+    return builder_object.CreateAlloca(type, nullptr, var_name);
 }
 
 void JotLLVMBackend::create_switch_case_branch(llvm::SwitchInst*           switch_inst,

@@ -48,8 +48,9 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration()
                 TokenKind::String, "Expect string as library name after import statement");
             std::string library_path = "../lib/" + library_name.literal + ".jot";
 
-            if (context->source_manager.is_path_registered(library_path.c_str()))
+            if (context->source_manager.is_path_registered(library_path)) {
                 continue;
+            }
 
             if (not is_file_exists(library_path)) {
                 context->diagnostics.add_diagnostic_error(
@@ -68,7 +69,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration()
         consume_kind(TokenKind::String, "Expect string as library name after import statement");
     std::string library_path = "../lib/" + library_name.literal + ".jot";
 
-    if (context->source_manager.is_path_registered(library_path.c_str())) {
+    if (context->source_manager.is_path_registered(library_path)) {
         return std::vector<std::shared_ptr<Statement>>();
     }
 
@@ -94,8 +95,9 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration()
 
             std::string library_path = file_parent_path + library_name.literal + ".jot";
 
-            if (context->source_manager.is_path_registered(library_path.c_str()))
+            if (context->source_manager.is_path_registered(library_path)) {
                 continue;
+            }
 
             if (not is_file_exists(library_path)) {
                 context->diagnostics.add_diagnostic_error(library_name.position,
