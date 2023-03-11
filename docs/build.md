@@ -11,6 +11,7 @@ To build jot source code you need to have some program installed
 - Cmake 3.16.0 or more
 - Python (Optional only for development)
 - Clang Format (Optional only for development)
+- Clangd (Optional only for development)
 - Ninja (Optional only for development)
 - CCashe (Optional only for development)
 
