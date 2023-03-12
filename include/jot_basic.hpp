@@ -1,7 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 // Singed integers types
 using int8 = std::int8_t;
@@ -54,7 +56,32 @@ using Unique = std::unique_ptr<T>;
 #define str10Equals(first, other) str9Equals(first, other) && first[9] == other[9]
 
 // Convert string to integer
-int64 str_to_int(const char* p);
+auto str_to_int(const char* p) -> int64;
 
 // Convert string to float
-float64 str_to_float(const char* p);
+auto str_to_float(const char* p) -> float64;
+
+// Return true if element is in the vector
+template <typename T>
+auto is_contains(const std::vector<T>& vec, const T& element) -> bool
+{
+    return std::find(vec.begin(), vec.end(), element) != vec.end();
+}
+
+// Return the index of element or -1 if not exists
+template <typename T>
+auto index_of(const std::vector<T>& vec, const T& element) -> int
+{
+    auto it = std::find(vec.begin(), vec.end(), element);
+    return it == vec.end() ? -1 : it - vec.begin();
+}
+
+// Append vector elements at the end of another vector
+template <typename T>
+auto append_vectors(std::vector<T>& vec, std::vector<T>& extra) -> void
+{
+    vec.reserve(vec.size() + extra.size());
+    for (auto element : extra) {
+        vec.push_back(element);
+    }
+}

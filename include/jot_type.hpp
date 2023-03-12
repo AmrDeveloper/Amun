@@ -9,174 +9,199 @@
 #include <utility>
 #include <vector>
 
-enum class TypeKind : short {
-    Number,
-    Pointer,
-    Function,
-    Array,
-    Structure,
-    Enumeration,
-    EnumerationElement,
-    None,
-    Void,
-    Null,
+enum class TypeKind : int8 {
+    NUMBER,
+    POINTER,
+    FUNCTION,
+    ARRAY,
+    STRUCT,
+    ENUM,
+    ENUM_ELEMENT,
+    GENERIC_PARAMETER,
+    GENERIC_STRUCT,
+    NONE,
+    VOID,
+    NILL,
 };
 
 struct JotType {
-    TypeKind type_kind = TypeKind::None;
+    TypeKind type_kind = TypeKind::NONE;
 };
 
-enum class NumberKind : short {
-    Integer1,
-    Integer8,
-    Integer16,
-    Integer32,
-    Integer64,
-    UInteger8,
-    UInteger16,
-    UInteger32,
-    UInteger64,
-    Float32,
-    Float64,
+enum class NumberKind : int8 {
+    INTEGER_1,
+    INTEGER_8,
+    INTEGER_16,
+    INTEGER_32,
+    INTEGER_64,
+    U_INTEGER_8,
+    U_INTEGER_16,
+    U_INTEGER_32,
+    U_INTEGER_64,
+    FLOAT_32,
+    FLOAT_64,
 };
 
 static std::unordered_map<NumberKind, int> number_kind_width = {
-    {NumberKind::Integer1, 1},    {NumberKind::Integer8, 8},    {NumberKind::Integer16, 16},
-    {NumberKind::Integer32, 32},  {NumberKind::Integer64, 64},
+    {NumberKind::INTEGER_1, 1},     {NumberKind::INTEGER_8, 8},     {NumberKind::INTEGER_16, 16},
+    {NumberKind::INTEGER_32, 32},   {NumberKind::INTEGER_64, 64},
 
-    {NumberKind::UInteger8, 8},   {NumberKind::UInteger16, 16}, {NumberKind::UInteger32, 32},
-    {NumberKind::UInteger64, 64},
+    {NumberKind::U_INTEGER_8, 8},   {NumberKind::U_INTEGER_16, 16}, {NumberKind::U_INTEGER_32, 32},
+    {NumberKind::U_INTEGER_64, 64},
 
-    {NumberKind::Float32, 32},    {NumberKind::Float64, 64},
+    {NumberKind::FLOAT_32, 32},     {NumberKind::FLOAT_64, 64},
 };
 
 struct JotNumberType : public JotType {
-    JotNumberType(NumberKind kind) : number_kind(kind) { type_kind = TypeKind::Number; }
+    explicit JotNumberType(NumberKind kind) : number_kind(kind) { type_kind = TypeKind::NUMBER; }
     NumberKind number_kind;
 };
 
 struct JotPointerType : public JotType {
-    JotPointerType(std::shared_ptr<JotType> base_type) : base_type(std::move(base_type))
+    explicit JotPointerType(Shared<JotType> base_type) : base_type(std::move(base_type))
     {
-        type_kind = TypeKind::Pointer;
+        type_kind = TypeKind::POINTER;
     }
 
-    std::shared_ptr<JotType> base_type;
+    Shared<JotType> base_type;
 };
 
 struct JotArrayType : public JotType {
-    JotArrayType(std::shared_ptr<JotType> element_type, size_t size)
+    JotArrayType(Shared<JotType> element_type, size_t size)
         : element_type(std::move(element_type)), size(size)
     {
-        type_kind = TypeKind::Array;
+        type_kind = TypeKind::ARRAY;
     }
 
-    std::shared_ptr<JotType> element_type;
-    size_t                   size;
+    Shared<JotType> element_type;
+    size_t          size;
 };
 
 struct JotFunctionType : public JotType {
-    JotFunctionType(Token name, std::vector<std::shared_ptr<JotType>> parameters,
-                    std::shared_ptr<JotType> return_type, bool varargs = false,
-                    std::shared_ptr<JotType> varargs_type = nullptr)
+    JotFunctionType(Token name, std::vector<Shared<JotType>> parameters,
+                    Shared<JotType> return_type, bool varargs = false,
+                    Shared<JotType> varargs_type = nullptr)
         : name(std::move(name)), parameters(std::move(parameters)),
           return_type(std::move(return_type)), has_varargs(varargs),
           varargs_type(std::move(varargs_type))
     {
-        type_kind = TypeKind::Function;
+        type_kind = TypeKind::FUNCTION;
     }
 
-    Token                                 name;
-    std::vector<std::shared_ptr<JotType>> parameters;
-    std::shared_ptr<JotType>              return_type;
-    int                                   implicit_parameters_count = 0;
-    bool                                  has_varargs;
-    std::shared_ptr<JotType>              varargs_type;
+    Token                        name;
+    std::vector<Shared<JotType>> parameters;
+    Shared<JotType>              return_type;
+    int                          implicit_parameters_count = 0;
+    bool                         has_varargs;
+    Shared<JotType>              varargs_type;
 };
 
 struct JotStructType : public JotType {
-    JotStructType(std::string name, std::unordered_map<std::string, int> fields_names,
-                  std::vector<std::shared_ptr<JotType>> types, bool is_packed)
+    JotStructType(std::string name, std::vector<std::string> fields_names,
+                  std::vector<Shared<JotType>> types, std::vector<std::string> generic_parameters,
+                  bool is_packed, bool is_generic)
         : name(std::move(name)), fields_names(std::move(fields_names)),
-          fields_types(std::move(types)), is_packed(is_packed)
+          fields_types(std::move(types)), generic_parameters(std::move(generic_parameters)),
+          is_packed(is_packed), is_generic(is_generic)
     {
-        type_kind = TypeKind::Structure;
+        type_kind = TypeKind::STRUCT;
     }
 
-    std::string                           name;
-    bool                                  is_packed;
-    std::unordered_map<std::string, int>  fields_names;
-    std::vector<std::shared_ptr<JotType>> fields_types;
+    std::string                  name;
+    std::vector<std::string>     fields_names;
+    std::vector<Shared<JotType>> fields_types;
+    std::vector<std::string>     generic_parameters;
+    bool                         is_packed;
+    bool                         is_generic;
 };
 
 struct JotEnumType : public JotType {
     JotEnumType(Token name, std::unordered_map<std::string, int> values,
-                std::shared_ptr<JotType> element_type)
-        : name(name), values(std::move(values)), element_type(std::move(element_type))
+                Shared<JotType> element_type)
+        : name(std::move(name)), values(std::move(values)), element_type(std::move(element_type))
     {
-        type_kind = TypeKind::Enumeration;
+        type_kind = TypeKind::ENUM;
     }
 
     Token                                name;
     std::unordered_map<std::string, int> values;
-    std::shared_ptr<JotType>             element_type;
+    Shared<JotType>                      element_type;
 };
 
 struct JotEnumElementType : public JotType {
-    JotEnumElementType(std::string name, std::shared_ptr<JotType> element_type)
-        : name(name), element_type(std::move(element_type))
+    JotEnumElementType(std::string name, Shared<JotType> element_type)
+        : name(std::move(name)), element_type(std::move(element_type))
     {
-        type_kind = TypeKind::EnumerationElement;
+        type_kind = TypeKind::ENUM_ELEMENT;
     }
 
-    std::string              name;
-    std::shared_ptr<JotType> element_type;
+    std::string     name;
+    Shared<JotType> element_type;
+};
+
+struct JotGenericParameterType : public JotType {
+    explicit JotGenericParameterType(std::string name) : name(std::move(name))
+    {
+        type_kind = TypeKind::GENERIC_PARAMETER;
+    }
+    std::string name;
+};
+
+struct JotGenericStructType : public JotType {
+    JotGenericStructType(Shared<JotStructType> struct_type, std::vector<Shared<JotType>> parameters)
+        : struct_type(std::move(struct_type)), parameters(std::move(parameters))
+    {
+        type_kind = TypeKind::GENERIC_STRUCT;
+    }
+    Shared<JotStructType>        struct_type;
+    std::vector<Shared<JotType>> parameters;
 };
 
 struct JotNoneType : public JotType {
-    JotNoneType() { type_kind = TypeKind::None; }
+    JotNoneType() { type_kind = TypeKind::NONE; }
 };
 
 struct JotVoidType : public JotType {
-    JotVoidType() { type_kind = TypeKind::Void; }
+    JotVoidType() { type_kind = TypeKind::VOID; }
 };
 
 struct JotNullType : public JotType {
-    JotNullType() { type_kind = TypeKind::Null; }
+    JotNullType() { type_kind = TypeKind::NILL; }
 };
 
-bool is_jot_types_equals(const std::shared_ptr<JotType>& type,
-                         const std::shared_ptr<JotType>& other);
+auto is_jot_types_equals(const Shared<JotType>& type, const Shared<JotType>& other) -> bool;
 
-bool is_jot_functions_types_equals(const std::shared_ptr<JotFunctionType>& type,
-                                   const std::shared_ptr<JotFunctionType>& other);
+auto is_jot_functions_types_equals(const std::shared_ptr<JotFunctionType>& type,
+                                   const std::shared_ptr<JotFunctionType>& other) -> bool;
 
-bool can_jot_types_casted(const std::shared_ptr<JotType>& from, const std::shared_ptr<JotType>& to);
+auto can_jot_types_casted(const Shared<JotType>& from, const Shared<JotType>& to) -> bool;
 
-std::string jot_type_literal(const std::shared_ptr<JotType>& type);
+auto jot_type_literal(const Shared<JotType>& type) -> std::string;
 
-const char* jot_number_kind_literal(NumberKind kind);
+auto jot_number_kind_literal(NumberKind kind) -> const char*;
 
-bool is_number_type(std::shared_ptr<JotType> type);
+auto is_number_type(Shared<JotType> type) -> bool;
 
-bool is_integer_type(std::shared_ptr<JotType> type);
+auto is_integer_type(Shared<JotType> type) -> bool;
 
-bool is_enum_element_type(std::shared_ptr<JotType> type);
+auto is_enum_element_type(Shared<JotType> type) -> bool;
 
-bool is_boolean_type(std::shared_ptr<JotType> type);
+auto is_generic_struct_type(Shared<JotType> type) -> bool;
 
-bool is_function_type(std::shared_ptr<JotType> type);
+auto is_boolean_type(Shared<JotType> type) -> bool;
 
-bool is_function_pointer_type(std::shared_ptr<JotType> type);
+auto is_function_type(Shared<JotType> type) -> bool;
 
-bool is_pointer_type(std::shared_ptr<JotType> type);
+auto is_function_pointer_type(Shared<JotType> type) -> bool;
 
-bool is_void_type(std::shared_ptr<JotType> type);
+auto is_pointer_type(Shared<JotType> type) -> bool;
 
-bool is_null_type(std::shared_ptr<JotType> type);
+auto is_void_type(Shared<JotType> type) -> bool;
 
-bool is_none_type(std::shared_ptr<JotType> type);
+auto is_null_type(Shared<JotType> type) -> bool;
 
-bool is_pointer_of_type(std::shared_ptr<JotType> type, std::shared_ptr<JotType> base);
+auto is_none_type(Shared<JotType> type) -> bool;
 
-bool is_array_of_type(std::shared_ptr<JotType> type, std::shared_ptr<JotType> base);
+auto is_pointer_of_type(Shared<JotType> type, Shared<JotType> base) -> bool;
+
+auto is_array_of_type(Shared<JotType> type, Shared<JotType> base) -> bool;

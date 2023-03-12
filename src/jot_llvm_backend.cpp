@@ -1,6 +1,7 @@
 #include "../include/jot_llvm_backend.hpp"
 #include "../include/jot_ast_visitor.hpp"
 #include "../include/jot_logger.hpp"
+#include "../include/jot_name_mangle.hpp"
 #include "../include/jot_type.hpp"
 
 #include <llvm/ADT/ArrayRef.h>
@@ -21,8 +22,9 @@
 #include <string>
 #include <vector>
 
-std::unique_ptr<llvm::Module>
-JotLLVMBackend::compile(std::string module_name, std::shared_ptr<CompilationUnit> compilation_unit)
+auto JotLLVMBackend::compile(std::string                      module_name,
+                             std::shared_ptr<CompilationUnit> compilation_unit)
+    -> std::unique_ptr<llvm::Module>
 {
     llvm_module = std::make_unique<llvm::Module>(module_name, llvm_context);
     try {
@@ -36,7 +38,7 @@ JotLLVMBackend::compile(std::string module_name, std::shared_ptr<CompilationUnit
     return std::move(llvm_module);
 }
 
-std::any JotLLVMBackend::visit(BlockStatement* node)
+auto JotLLVMBackend::visit(BlockStatement* node) -> std::any
 {
     push_alloca_inst_scope();
     defer_calls_stack.top().push_new_scope();
@@ -66,11 +68,19 @@ std::any JotLLVMBackend::visit(BlockStatement* node)
     return 0;
 }
 
-std::any JotLLVMBackend::visit(FieldDeclaration* node)
+auto JotLLVMBackend::visit(FieldDeclaration* node) -> std::any
 {
     auto var_name = node->get_name().literal;
     auto field_type = node->get_type();
-    auto llvm_type = llvm_type_from_jot_type(field_type);
+
+    llvm::Type* llvm_type;
+    if (field_type->type_kind == TypeKind::GENERIC_STRUCT) {
+        auto generic_type = std::static_pointer_cast<JotGenericStructType>(field_type);
+        llvm_type = resolve_generic_struct(generic_type);
+    }
+    else {
+        llvm_type = llvm_type_from_jot_type(field_type);
+    }
 
     // Globals code generation block can be moved into other function to be clear and handle more
     // cases and to handle also soem compile time evaluations
@@ -166,7 +176,7 @@ std::any JotLLVMBackend::visit(FieldDeclaration* node)
     return 0;
 }
 
-std::any JotLLVMBackend::visit(FunctionPrototype* node)
+auto JotLLVMBackend::visit(FunctionPrototype* node) -> std::any
 {
     auto                     parameters = node->get_parameters();
     size_t                   parameters_size = parameters.size();
@@ -195,8 +205,9 @@ std::any JotLLVMBackend::visit(FunctionPrototype* node)
     return function;
 }
 
-std::any JotLLVMBackend::visit(FunctionDeclaration* node)
+auto JotLLVMBackend::visit(FunctionDeclaration* node) -> std::any
 {
+    is_on_global_scope = false;
     auto prototype = node->get_prototype();
     auto name = prototype->get_name().literal;
     functions_table[name] = prototype;
@@ -234,12 +245,19 @@ std::any JotLLVMBackend::visit(FunctionDeclaration* node)
     verifyFunction(*function);
 
     has_return_statement = false;
+    is_on_global_scope = true;
     return function;
 }
 
-std::any JotLLVMBackend::visit(StructDeclaration* node)
+auto JotLLVMBackend::visit(StructDeclaration* node) -> std::any
 {
     const auto struct_type = node->get_struct_type();
+
+    // Generic Struct is a template and should be defined only when used
+    if (struct_type->is_generic) {
+        return 0;
+    }
+
     const auto struct_name = struct_type->name;
     const auto struct_llvm_type = llvm::StructType::create(llvm_context);
     struct_llvm_type->setName(struct_name);
@@ -248,12 +266,12 @@ std::any JotLLVMBackend::visit(StructDeclaration* node)
     std::vector<llvm::Type*> struct_fields;
     struct_fields.reserve(fields.size());
 
-    for (auto& field : fields) {
+    for (const auto& field : fields) {
 
         // Handle case where field type is pointer to the current struct
-        if (field->type_kind == TypeKind::Pointer) {
+        if (field->type_kind == TypeKind::POINTER) {
             auto pointer = std::static_pointer_cast<JotPointerType>(field);
-            if (pointer->base_type->type_kind == TypeKind::Structure) {
+            if (pointer->base_type->type_kind == TypeKind::STRUCT) {
                 auto struct_ty = std::static_pointer_cast<JotStructType>(pointer->base_type);
                 if (struct_ty->name == struct_name) {
                     struct_fields.push_back(struct_llvm_type->getPointerTo());
@@ -263,11 +281,11 @@ std::any JotLLVMBackend::visit(StructDeclaration* node)
         }
 
         // Handle case where field type is array of pointers to the current struct
-        if (field->type_kind == TypeKind::Array) {
+        if (field->type_kind == TypeKind::ARRAY) {
             auto array = std::static_pointer_cast<JotArrayType>(field);
-            if (array->element_type->type_kind == TypeKind::Pointer) {
+            if (array->element_type->type_kind == TypeKind::POINTER) {
                 auto pointer = std::static_pointer_cast<JotPointerType>(array->element_type);
-                if (pointer->base_type->type_kind == TypeKind::Structure) {
+                if (pointer->base_type->type_kind == TypeKind::STRUCT) {
                     auto struct_ty = std::static_pointer_cast<JotStructType>(pointer->base_type);
                     if (struct_ty->name == struct_name) {
                         auto struct_ptr_ty = struct_llvm_type->getPointerTo();
@@ -287,13 +305,13 @@ std::any JotLLVMBackend::visit(StructDeclaration* node)
     return 0;
 }
 
-std::any JotLLVMBackend::visit([[maybe_unused]] EnumDeclaration* node)
+auto JotLLVMBackend::visit([[maybe_unused]] EnumDeclaration* node) -> std::any
 {
     // Enumeration type is only compile time type, no need to generate any IR for it
     return 0;
 }
 
-std::any JotLLVMBackend::visit(IfStatement* node)
+auto JotLLVMBackend::visit(IfStatement* node) -> std::any
 {
     auto current_function = Builder.GetInsertBlock()->getParent();
     auto start_block = llvm::BasicBlock::Create(llvm_context, "if.start");
@@ -342,7 +360,7 @@ std::any JotLLVMBackend::visit(IfStatement* node)
     return 0;
 }
 
-std::any JotLLVMBackend::visit(ForRangeStatement* node)
+auto JotLLVMBackend::visit(ForRangeStatement* node) -> std::any
 {
     auto start = llvm_resolve_value(node->range_start->accept(this));
     auto end = llvm_resolve_value(node->range_end->accept(this));
@@ -417,7 +435,7 @@ std::any JotLLVMBackend::visit(ForRangeStatement* node)
     return 0;
 }
 
-std::any JotLLVMBackend::visit(ForEachStatement* node)
+auto JotLLVMBackend::visit(ForEachStatement* node) -> std::any
 {
     auto collection_value = llvm_node_value(node->collection->accept(this));
     auto collection = llvm_resolve_value(collection_value);
@@ -511,7 +529,7 @@ std::any JotLLVMBackend::visit(ForEachStatement* node)
     return 0;
 }
 
-std::any JotLLVMBackend::visit(ForeverStatement* node)
+auto JotLLVMBackend::visit(ForeverStatement* node) -> std::any
 {
     auto body_block = llvm::BasicBlock::Create(llvm_context, "forever");
     auto end_block = llvm::BasicBlock::Create(llvm_context, "forever.end");
@@ -549,7 +567,7 @@ std::any JotLLVMBackend::visit(ForeverStatement* node)
     return 0;
 }
 
-std::any JotLLVMBackend::visit(WhileStatement* node)
+auto JotLLVMBackend::visit(WhileStatement* node) -> std::any
 {
     auto current_function = Builder.GetInsertBlock()->getParent();
     auto condition_branch = llvm::BasicBlock::Create(llvm_context, "while.condition");
@@ -587,7 +605,7 @@ std::any JotLLVMBackend::visit(WhileStatement* node)
     return 0;
 }
 
-std::any JotLLVMBackend::visit(SwitchStatement* node)
+auto JotLLVMBackend::visit(SwitchStatement* node) -> std::any
 {
     auto current_function = Builder.GetInsertBlock()->getParent();
     auto argument = node->get_argument();
@@ -614,7 +632,7 @@ std::any JotLLVMBackend::visit(SwitchStatement* node)
     return 0;
 }
 
-std::any JotLLVMBackend::visit(ReturnStatement* node)
+auto JotLLVMBackend::visit(ReturnStatement* node) -> std::any
 {
     has_return_statement = true;
 
@@ -667,7 +685,7 @@ std::any JotLLVMBackend::visit(ReturnStatement* node)
     internal_compiler_error("Un expected return type");
 }
 
-std::any JotLLVMBackend::visit(DeferStatement* node)
+auto JotLLVMBackend::visit(DeferStatement* node) -> std::any
 {
     auto call_expression = node->get_call_expression();
     auto callee = std::dynamic_pointer_cast<LiteralExpression>(call_expression->get_callee());
@@ -739,7 +757,7 @@ std::any JotLLVMBackend::visit(DeferStatement* node)
     return 0;
 }
 
-std::any JotLLVMBackend::visit(BreakStatement* node)
+auto JotLLVMBackend::visit(BreakStatement* node) -> std::any
 {
     has_break_or_continue_statement = true;
 
@@ -751,7 +769,7 @@ std::any JotLLVMBackend::visit(BreakStatement* node)
     return 0;
 }
 
-std::any JotLLVMBackend::visit(ContinueStatement* node)
+auto JotLLVMBackend::visit(ContinueStatement* node) -> std::any
 {
     has_break_or_continue_statement = true;
 
@@ -763,13 +781,13 @@ std::any JotLLVMBackend::visit(ContinueStatement* node)
     return 0;
 }
 
-std::any JotLLVMBackend::visit(ExpressionStatement* node)
+auto JotLLVMBackend::visit(ExpressionStatement* node) -> std::any
 {
     node->get_expression()->accept(this);
     return 0;
 }
 
-std::any JotLLVMBackend::visit(IfExpression* node)
+auto JotLLVMBackend::visit(IfExpression* node) -> std::any
 {
     // If it constant, we can resolve it at Compile time
     if (is_global_block() && node->is_constant()) {
@@ -809,7 +827,7 @@ std::any JotLLVMBackend::visit(IfExpression* node)
     return pn;
 }
 
-std::any JotLLVMBackend::visit(SwitchExpression* node)
+auto JotLLVMBackend::visit(SwitchExpression* node) -> std::any
 {
     // If it constant, we can resolve it at Compile time
     if (is_global_block() && node->is_constant()) {
@@ -895,12 +913,12 @@ std::any JotLLVMBackend::visit(SwitchExpression* node)
     return phi_node;
 }
 
-std::any JotLLVMBackend::visit(GroupExpression* node)
+auto JotLLVMBackend::visit(GroupExpression* node) -> std::any
 {
     return node->get_expression()->accept(this);
 }
 
-std::any JotLLVMBackend::visit(AssignExpression* node)
+auto JotLLVMBackend::visit(AssignExpression* node) -> std::any
 {
     auto left_node = node->get_left();
     // Assign value to variable
@@ -1011,7 +1029,7 @@ std::any JotLLVMBackend::visit(AssignExpression* node)
     internal_compiler_error("Invalid assignments expression with unexpected lvalue type");
 }
 
-std::any JotLLVMBackend::visit(BinaryExpression* node)
+auto JotLLVMBackend::visit(BinaryExpression* node) -> std::any
 {
     auto left = llvm_resolve_value(node->get_left()->accept(this));
     auto right = llvm_resolve_value(node->get_right()->accept(this));
@@ -1030,7 +1048,7 @@ std::any JotLLVMBackend::visit(BinaryExpression* node)
     internal_compiler_error("Binary Operators work only for Numeric types");
 }
 
-std::any JotLLVMBackend::visit(ShiftExpression* node)
+auto JotLLVMBackend::visit(ShiftExpression* node) -> std::any
 {
     auto left = llvm_resolve_value(node->get_left()->accept(this));
     auto right = llvm_resolve_value(node->get_right()->accept(this));
@@ -1047,7 +1065,7 @@ std::any JotLLVMBackend::visit(ShiftExpression* node)
     internal_compiler_error("Invalid Shift expression operator");
 }
 
-std::any JotLLVMBackend::visit(ComparisonExpression* node)
+auto JotLLVMBackend::visit(ComparisonExpression* node) -> std::any
 {
     const auto left = llvm_resolve_value(node->get_left()->accept(this));
     const auto right = llvm_resolve_value(node->get_right()->accept(this));
@@ -1075,7 +1093,7 @@ std::any JotLLVMBackend::visit(ComparisonExpression* node)
     internal_compiler_error("Binary Operators work only for Numeric types");
 }
 
-std::any JotLLVMBackend::visit(LogicalExpression* node)
+auto JotLLVMBackend::visit(LogicalExpression* node) -> std::any
 {
     auto left = llvm_node_value(node->get_left()->accept(this));
     auto right = llvm_node_value(node->get_right()->accept(this));
@@ -1096,7 +1114,7 @@ std::any JotLLVMBackend::visit(LogicalExpression* node)
     }
 }
 
-std::any JotLLVMBackend::visit(PrefixUnaryExpression* node)
+auto JotLLVMBackend::visit(PrefixUnaryExpression* node) -> std::any
 {
     auto operand = node->get_right();
     auto operator_kind = node->get_operator_token().kind;
@@ -1119,7 +1137,7 @@ std::any JotLLVMBackend::visit(PrefixUnaryExpression* node)
     // Pointer * Dereference operator
     if (operator_kind == TokenKind::Star) {
         auto right = llvm_node_value(operand->accept(this));
-        auto is_expect_struct_type = node->get_type_node()->type_kind == TypeKind::Structure;
+        auto is_expect_struct_type = node->get_type_node()->type_kind == TypeKind::STRUCT;
         // No need to emit 2 load inst if the current type is pointer to struct
         if (is_expect_struct_type) {
             return derefernecs_llvm_pointer(right);
@@ -1155,7 +1173,7 @@ std::any JotLLVMBackend::visit(PrefixUnaryExpression* node)
     internal_compiler_error("Invalid Prefix Unary operator");
 }
 
-std::any JotLLVMBackend::visit(PostfixUnaryExpression* node)
+auto JotLLVMBackend::visit(PostfixUnaryExpression* node) -> std::any
 {
     auto operand = node->get_right();
     auto operator_kind = node->get_operator_token().kind;
@@ -1173,7 +1191,7 @@ std::any JotLLVMBackend::visit(PostfixUnaryExpression* node)
     internal_compiler_error("Invalid Postfix Unary operator");
 }
 
-std::any JotLLVMBackend::visit(CallExpression* node)
+auto JotLLVMBackend::visit(CallExpression* node) -> std::any
 {
     auto callee_ast_node_type = node->get_callee()->get_ast_node_type();
 
@@ -1387,12 +1405,22 @@ std::any JotLLVMBackend::visit(CallExpression* node)
     internal_compiler_error("Invalid call expression callee type");
 }
 
-std::any JotLLVMBackend::visit(InitializeExpression* node)
+auto JotLLVMBackend::visit(InitializeExpression* node) -> std::any
 {
+
+    // Convert struct and resolve it first if it generic to LLVM struct type
+    llvm::Type* struct_type;
+    if (node->type->type_kind == TypeKind::GENERIC_STRUCT) {
+        auto generic = std::static_pointer_cast<JotGenericStructType>(node->type);
+        struct_type = resolve_generic_struct(generic);
+    }
+    else {
+        struct_type = llvm_type_from_jot_type(node->type);
+    }
+
     // If it on global scope, must initialize it as Constants Struct with constants values
     if (is_global_block()) {
-        auto struct_type = llvm::dyn_cast<llvm::StructType>(llvm_type_from_jot_type(node->type));
-
+        auto llvm_struct_type = llvm::dyn_cast<llvm::StructType>(struct_type);
         // Resolve constants arguments
         std::vector<llvm::Constant*> constants_arguments;
         constants_arguments.reserve(node->arguments.size());
@@ -1401,11 +1429,9 @@ std::any JotLLVMBackend::visit(InitializeExpression* node)
         }
 
         // Return Constants struct instance
-        return llvm::ConstantStruct::get(struct_type, constants_arguments);
+        return llvm::ConstantStruct::get(llvm_struct_type, constants_arguments);
     }
 
-    // Initialize struct
-    auto struct_type = llvm_type_from_jot_type(node->type);
     auto alloc_inst = Builder.CreateAlloca(struct_type);
 
     // Loop over arguments and set them by index
@@ -1422,7 +1448,7 @@ std::any JotLLVMBackend::visit(InitializeExpression* node)
     return alloc_inst;
 }
 
-std::any JotLLVMBackend::visit(LambdaExpression* node)
+auto JotLLVMBackend::visit(LambdaExpression* node) -> std::any
 {
     auto lambda_name = "_lambda" + std::to_string(lambda_unique_id++);
     auto function_ptr_type = std::static_pointer_cast<JotPointerType>(node->get_type_node());
@@ -1443,6 +1469,7 @@ std::any JotLLVMBackend::visit(LambdaExpression* node)
     auto outer_parameters_size = outer_parameter_names.size();
 
     std::vector<std::string> implicit_parameters;
+    implicit_parameters.reserve(outer_parameter_names.size());
     for (auto& outer_parameter_name : outer_parameter_names) {
         implicit_parameters.push_back(outer_parameter_name);
     }
@@ -1481,7 +1508,7 @@ std::any JotLLVMBackend::visit(LambdaExpression* node)
     return function;
 }
 
-std::any JotLLVMBackend::visit(DotExpression* node)
+auto JotLLVMBackend::visit(DotExpression* node) -> std::any
 {
     auto callee = node->get_callee();
     auto callee_llvm_type = llvm_type_from_jot_type(callee->get_type_node());
@@ -1508,7 +1535,7 @@ std::any JotLLVMBackend::visit(DotExpression* node)
     return Builder.CreateLoad(expected_llvm_type, member_ptr);
 }
 
-std::any JotLLVMBackend::visit(CastExpression* node)
+auto JotLLVMBackend::visit(CastExpression* node) -> std::any
 {
     auto value = llvm_resolve_value(node->get_value()->accept(this));
     auto value_type = llvm_type_from_jot_type(node->get_value()->get_type_node());
@@ -1560,7 +1587,7 @@ std::any JotLLVMBackend::visit(CastExpression* node)
     return Builder.CreateBitCast(value, target_type);
 }
 
-std::any JotLLVMBackend::visit(TypeSizeExpression* node)
+auto JotLLVMBackend::visit(TypeSizeExpression* node) -> std::any
 {
     auto llvm_type = llvm_type_from_jot_type(node->get_type());
     auto type_alloc_size = llvm_module->getDataLayout().getTypeAllocSize(llvm_type);
@@ -1568,7 +1595,7 @@ std::any JotLLVMBackend::visit(TypeSizeExpression* node)
     return type_size;
 }
 
-std::any JotLLVMBackend::visit(ValueSizeExpression* node)
+auto JotLLVMBackend::visit(ValueSizeExpression* node) -> std::any
 {
     auto llvm_type = llvm_type_from_jot_type(node->get_value()->get_type_node());
     auto type_alloc_size = llvm_module->getDataLayout().getTypeAllocSize(llvm_type);
@@ -1576,20 +1603,20 @@ std::any JotLLVMBackend::visit(ValueSizeExpression* node)
     return type_size;
 }
 
-std::any JotLLVMBackend::visit(IndexExpression* node)
+auto JotLLVMBackend::visit(IndexExpression* node) -> std::any
 {
     auto index = llvm_resolve_value(node->get_index()->accept(this));
     return access_array_element(node->get_value(), index);
 }
 
-std::any JotLLVMBackend::visit(EnumAccessExpression* node)
+auto JotLLVMBackend::visit(EnumAccessExpression* node) -> std::any
 {
     auto element_type = llvm_type_from_jot_type(node->get_type_node());
     auto element_index = llvm::ConstantInt::get(element_type, node->get_enum_element_index());
     return llvm::dyn_cast<llvm::Value>(element_index);
 }
 
-std::any JotLLVMBackend::visit(LiteralExpression* node)
+auto JotLLVMBackend::visit(LiteralExpression* node) -> std::any
 {
     const auto name = node->get_name().literal;
     // If found in alloca inst table that mean it local variable
@@ -1601,13 +1628,13 @@ std::any JotLLVMBackend::visit(LiteralExpression* node)
     return llvm_module->getNamedGlobal(name);
 }
 
-std::any JotLLVMBackend::visit(NumberExpression* node)
+auto JotLLVMBackend::visit(NumberExpression* node) -> std::any
 {
     auto number_type = std::static_pointer_cast<JotNumberType>(node->get_type_node());
     return llvm_number_value(node->get_value().literal, number_type->number_kind);
 }
 
-std::any JotLLVMBackend::visit(ArrayExpression* node)
+auto JotLLVMBackend::visit(ArrayExpression* node) -> std::any
 {
     auto node_values = node->get_values();
     auto size = node_values.size();
@@ -1623,7 +1650,8 @@ std::any JotLLVMBackend::visit(ArrayExpression* node)
         return llvm::ConstantArray::get(arrayType, values);
     }
 
-    auto                      arrayType = llvm_type_from_jot_type(node->get_type_node());
+    auto arrayType = llvm_type_from_jot_type(node->get_type_node());
+
     std::vector<llvm::Value*> values;
     values.reserve(size);
     for (auto& value : node_values) {
@@ -1643,30 +1671,30 @@ std::any JotLLVMBackend::visit(ArrayExpression* node)
     return alloca;
 }
 
-std::any JotLLVMBackend::visit(StringExpression* node)
+auto JotLLVMBackend::visit(StringExpression* node) -> std::any
 {
     std::string literal = node->get_value().literal;
     return resolve_constant_string_expression(literal);
 }
 
-std::any JotLLVMBackend::visit(CharacterExpression* node)
+auto JotLLVMBackend::visit(CharacterExpression* node) -> std::any
 {
     char char_asci_value = node->get_value().literal[0];
     return create_llvm_int8(char_asci_value, false);
 }
 
-std::any JotLLVMBackend::visit(BooleanExpression* node)
+auto JotLLVMBackend::visit(BooleanExpression* node) -> std::any
 {
     return create_llvm_int1(node->get_value().kind == TokenKind::TrueKeyword);
 }
 
-std::any JotLLVMBackend::visit(NullExpression* node)
+auto JotLLVMBackend::visit(NullExpression* node) -> std::any
 {
     auto llvm_type = llvm_type_from_jot_type(node->null_base_type);
     return create_llvm_null(llvm_type);
 }
 
-llvm::Value* JotLLVMBackend::llvm_node_value(std::any any_value)
+auto JotLLVMBackend::llvm_node_value(std::any any_value) -> llvm::Value*
 {
     if (any_value.type() == typeid(llvm::Value*)) {
         return std::any_cast<llvm::Value*>(any_value);
@@ -1702,7 +1730,7 @@ llvm::Value* JotLLVMBackend::llvm_node_value(std::any any_value)
     internal_compiler_error("Unknown type llvm node type ");
 }
 
-llvm::Value* JotLLVMBackend::llvm_resolve_value(std::any any_value)
+auto JotLLVMBackend::llvm_resolve_value(std::any any_value) -> llvm::Value*
 {
     auto llvm_value = llvm_node_value(any_value);
 
@@ -1717,7 +1745,7 @@ llvm::Value* JotLLVMBackend::llvm_resolve_value(std::any any_value)
     return llvm_value;
 }
 
-llvm::Value* JotLLVMBackend::llvm_resolve_variable(const std::string& name)
+auto JotLLVMBackend::llvm_resolve_variable(const std::string& name) -> llvm::Value*
 {
     // If found in alloca inst table that mean it local variable
     auto alloca_inst = alloca_inst_table.lookup(name);
@@ -1728,96 +1756,96 @@ llvm::Value* JotLLVMBackend::llvm_resolve_variable(const std::string& name)
     return llvm_module->getNamedGlobal(name);
 }
 
-inline llvm::Value* JotLLVMBackend::llvm_number_value(const std::string& value_litearl,
-                                                      NumberKind         size)
+inline auto JotLLVMBackend::llvm_number_value(const std::string& value_litearl, NumberKind size)
+    -> llvm::Value*
 {
     switch (size) {
-    case NumberKind::Integer1: {
+    case NumberKind::INTEGER_1: {
         auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int1_type, value);
     }
-    case NumberKind::Integer8: {
+    case NumberKind::INTEGER_8: {
         auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int8_type, value);
     }
-    case NumberKind::UInteger8: {
+    case NumberKind::U_INTEGER_8: {
         auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int8_type, value, true);
     }
-    case NumberKind::Integer16: {
+    case NumberKind::INTEGER_16: {
         auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int16_type, value);
     }
-    case NumberKind::UInteger16: {
+    case NumberKind::U_INTEGER_16: {
         auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int16_type, value, true);
     }
-    case NumberKind::Integer32: {
+    case NumberKind::INTEGER_32: {
         auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int32_type, value);
     }
-    case NumberKind::UInteger32: {
+    case NumberKind::U_INTEGER_32: {
         auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int32_type, value, true);
     }
-    case NumberKind::Integer64: {
+    case NumberKind::INTEGER_64: {
         auto value = std::strtoll(value_litearl.c_str(), nullptr, 0);
         return llvm::ConstantInt::get(llvm_int64_type, value);
     }
-    case NumberKind::UInteger64: {
+    case NumberKind::U_INTEGER_64: {
         auto value = std::strtoll(value_litearl.c_str(), nullptr, 0);
         return llvm::ConstantInt::get(llvm_int64_type, value, true);
     }
-    case NumberKind::Float32: {
+    case NumberKind::FLOAT_32: {
         auto value = std::stod(value_litearl);
         return llvm::ConstantFP::get(llvm_float32_type, value);
     }
-    case NumberKind::Float64: {
+    case NumberKind::FLOAT_64: {
         auto value = std::stod(value_litearl);
         return llvm::ConstantFP::get(llvm_float64_type, value);
     }
     }
 }
 
-llvm::Type* JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> type)
+auto JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> type) -> llvm::Type*
 {
     TypeKind type_kind = type->type_kind;
-    if (type_kind == TypeKind::Number) {
+    if (type_kind == TypeKind::NUMBER) {
         auto       jot_number_type = std::static_pointer_cast<JotNumberType>(type);
         NumberKind number_kind = jot_number_type->number_kind;
         switch (number_kind) {
-        case NumberKind::Integer1: return llvm_int1_type;
-        case NumberKind::Integer8: return llvm_int8_type;
-        case NumberKind::Integer16: return llvm_int16_type;
-        case NumberKind::Integer32: return llvm_int32_type;
-        case NumberKind::Integer64: return llvm_int64_type;
-        case NumberKind::UInteger8: return llvm_int8_type;
-        case NumberKind::UInteger16: return llvm_int16_type;
-        case NumberKind::UInteger32: return llvm_int32_type;
-        case NumberKind::UInteger64: return llvm_int64_type;
-        case NumberKind::Float32: return llvm_float32_type;
-        case NumberKind::Float64: return llvm_float64_type;
+        case NumberKind::INTEGER_1: return llvm_int1_type;
+        case NumberKind::INTEGER_8: return llvm_int8_type;
+        case NumberKind::INTEGER_16: return llvm_int16_type;
+        case NumberKind::INTEGER_32: return llvm_int32_type;
+        case NumberKind::INTEGER_64: return llvm_int64_type;
+        case NumberKind::U_INTEGER_8: return llvm_int8_type;
+        case NumberKind::U_INTEGER_16: return llvm_int16_type;
+        case NumberKind::U_INTEGER_32: return llvm_int32_type;
+        case NumberKind::U_INTEGER_64: return llvm_int64_type;
+        case NumberKind::FLOAT_32: return llvm_float32_type;
+        case NumberKind::FLOAT_64: return llvm_float64_type;
         }
     }
 
-    if (type_kind == TypeKind::Array) {
+    if (type_kind == TypeKind::ARRAY) {
         auto jot_array_type = std::static_pointer_cast<JotArrayType>(type);
         auto element_type = llvm_type_from_jot_type(jot_array_type->element_type);
         auto size = jot_array_type->size;
         return llvm::ArrayType::get(element_type, size);
     }
 
-    if (type_kind == TypeKind::Pointer) {
+    if (type_kind == TypeKind::POINTER) {
         auto jot_pointer_type = std::static_pointer_cast<JotPointerType>(type);
         // In llvm *void should be generated as *i8
-        if (jot_pointer_type->base_type->type_kind == TypeKind::Void) {
+        if (jot_pointer_type->base_type->type_kind == TypeKind::VOID) {
             return llvm_void_ptr_type;
         }
         auto point_to_type = llvm_type_from_jot_type(jot_pointer_type->base_type);
         return llvm::PointerType::get(point_to_type, 0);
     }
 
-    if (type_kind == TypeKind::Function) {
+    if (type_kind == TypeKind::FUNCTION) {
         auto jot_function_type = std::static_pointer_cast<JotFunctionType>(type);
         auto parameters = jot_function_type->parameters;
         int  parameters_size = parameters.size();
@@ -1830,26 +1858,31 @@ llvm::Type* JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> typ
         return function_type;
     }
 
-    if (type_kind == TypeKind::Structure) {
+    if (type_kind == TypeKind::STRUCT) {
         auto struct_type = std::static_pointer_cast<JotStructType>(type);
         auto struct_name = struct_type->name;
         return structures_types_map[struct_name];
     }
 
-    if (type_kind == TypeKind::EnumerationElement) {
+    if (type_kind == TypeKind::ENUM_ELEMENT) {
         auto enum_element_type = std::static_pointer_cast<JotEnumElementType>(type);
         return llvm_type_from_jot_type(enum_element_type->element_type);
     }
 
-    if (type_kind == TypeKind::Void) {
+    if (type_kind == TypeKind::VOID) {
         return llvm_void_type;
+    }
+
+    if (type_kind == TypeKind::GENERIC_STRUCT) {
+        auto generic_struct_type = std::static_pointer_cast<JotGenericStructType>(type);
+        return resolve_generic_struct(generic_struct_type);
     }
 
     internal_compiler_error("Can't find LLVM Type for this Jot Type");
 }
 
-inline llvm::Value* JotLLVMBackend::create_llvm_numbers_bianry(TokenKind op, llvm::Value* left,
-                                                               llvm::Value* right)
+inline auto JotLLVMBackend::create_llvm_numbers_bianry(TokenKind op, llvm::Value* left,
+                                                       llvm::Value* right) -> llvm::Value*
 {
     if (left->getType()->isIntegerTy() && right->getType()->isIntegerTy()) {
         return create_llvm_integers_bianry(op, left, right);
@@ -1862,8 +1895,8 @@ inline llvm::Value* JotLLVMBackend::create_llvm_numbers_bianry(TokenKind op, llv
     internal_compiler_error("llvm binary operator with number expect integers or floats");
 }
 
-inline llvm::Value* JotLLVMBackend::create_llvm_integers_bianry(TokenKind op, llvm::Value* left,
-                                                                llvm::Value* right)
+inline auto JotLLVMBackend::create_llvm_integers_bianry(TokenKind op, llvm::Value* left,
+                                                        llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
     case TokenKind::Plus: {
@@ -1887,8 +1920,8 @@ inline llvm::Value* JotLLVMBackend::create_llvm_integers_bianry(TokenKind op, ll
     }
 }
 
-inline llvm::Value* JotLLVMBackend::create_llvm_floats_bianry(TokenKind op, llvm::Value* left,
-                                                              llvm::Value* right)
+inline auto JotLLVMBackend::create_llvm_floats_bianry(TokenKind op, llvm::Value* left,
+                                                      llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
     case TokenKind::Plus: {
@@ -1912,8 +1945,8 @@ inline llvm::Value* JotLLVMBackend::create_llvm_floats_bianry(TokenKind op, llvm
     }
 }
 
-inline llvm::Value* JotLLVMBackend::create_llvm_numbers_comparison(TokenKind op, llvm::Value* left,
-                                                                   llvm::Value* right)
+inline auto JotLLVMBackend::create_llvm_numbers_comparison(TokenKind op, llvm::Value* left,
+                                                           llvm::Value* right) -> llvm::Value*
 {
     if (left->getType()->isIntegerTy() && right->getType()->isIntegerTy()) {
         return create_llvm_integers_comparison(op, left, right);
@@ -1926,8 +1959,8 @@ inline llvm::Value* JotLLVMBackend::create_llvm_numbers_comparison(TokenKind op,
     internal_compiler_error("llvm binary comparison with number expect integers or floats");
 }
 
-inline llvm::Value* JotLLVMBackend::create_llvm_integers_comparison(TokenKind op, llvm::Value* left,
-                                                                    llvm::Value* right)
+inline auto JotLLVMBackend::create_llvm_integers_comparison(TokenKind op, llvm::Value* left,
+                                                            llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
     case TokenKind::EqualEqual: {
@@ -1954,8 +1987,8 @@ inline llvm::Value* JotLLVMBackend::create_llvm_integers_comparison(TokenKind op
     }
 }
 
-inline llvm::Value* JotLLVMBackend::create_llvm_floats_comparison(TokenKind op, llvm::Value* left,
-                                                                  llvm::Value* right)
+inline auto JotLLVMBackend::create_llvm_floats_comparison(TokenKind op, llvm::Value* left,
+                                                          llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
     case TokenKind::EqualEqual: {
@@ -1982,8 +2015,8 @@ inline llvm::Value* JotLLVMBackend::create_llvm_floats_comparison(TokenKind op, 
     }
 }
 
-llvm::Value* JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> operand,
-                                                         bool                        is_prefix)
+auto JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> operand,
+                                                 bool is_prefix) -> llvm::Value*
 {
     auto number_type = std::static_pointer_cast<JotNumberType>(operand->get_type_node());
     auto constants_one = llvm_number_value("1", number_type->number_kind);
@@ -2032,8 +2065,8 @@ llvm::Value* JotLLVMBackend::create_llvm_value_increment(std::shared_ptr<Express
     internal_compiler_error("Unary expression with non global or alloca type");
 }
 
-llvm::Value* JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> operand,
-                                                         bool                        is_prefix)
+auto JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> operand,
+                                                 bool is_prefix) -> llvm::Value*
 {
     auto number_type = std::static_pointer_cast<JotNumberType>(operand->get_type_node());
     auto constants_one = llvm_number_value("1", number_type->number_kind);
@@ -2086,7 +2119,7 @@ llvm::Value* JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<Express
     internal_compiler_error("Unary expression with non global or alloca type");
 }
 
-llvm::Value* JotLLVMBackend::access_struct_member_pointer(DotExpression* expression)
+auto JotLLVMBackend::access_struct_member_pointer(DotExpression* expression) -> llvm::Value*
 {
 
     auto callee = expression->get_callee();
@@ -2140,12 +2173,12 @@ llvm::Value* JotLLVMBackend::access_struct_member_pointer(DotExpression* express
     internal_compiler_error("Invalid callee type in access_struct_member_pointer");
 }
 
-llvm::Value* JotLLVMBackend::access_array_element(std::shared_ptr<Expression> node_value,
-                                                  llvm::Value*                index)
+auto JotLLVMBackend::access_array_element(std::shared_ptr<Expression> node_value,
+                                          llvm::Value*                index) -> llvm::Value*
 {
     auto values = node_value->get_type_node();
 
-    if (values->type_kind == TypeKind::Pointer) {
+    if (values->type_kind == TypeKind::POINTER) {
         auto pointer_type = std::static_pointer_cast<JotPointerType>(values);
         auto element_type = llvm_type_from_jot_type(pointer_type->base_type);
         auto value = llvm_resolve_value(node_value->accept(this));
@@ -2249,7 +2282,8 @@ llvm::Value* JotLLVMBackend::access_array_element(std::shared_ptr<Expression> no
     internal_compiler_error("Invalid Index expression");
 }
 
-llvm::Constant* JotLLVMBackend::resolve_constant_expression(std::shared_ptr<Expression> value)
+auto JotLLVMBackend::resolve_constant_expression(std::shared_ptr<Expression> value)
+    -> llvm::Constant*
 {
     auto field_type = value->get_type_node();
 
@@ -2275,8 +2309,8 @@ llvm::Constant* JotLLVMBackend::resolve_constant_expression(std::shared_ptr<Expr
     return llvm::dyn_cast<llvm::Constant>(llvm_value);
 }
 
-llvm::Constant*
-JotLLVMBackend::resolve_constant_index_expression(std::shared_ptr<IndexExpression> expression)
+auto JotLLVMBackend::resolve_constant_index_expression(std::shared_ptr<IndexExpression> expression)
+    -> llvm::Constant*
 {
     auto llvm_array = llvm_node_value(expression->get_value()->accept(this));
     auto index_value = expression->get_index()->accept(this);
@@ -2315,8 +2349,8 @@ JotLLVMBackend::resolve_constant_index_expression(std::shared_ptr<IndexExpressio
     internal_compiler_error("Invalid type in resolve_global_index_expression");
 }
 
-llvm::Constant*
-JotLLVMBackend::resolve_constant_if_expression(std::shared_ptr<IfExpression> expression)
+auto JotLLVMBackend::resolve_constant_if_expression(std::shared_ptr<IfExpression> expression)
+    -> llvm::Constant*
 {
     auto condition = llvm_resolve_value(expression->get_condition()->accept(this));
     auto constant_condition = llvm::dyn_cast<llvm::Constant>(condition);
@@ -2328,8 +2362,8 @@ JotLLVMBackend::resolve_constant_if_expression(std::shared_ptr<IfExpression> exp
         llvm_resolve_value(expression->get_if_value()->accept(this)));
 }
 
-llvm::Constant*
-JotLLVMBackend::resolve_constant_switch_expression(std::shared_ptr<SwitchExpression> expression)
+auto JotLLVMBackend::resolve_constant_switch_expression(
+    std::shared_ptr<SwitchExpression> expression) -> llvm::Constant*
 {
     auto argument = llvm_resolve_value(expression->get_argument()->accept(this));
     auto constant_argument = llvm::dyn_cast<llvm::Constant>(argument);
@@ -2348,7 +2382,8 @@ JotLLVMBackend::resolve_constant_switch_expression(std::shared_ptr<SwitchExpress
     return llvm::dyn_cast<llvm::Constant>(default_value);
 }
 
-llvm::Constant* JotLLVMBackend::resolve_constant_string_expression(const std::string& literal)
+auto JotLLVMBackend::resolve_constant_string_expression(const std::string& literal)
+    -> llvm::Constant*
 {
     // Resolve constants string from string pool if it generated before
     if (constants_string_pool.contains(literal)) {
@@ -2373,9 +2408,72 @@ llvm::Constant* JotLLVMBackend::resolve_constant_string_expression(const std::st
     return string;
 }
 
-inline llvm::AllocaInst* JotLLVMBackend::create_entry_block_alloca(llvm::Function*   function,
-                                                                   const std::string var_name,
-                                                                   llvm::Type*       type)
+auto JotLLVMBackend::resolve_generic_struct(Shared<JotGenericStructType> generic)
+    -> llvm::StructType*
+{
+    const auto struct_type = generic->struct_type;
+    const auto struct_name = struct_type->name;
+    const auto mangled_name = struct_name + mangle_types(generic->parameters);
+    if (structures_types_map.contains(mangled_name)) {
+        return llvm::dyn_cast<llvm::StructType>(structures_types_map[mangled_name]);
+    }
+
+    auto* struct_llvm_type = llvm::StructType::create(llvm_context);
+    struct_llvm_type->setName(mangled_name);
+
+    const auto               fields = struct_type->fields_types;
+    std::vector<llvm::Type*> struct_fields;
+    struct_fields.reserve(fields.size());
+
+    for (const auto& field : fields) {
+
+        // Handle case where field type is pointer to the current struct
+        if (field->type_kind == TypeKind::POINTER) {
+            auto pointer = std::static_pointer_cast<JotPointerType>(field);
+            if (pointer->base_type->type_kind == TypeKind::STRUCT) {
+                auto struct_ty = std::static_pointer_cast<JotStructType>(pointer->base_type);
+                if (struct_ty->name == struct_name) {
+                    struct_fields.push_back(struct_llvm_type->getPointerTo());
+                    continue;
+                }
+            }
+        }
+
+        // Handle case where field type is array of pointers to the current struct
+        if (field->type_kind == TypeKind::ARRAY) {
+            auto array = std::static_pointer_cast<JotArrayType>(field);
+            if (array->element_type->type_kind == TypeKind::POINTER) {
+                auto pointer = std::static_pointer_cast<JotPointerType>(array->element_type);
+                if (pointer->base_type->type_kind == TypeKind::STRUCT) {
+                    auto struct_ty = std::static_pointer_cast<JotStructType>(pointer->base_type);
+                    if (struct_ty->name == struct_name) {
+                        auto struct_ptr_ty = struct_llvm_type->getPointerTo();
+                        auto array_type = create_llvm_array_type(struct_ptr_ty, array->size);
+                        struct_fields.push_back(array_type);
+                        continue;
+                    }
+                }
+            }
+        }
+
+        if (field->type_kind == TypeKind::GENERIC_PARAMETER) {
+            auto generic_type = std::static_pointer_cast<JotGenericParameterType>(field);
+            auto position = index_of(struct_type->generic_parameters, generic_type->name);
+            struct_fields.push_back(llvm_type_from_jot_type(generic->parameters[position]));
+            continue;
+        }
+
+        struct_fields.push_back(llvm_type_from_jot_type(field));
+    }
+
+    struct_llvm_type->setBody(struct_fields, struct_type->is_packed);
+    structures_types_map[mangled_name] = struct_llvm_type;
+    return struct_llvm_type;
+}
+
+inline auto JotLLVMBackend::create_entry_block_alloca(llvm::Function*   function,
+                                                      const std::string var_name, llvm::Type* type)
+    -> llvm::AllocaInst*
 {
     llvm::IRBuilder<> builder_object(&function->getEntryBlock(), function->getEntryBlock().begin());
     return builder_object.CreateAlloca(type, nullptr, var_name);
@@ -2432,7 +2530,7 @@ void JotLLVMBackend::create_switch_case_branch(llvm::SwitchInst*           switc
     switch_inst->setDefaultDest(branch_block);
 }
 
-llvm::Function* JotLLVMBackend::lookup_function(std::string& name)
+auto JotLLVMBackend::lookup_function(std::string& name) -> llvm::Function*
 {
     if (auto function = llvm_module->getFunction(name)) {
         return function;
@@ -2446,14 +2544,14 @@ llvm::Function* JotLLVMBackend::lookup_function(std::string& name)
     return llvm_functions[name];
 }
 
-inline bool JotLLVMBackend::is_lambda_function_name(const std::string& name)
+inline auto JotLLVMBackend::is_lambda_function_name(const std::string& name) -> bool
 {
     return name.starts_with("_lambda");
 }
 
-inline bool JotLLVMBackend::is_global_block() { return Builder.GetInsertBlock() == nullptr; }
+inline auto JotLLVMBackend::is_global_block() -> bool { return is_on_global_scope; }
 
-inline void JotLLVMBackend::execute_defer_call(std::shared_ptr<DeferCall>& defer_call)
+inline auto JotLLVMBackend::execute_defer_call(std::shared_ptr<DeferCall>& defer_call) -> void
 {
     if (defer_call->defer_kind == DeferCallKind::DEFER_FUNCTION_CALL) {
         auto fun_call = std::static_pointer_cast<DeferFunctionCall>(defer_call);
@@ -2465,7 +2563,7 @@ inline void JotLLVMBackend::execute_defer_call(std::shared_ptr<DeferCall>& defer
     }
 }
 
-inline void JotLLVMBackend::execute_scope_defer_calls()
+inline auto JotLLVMBackend::execute_scope_defer_calls() -> void
 {
     auto defer_calls = defer_calls_stack.top().get_scope_elements();
     for (auto& defer_call : defer_calls) {
@@ -2473,7 +2571,7 @@ inline void JotLLVMBackend::execute_scope_defer_calls()
     }
 }
 
-inline void JotLLVMBackend::execute_all_defer_calls()
+inline auto JotLLVMBackend::execute_all_defer_calls() -> void
 {
     auto current_defer_stack = defer_calls_stack.top();
 
@@ -2486,11 +2584,14 @@ inline void JotLLVMBackend::execute_all_defer_calls()
     }
 }
 
-inline void JotLLVMBackend::push_alloca_inst_scope() { alloca_inst_table.push_new_scope(); }
+inline auto JotLLVMBackend::push_alloca_inst_scope() -> void { alloca_inst_table.push_new_scope(); }
 
-inline void JotLLVMBackend::pop_alloca_inst_scope() { alloca_inst_table.pop_current_scope(); }
+inline auto JotLLVMBackend::pop_alloca_inst_scope() -> void
+{
+    alloca_inst_table.pop_current_scope();
+}
 
-inline void JotLLVMBackend::internal_compiler_error(const char* message)
+inline auto JotLLVMBackend::internal_compiler_error(const char* message) -> void
 {
     jot::loge << "Internal Compiler Error: " << message << '\n';
     exit(EXIT_FAILURE);

@@ -11,20 +11,20 @@
 #include <unordered_map>
 #include <vector>
 
-std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit()
+auto JotParser::parse_compilation_unit() -> Shared<CompilationUnit>
 {
-    std::vector<std::shared_ptr<Statement>> tree_nodes;
+    std::vector<Shared<Statement>> tree_nodes;
     try {
         while (is_source_available()) {
             if (is_current_kind(TokenKind::ImportKeyword)) {
                 auto module_tree_node = parse_import_declaration();
-                merge_tree_nodes(tree_nodes, module_tree_node);
+                append_vectors(tree_nodes, module_tree_node);
                 continue;
             }
 
             if (is_current_kind(TokenKind::LoadKeyword)) {
                 auto module_tree_node = parse_load_declaration();
-                merge_tree_nodes(tree_nodes, module_tree_node);
+                append_vectors(tree_nodes, module_tree_node);
                 continue;
             }
 
@@ -36,13 +36,13 @@ std::shared_ptr<CompilationUnit> JotParser::parse_compilation_unit()
     return std::make_shared<CompilationUnit>(tree_nodes);
 }
 
-std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration()
+auto JotParser::parse_import_declaration() -> std::vector<Shared<Statement>>
 {
     advanced_token();
     if (is_current_kind(TokenKind::OpenBrace)) {
         // import { <string> <string> }
         advanced_token();
-        std::vector<std::shared_ptr<Statement>> tree_nodes;
+        std::vector<Shared<Statement>> tree_nodes;
         while (is_source_available() && not is_current_kind(TokenKind::CloseBrace)) {
             auto library_name = consume_kind(
                 TokenKind::String, "Expect string as library name after import statement");
@@ -59,7 +59,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration()
             }
 
             auto nodes = parse_single_source_file(library_path);
-            merge_tree_nodes(tree_nodes, nodes);
+            append_vectors(tree_nodes, nodes);
         }
         assert_kind(TokenKind::CloseBrace, "Expect Close brace `}` after import block");
         return tree_nodes;
@@ -70,7 +70,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration()
     std::string library_path = "../lib/" + library_name.literal + ".jot";
 
     if (context->source_manager.is_path_registered(library_path)) {
-        return std::vector<std::shared_ptr<Statement>>();
+        return std::vector<Shared<Statement>>();
     }
 
     if (not is_file_exists(library_path)) {
@@ -82,13 +82,13 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_import_declaration()
     return parse_single_source_file(library_path);
 }
 
-std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration()
+auto JotParser::parse_load_declaration() -> std::vector<Shared<Statement>>
 {
     advanced_token();
     if (is_current_kind(TokenKind::OpenBrace)) {
         // load { <string> <string> }
         advanced_token();
-        std::vector<std::shared_ptr<Statement>> tree_nodes;
+        std::vector<Shared<Statement>> tree_nodes;
         while (is_source_available() && not is_current_kind(TokenKind::CloseBrace)) {
             auto library_name =
                 consume_kind(TokenKind::String, "Expect string as file name after load statement");
@@ -106,7 +106,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration()
             }
 
             auto nodes = parse_single_source_file(library_path);
-            merge_tree_nodes(tree_nodes, nodes);
+            append_vectors(tree_nodes, nodes);
         }
         assert_kind(TokenKind::CloseBrace, "Expect Close brace `}` after import block");
         return tree_nodes;
@@ -118,7 +118,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration()
     std::string library_path = file_parent_path + library_name.literal + ".jot";
 
     if (context->source_manager.is_path_registered(library_path)) {
-        return std::vector<std::shared_ptr<Statement>>();
+        return std::vector<Shared<Statement>>();
     }
 
     if (not is_file_exists(library_path)) {
@@ -130,7 +130,7 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_load_declaration()
     return parse_single_source_file(library_path);
 }
 
-std::vector<std::shared_ptr<Statement>> JotParser::parse_single_source_file(std::string& path)
+auto JotParser::parse_single_source_file(std::string& path) -> std::vector<Shared<Statement>>
 {
     const char*  file_name = path.c_str();
     std::string  source_content = read_file_content(file_name);
@@ -144,29 +144,27 @@ std::vector<std::shared_ptr<Statement>> JotParser::parse_single_source_file(std:
     return compilation_unit->get_tree_nodes();
 }
 
-void JotParser::merge_tree_nodes(std::vector<std::shared_ptr<Statement>>& distany,
-                                 std::vector<std::shared_ptr<Statement>>& source)
-{
-    distany.insert(std::end(distany), std::begin(source), std::end(source));
-}
-
-std::shared_ptr<Statement> JotParser::parse_declaration_statement()
+auto JotParser::parse_declaration_statement() -> Shared<Statement>
 {
     switch (peek_current().kind) {
     case TokenKind::PrefixKeyword:
     case TokenKind::InfixKeyword:
     case TokenKind::PostfixKeyword: {
         auto call_kind = PREFIX_FUNCTION;
-        if (peek_current().kind == TokenKind::InfixKeyword)
+        if (peek_current().kind == TokenKind::InfixKeyword) {
             call_kind = INFIX_FUNCTION;
-        else if (peek_current().kind == TokenKind::PostfixKeyword)
+        }
+        else if (peek_current().kind == TokenKind::PostfixKeyword) {
             call_kind = POSTFIX_FUNCTION;
+        }
         advanced_token();
 
-        if (is_current_kind(TokenKind::ExternKeyword))
+        if (is_current_kind(TokenKind::ExternKeyword)) {
             return parse_function_prototype(call_kind, true);
-        else if (is_current_kind(TokenKind::FunKeyword))
+        }
+        else if (is_current_kind(TokenKind::FunKeyword)) {
             return parse_function_declaration(call_kind);
+        }
 
         context->diagnostics.add_diagnostic_error(
             peek_current().position, "Prefix, Infix, postfix keyword used only with functions");
@@ -199,7 +197,7 @@ std::shared_ptr<Statement> JotParser::parse_declaration_statement()
     }
 }
 
-std::shared_ptr<Statement> JotParser::parse_statement()
+auto JotParser::parse_statement() -> Shared<Statement>
 {
     switch (peek_current().kind) {
     case TokenKind::VarKeyword: {
@@ -238,14 +236,14 @@ std::shared_ptr<Statement> JotParser::parse_statement()
     }
 }
 
-std::shared_ptr<FieldDeclaration> JotParser::parse_field_declaration(bool is_global)
+auto JotParser::parse_field_declaration(bool is_global) -> Shared<FieldDeclaration>
 {
     assert_kind(TokenKind::VarKeyword, "Expect var keyword.");
     auto name = consume_kind(TokenKind::Symbol, "Expect identifier as variable name.");
     if (is_current_kind(TokenKind::Colon)) {
         advanced_token();
-        auto                        type = parse_type();
-        std::shared_ptr<Expression> initalizer;
+        auto               type = parse_type();
+        Shared<Expression> initalizer;
         if (is_current_kind(TokenKind::Equal)) {
             assert_kind(TokenKind::Equal, "Expect = after variable name.");
             initalizer = parse_expression();
@@ -259,8 +257,8 @@ std::shared_ptr<FieldDeclaration> JotParser::parse_field_declaration(bool is_glo
     return std::make_shared<FieldDeclaration>(name, jot_none_ty, value, is_global);
 }
 
-std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionDeclarationKind kind,
-                                                                       bool is_external)
+auto JotParser::parse_function_prototype(FunctionDeclarationKind kind, bool is_external)
+    -> Shared<FunctionPrototype>
 {
     if (is_external) {
         assert_kind(TokenKind::ExternKeyword, "Expect external keyword");
@@ -269,9 +267,9 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionD
     assert_kind(TokenKind::FunKeyword, "Expect function keyword.");
     Token name = consume_kind(TokenKind::Symbol, "Expect identifier as function name.");
 
-    bool                                    has_varargs = false;
-    std::shared_ptr<JotType>                varargs_type = nullptr;
-    std::vector<std::shared_ptr<Parameter>> parameters;
+    bool                           has_varargs = false;
+    Shared<JotType>                varargs_type = nullptr;
+    std::vector<Shared<Parameter>> parameters;
     if (is_current_kind(TokenKind::OpenParen)) {
         advanced_token();
         while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
@@ -335,23 +333,24 @@ std::shared_ptr<FunctionPrototype> JotParser::parse_function_prototype(FunctionD
     }
 
     // Function can't return fixed size array, you can use pointer format to return allocated array
-    if (return_type->type_kind == TypeKind::Array) {
+    if (return_type->type_kind == TypeKind::ARRAY) {
         context->diagnostics.add_diagnostic_error(
             name.position, "Function cannot return array type " + jot_type_literal(return_type));
         throw "Stop";
     }
 
-    if (is_external)
+    if (is_external) {
         assert_kind(TokenKind::Semicolon, "Expect ; after external function declaration");
+    }
     return std::make_shared<FunctionPrototype>(name, parameters, return_type, is_external,
                                                has_varargs, varargs_type);
 }
 
-std::shared_ptr<FunctionDeclaration>
-JotParser::parse_function_declaration(FunctionDeclarationKind kind)
+auto JotParser::parse_function_declaration(FunctionDeclarationKind kind)
+    -> Shared<FunctionDeclaration>
 {
     auto parent_node_scope = current_ast_scope;
-    current_ast_scope = AstNodeScope::FunctionScope;
+    current_ast_scope = AstNodeScope::FUNCTION_SCOPE;
 
     auto prototype = parse_function_prototype(kind, false);
 
@@ -388,30 +387,56 @@ JotParser::parse_function_declaration(FunctionDeclarationKind kind)
     throw "Stop";
 }
 
-std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration(bool is_packed)
+auto JotParser::parse_structure_declaration(bool is_packed) -> Shared<StructDeclaration>
 {
     auto struct_token = consume_kind(TokenKind::StructKeyword, "Expect struct keyword");
     auto struct_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
     auto struct_name_str = struct_name.literal;
     current_struct_name = struct_name.literal;
-    size_t                                field_index = 0;
-    std::unordered_map<std::string, int>  fields_names;
-    std::vector<std::shared_ptr<JotType>> fields_types;
+
+    std::vector<std::string> generics_parameters;
+
+    // Parse generic parameters declarations if they exists
+    bool is_generic_struct = is_current_kind(TokenKind::Smaller);
+    if (is_generic_struct) {
+        advanced_token();
+        while (is_source_available() && !is_current_kind(TokenKind::Greater)) {
+            auto parameter = consume_kind(TokenKind::Symbol, "Expect parameter name");
+
+            if (!generic_parameters_names.insert(parameter.literal).second) {
+                context->diagnostics.add_diagnostic_error(
+                    parameter.position,
+                    "You already declared generic parameter with name " + parameter.literal);
+                throw "Stop";
+            }
+
+            generics_parameters.push_back(parameter.literal);
+
+            if (is_current_kind(TokenKind::Comma)) {
+                advanced_token();
+            }
+        }
+        assert_kind(TokenKind::Greater, "Expect > after struct type parameters");
+    }
+
+    std::vector<std::string>     fields_names;
+    std::vector<Shared<JotType>> fields_types;
     assert_kind(TokenKind::OpenBrace, "Expect { after struct name");
     while (is_source_available() && !is_current_kind(TokenKind::CloseBrace)) {
         auto field_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
-        if (fields_names.contains(field_name.literal)) {
+
+        if (is_contains(fields_names, field_name.literal)) {
             context->diagnostics.add_diagnostic_error(field_name.position,
                                                       "There is already struct member with name " +
                                                           field_name.literal);
             throw "Stop";
         }
 
-        fields_names[field_name.literal] = field_index++;
+        fields_names.push_back(field_name.literal);
         auto field_type = parse_type();
 
         // Handle Incomplete field type case
-        if (field_type->type_kind == TypeKind::None) {
+        if (field_type->type_kind == TypeKind::NONE) {
             context->diagnostics.add_diagnostic_error(
                 field_name.position, "Field type isn't fully defined yet, you can't use it "
                                      "until it defined but you can use *" +
@@ -422,9 +447,12 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration(bool i
         fields_types.push_back(field_type);
         assert_kind(TokenKind::Semicolon, "Expect ; at the end of struct field declaration");
     }
+
     assert_kind(TokenKind::CloseBrace, "Expect } in the end of struct declaration");
+
     auto structure_type =
-        std::make_shared<JotStructType>(struct_name_str, fields_names, fields_types, is_packed);
+        std::make_shared<JotStructType>(struct_name_str, fields_names, fields_types,
+                                        generics_parameters, is_packed, is_generic_struct);
 
     if (context->structures.contains(struct_name_str)) {
         context->diagnostics.add_diagnostic_error(
@@ -468,22 +496,22 @@ std::shared_ptr<StructDeclaration> JotParser::parse_structure_declaration(bool i
 
     context->structures[struct_name_str] = structure_type;
     current_struct_name = "";
+    generic_parameters_names.clear();
     return std::make_shared<StructDeclaration>(structure_type);
 }
 
-std::shared_ptr<EnumDeclaration> JotParser::parse_enum_declaration()
+auto JotParser::parse_enum_declaration() -> Shared<EnumDeclaration>
 {
     auto enum_token = consume_kind(TokenKind::EnumKeyword, "Expect enum keyword");
     auto enum_name = consume_kind(TokenKind::Symbol, "Expect Symbol as enum name");
 
-    std::shared_ptr<JotType> element_type = nullptr;
+    Shared<JotType> element_type = nullptr;
 
     if (is_current_kind(TokenKind::Colon)) {
         advanced_token();
         element_type = parse_type();
     }
     else {
-        // TODO: if we split the type from his position we can declare this type once
         // Default enumeration element type is integer 32
         element_type = jot_int32_ty;
     }
@@ -557,17 +585,17 @@ std::shared_ptr<EnumDeclaration> JotParser::parse_enum_declaration()
     return std::make_shared<EnumDeclaration>(enum_name, enum_type);
 }
 
-std::shared_ptr<Parameter> JotParser::parse_parameter()
+auto JotParser::parse_parameter() -> Shared<Parameter>
 {
     Token name = consume_kind(TokenKind::Symbol, "Expect identifier as parameter name.");
     auto  type = parse_type();
     return std::make_shared<Parameter>(name, type);
 }
 
-std::shared_ptr<BlockStatement> JotParser::parse_block_statement()
+auto JotParser::parse_block_statement() -> Shared<BlockStatement>
 {
     consume_kind(TokenKind::OpenBrace, "Expect { on the start of block.");
-    std::vector<std::shared_ptr<Statement>> statements;
+    std::vector<Shared<Statement>> statements;
     while (is_source_available() && !is_current_kind(TokenKind::CloseBrace)) {
         statements.push_back(parse_statement());
     }
@@ -575,7 +603,7 @@ std::shared_ptr<BlockStatement> JotParser::parse_block_statement()
     return std::make_shared<BlockStatement>(statements);
 }
 
-std::shared_ptr<ReturnStatement> JotParser::parse_return_statement()
+auto JotParser::parse_return_statement() -> Shared<ReturnStatement>
 {
     auto keyword = consume_kind(TokenKind::ReturnKeyword, "Expect return keyword.");
     if (is_current_kind(TokenKind::Semicolon)) {
@@ -587,7 +615,7 @@ std::shared_ptr<ReturnStatement> JotParser::parse_return_statement()
     return std::make_shared<ReturnStatement>(keyword, value, true);
 }
 
-std::shared_ptr<DeferStatement> JotParser::parse_defer_statement()
+auto JotParser::parse_defer_statement() -> Shared<DeferStatement>
 {
     auto defer_token = consume_kind(TokenKind::DeferKeyword, "Expect Defer keyword.");
     auto expression = parse_expression();
@@ -601,11 +629,11 @@ std::shared_ptr<DeferStatement> JotParser::parse_defer_statement()
     throw "Stop";
 }
 
-std::shared_ptr<BreakStatement> JotParser::parse_break_statement()
+auto JotParser::parse_break_statement() -> Shared<BreakStatement>
 {
     auto break_token = consume_kind(TokenKind::BreakKeyword, "Expect break keyword.");
 
-    if (current_ast_scope != AstNodeScope::ConditionalScope or loop_levels_stack.top() == 0) {
+    if (current_ast_scope != AstNodeScope::CONDITION_SCOPE or loop_levels_stack.top() == 0) {
         context->diagnostics.add_diagnostic_error(
             break_token.position, "break keyword can only be used inside at last one while loop");
         throw "Stop";
@@ -650,11 +678,11 @@ std::shared_ptr<BreakStatement> JotParser::parse_break_statement()
     throw "Stop";
 }
 
-std::shared_ptr<ContinueStatement> JotParser::parse_continue_statement()
+auto JotParser::parse_continue_statement() -> Shared<ContinueStatement>
 {
     auto continue_token = consume_kind(TokenKind::ContinueKeyword, "Expect continue keyword.");
 
-    if (current_ast_scope != AstNodeScope::ConditionalScope or loop_levels_stack.top() == 0) {
+    if (current_ast_scope != AstNodeScope::CONDITION_SCOPE or loop_levels_stack.top() == 0) {
         context->diagnostics.add_diagnostic_error(
             continue_token.position,
             "continue keyword can only be used inside at last one while loop");
@@ -705,16 +733,16 @@ std::shared_ptr<ContinueStatement> JotParser::parse_continue_statement()
     throw "Stop";
 }
 
-std::shared_ptr<IfStatement> JotParser::parse_if_statement()
+auto JotParser::parse_if_statement() -> Shared<IfStatement>
 {
     auto parent_node_scope = current_ast_scope;
-    current_ast_scope = AstNodeScope::ConditionalScope;
+    current_ast_scope = AstNodeScope::CONDITION_SCOPE;
 
     auto if_token = consume_kind(TokenKind::IfKeyword, "Expect If keyword.");
     auto condition = parse_expression();
     auto then_block = parse_statement();
     auto conditional_block = std::make_shared<ConditionalBlock>(if_token, condition, then_block);
-    std::vector<std::shared_ptr<ConditionalBlock>> conditional_blocks;
+    std::vector<Shared<ConditionalBlock>> conditional_blocks;
     conditional_blocks.push_back(conditional_block);
 
     bool has_else_branch = false;
@@ -749,10 +777,10 @@ std::shared_ptr<IfStatement> JotParser::parse_if_statement()
     return std::make_shared<IfStatement>(conditional_blocks, has_else_branch);
 }
 
-std::shared_ptr<Statement> JotParser::parse_for_statement()
+auto JotParser::parse_for_statement() -> Shared<Statement>
 {
     auto parent_node_scope = current_ast_scope;
-    current_ast_scope = AstNodeScope::ConditionalScope;
+    current_ast_scope = AstNodeScope::CONDITION_SCOPE;
 
     auto keyword = consume_kind(TokenKind::ForKeyword, "Expect for keyword.");
 
@@ -789,7 +817,7 @@ std::shared_ptr<Statement> JotParser::parse_for_statement()
 
         // If there is : after range the mean we have custom step expression
         // If not use nullptr as default value for step (Handled in the Backend)
-        std::shared_ptr<Expression> step = nullptr;
+        Shared<Expression> step = nullptr;
         if (is_current_kind(TokenKind::Colon)) {
             advanced_token();
             step = parse_expression();
@@ -814,10 +842,10 @@ std::shared_ptr<Statement> JotParser::parse_for_statement()
     return std::make_shared<ForEachStatement>(keyword, name, expr, body);
 }
 
-std::shared_ptr<WhileStatement> JotParser::parse_while_statement()
+auto JotParser::parse_while_statement() -> Shared<WhileStatement>
 {
     auto parent_node_scope = current_ast_scope;
-    current_ast_scope = AstNodeScope::ConditionalScope;
+    current_ast_scope = AstNodeScope::CONDITION_SCOPE;
 
     auto keyword = consume_kind(TokenKind::WhileKeyword, "Expect while keyword.");
     auto condition = parse_expression();
@@ -830,17 +858,17 @@ std::shared_ptr<WhileStatement> JotParser::parse_while_statement()
     return std::make_shared<WhileStatement>(keyword, condition, body);
 }
 
-std::shared_ptr<SwitchStatement> JotParser::parse_switch_statement()
+auto JotParser::parse_switch_statement() -> Shared<SwitchStatement>
 {
     auto keyword = consume_kind(TokenKind::SwitchKeyword, "Expect switch keyword.");
     auto argument = parse_expression();
     assert_kind(TokenKind::OpenBrace, "Expect { after switch value");
 
-    std::vector<std::shared_ptr<SwitchCase>> switch_cases;
-    std::shared_ptr<SwitchCase>              default_branch = nullptr;
-    bool                                     has_default_branch = false;
+    std::vector<Shared<SwitchCase>> switch_cases;
+    Shared<SwitchCase>              default_branch = nullptr;
+    bool                            has_default_branch = false;
     while (is_source_available() and !is_current_kind(TokenKind::CloseBrace)) {
-        std::vector<std::shared_ptr<Expression>> values;
+        std::vector<Shared<Expression>> values;
         if (is_current_kind(TokenKind::ElseKeyword)) {
             if (has_default_branch) {
                 context->diagnostics.add_diagnostic_error(
@@ -865,31 +893,31 @@ std::shared_ptr<SwitchStatement> JotParser::parse_switch_statement()
                 advanced_token();
             }
         }
-        auto rightArrow = consume_kind(TokenKind::RightArrow, "Expect -> after branch value");
+        auto right_arrow = consume_kind(TokenKind::RightArrow, "Expect -> after branch value");
         auto branch = parse_statement();
-        auto switch_case = std::make_shared<SwitchCase>(rightArrow, values, branch);
+        auto switch_case = std::make_shared<SwitchCase>(right_arrow, values, branch);
         switch_cases.push_back(switch_case);
     }
     assert_kind(TokenKind::CloseBrace, "Expect } after switch Statement last branch");
     return std::make_shared<SwitchStatement>(keyword, argument, switch_cases, default_branch);
 }
 
-std::shared_ptr<ExpressionStatement> JotParser::parse_expression_statement()
+auto JotParser::parse_expression_statement() -> Shared<ExpressionStatement>
 {
     auto expression = parse_expression();
     assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after field declaration");
     return std::make_shared<ExpressionStatement>(expression);
 }
 
-std::shared_ptr<Expression> JotParser::parse_expression() { return parse_assignment_expression(); }
+auto JotParser::parse_expression() -> Shared<Expression> { return parse_assignment_expression(); }
 
-std::shared_ptr<Expression> JotParser::parse_assignment_expression()
+auto JotParser::parse_assignment_expression() -> Shared<Expression>
 {
     auto expression = parse_logical_or_expression();
     if (is_assignments_operator_token(peek_current())) {
-        auto                        assignments_token = peek_and_advance_token();
-        std::shared_ptr<Expression> right_value;
-        auto                        assignments_token_kind = assignments_token.kind;
+        auto               assignments_token = peek_and_advance_token();
+        Shared<Expression> right_value;
+        auto               assignments_token_kind = assignments_token.kind;
         if (assignments_token_kind == TokenKind::Equal) {
             right_value = parse_assignment_expression();
         }
@@ -904,7 +932,7 @@ std::shared_ptr<Expression> JotParser::parse_assignment_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_logical_or_expression()
+auto JotParser::parse_logical_or_expression() -> Shared<Expression>
 {
     auto expression = parse_logical_and_expression();
     while (is_current_kind(TokenKind::LogicalOr)) {
@@ -915,7 +943,7 @@ std::shared_ptr<Expression> JotParser::parse_logical_or_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_logical_and_expression()
+auto JotParser::parse_logical_and_expression() -> Shared<Expression>
 {
     auto expression = parse_equality_expression();
     while (is_current_kind(TokenKind::LogicalAnd)) {
@@ -926,7 +954,7 @@ std::shared_ptr<Expression> JotParser::parse_logical_and_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_equality_expression()
+auto JotParser::parse_equality_expression() -> Shared<Expression>
 {
     auto expression = parse_comparison_expression();
     while (is_current_kind(TokenKind::EqualEqual) || is_current_kind(TokenKind::BangEqual)) {
@@ -937,7 +965,7 @@ std::shared_ptr<Expression> JotParser::parse_equality_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_comparison_expression()
+auto JotParser::parse_comparison_expression() -> Shared<Expression>
 {
     auto expression = parse_shift_expression();
     while (is_current_kind(TokenKind::Greater) || is_current_kind(TokenKind::GreaterEqual) ||
@@ -949,7 +977,7 @@ std::shared_ptr<Expression> JotParser::parse_comparison_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_shift_expression()
+auto JotParser::parse_shift_expression() -> Shared<Expression>
 {
     auto expression = parse_term_expression();
     while (is_current_kind(TokenKind::RightShift) || is_current_kind(TokenKind::LeftShift)) {
@@ -960,7 +988,7 @@ std::shared_ptr<Expression> JotParser::parse_shift_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_term_expression()
+auto JotParser::parse_term_expression() -> Shared<Expression>
 {
     auto expression = parse_factor_expression();
     while (is_current_kind(TokenKind::Plus) || is_current_kind(TokenKind::Minus)) {
@@ -971,7 +999,7 @@ std::shared_ptr<Expression> JotParser::parse_term_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_factor_expression()
+auto JotParser::parse_factor_expression() -> Shared<Expression>
 {
     auto expression = parse_enum_access_expression();
     while (is_current_kind(TokenKind::Star) || is_current_kind(TokenKind::Slash) ||
@@ -983,7 +1011,7 @@ std::shared_ptr<Expression> JotParser::parse_factor_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_enum_access_expression()
+auto JotParser::parse_enum_access_expression() -> Shared<Expression>
 {
     auto expression = parse_infix_call_expression();
     if (is_current_kind(TokenKind::ColonColon)) {
@@ -1025,7 +1053,7 @@ std::shared_ptr<Expression> JotParser::parse_enum_access_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_infix_call_expression()
+auto JotParser::parse_infix_call_expression() -> Shared<Expression>
 {
     auto expression = parse_prefix_expression();
     auto current_token_literal = peek_current().literal;
@@ -1033,9 +1061,9 @@ std::shared_ptr<Expression> JotParser::parse_infix_call_expression()
     // Parse Infix function call as a call expression
     if (is_current_kind(TokenKind::Symbol) and
         is_function_declaration_kind(current_token_literal, INFIX_FUNCTION)) {
-        auto                                     symbol_token = peek_current();
-        auto                                     literal = parse_literal_expression();
-        std::vector<std::shared_ptr<Expression>> arguments;
+        auto                            symbol_token = peek_current();
+        auto                            literal = parse_literal_expression();
+        std::vector<Shared<Expression>> arguments;
         arguments.push_back(expression);
         arguments.push_back(parse_infix_call_expression());
         return std::make_shared<CallExpression>(symbol_token, literal, arguments);
@@ -1044,7 +1072,7 @@ std::shared_ptr<Expression> JotParser::parse_infix_call_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_prefix_expression()
+auto JotParser::parse_prefix_expression() -> Shared<Expression>
 {
     if (is_unary_operator_token(peek_current())) {
         auto token = peek_and_advance_token();
@@ -1070,21 +1098,21 @@ std::shared_ptr<Expression> JotParser::parse_prefix_expression()
     return parse_prefix_call_expression();
 }
 
-std::shared_ptr<Expression> JotParser::parse_prefix_call_expression()
+auto JotParser::parse_prefix_call_expression() -> Shared<Expression>
 {
     auto current_token_literal = peek_current().literal;
     if (is_current_kind(TokenKind::Symbol) and
         is_function_declaration_kind(current_token_literal, PREFIX_FUNCTION)) {
-        Token                                    symbol_token = peek_current();
-        auto                                     literal = parse_literal_expression();
-        std::vector<std::shared_ptr<Expression>> arguments;
+        Token                           symbol_token = peek_current();
+        auto                            literal = parse_literal_expression();
+        std::vector<Shared<Expression>> arguments;
         arguments.push_back(parse_prefix_expression());
         return std::make_shared<CallExpression>(symbol_token, literal, arguments);
     }
     return parse_postfix_increment_or_decrement();
 }
 
-std::shared_ptr<Expression> JotParser::parse_postfix_increment_or_decrement()
+auto JotParser::parse_postfix_increment_or_decrement() -> Shared<Expression>
 {
     auto expression = parse_call_or_access_expression();
 
@@ -1104,8 +1132,7 @@ std::shared_ptr<Expression> JotParser::parse_postfix_increment_or_decrement()
     return expression;
 }
 
-// TODO: Need a better name
-std::shared_ptr<Expression> JotParser::parse_call_or_access_expression()
+auto JotParser::parse_call_or_access_expression() -> Shared<Expression>
 {
     auto expression = parse_enumeration_attribute_expression();
     while (is_current_kind(TokenKind::Dot) || is_current_kind(TokenKind::OpenParen) ||
@@ -1121,8 +1148,8 @@ std::shared_ptr<Expression> JotParser::parse_call_or_access_expression()
 
         // Parse function call expression
         if (is_current_kind(TokenKind::OpenParen)) {
-            auto                                     position = peek_and_advance_token();
-            std::vector<std::shared_ptr<Expression>> arguments;
+            auto                            position = peek_and_advance_token();
+            std::vector<Shared<Expression>> arguments;
             while (not is_current_kind(TokenKind::CloseParen)) {
                 arguments.push_back(parse_expression());
                 if (is_current_kind(TokenKind::Comma)) {
@@ -1153,7 +1180,7 @@ std::shared_ptr<Expression> JotParser::parse_call_or_access_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_enumeration_attribute_expression()
+auto JotParser::parse_enumeration_attribute_expression() -> Shared<Expression>
 {
     auto expression = parse_postfix_call_expression();
     if (is_current_kind(TokenKind::Dot) and
@@ -1180,59 +1207,61 @@ std::shared_ptr<Expression> JotParser::parse_enumeration_attribute_expression()
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_postfix_call_expression()
+auto JotParser::parse_postfix_call_expression() -> Shared<Expression>
 {
     auto expression = parse_initializer_expression();
     auto current_token_literal = peek_current().literal;
     if (is_current_kind(TokenKind::Symbol) and
         is_function_declaration_kind(current_token_literal, POSTFIX_FUNCTION)) {
-        Token                                    symbol_token = peek_current();
-        auto                                     literal = parse_literal_expression();
-        std::vector<std::shared_ptr<Expression>> arguments;
+        Token                           symbol_token = peek_current();
+        auto                            literal = parse_literal_expression();
+        std::vector<Shared<Expression>> arguments;
         arguments.push_back(expression);
         return std::make_shared<CallExpression>(symbol_token, literal, arguments);
     }
     return expression;
 }
 
-std::shared_ptr<Expression> JotParser::parse_initializer_expression()
+auto JotParser::parse_initializer_expression() -> Shared<Expression>
 {
-    if (is_current_kind(TokenKind::Symbol) and is_next_kind(TokenKind::OpenBrace) and
+    if (is_current_kind(TokenKind::Symbol) &&
         context->structures.contains(current_token->literal)) {
-        auto type = parse_type();
-        auto token = consume_kind(TokenKind::OpenBrace, "Expect { at the start of initializer");
-        std::vector<std::shared_ptr<Expression>> arguments;
-        while (not is_current_kind(TokenKind::CloseBrace)) {
-            arguments.push_back(parse_expression());
-            if (is_current_kind(TokenKind::Comma)) {
-                advanced_token();
+        if (is_next_kind(TokenKind::OpenBrace) || is_next_kind(TokenKind::Smaller)) {
+            auto type = parse_type();
+            auto token = consume_kind(TokenKind::OpenBrace, "Expect { at the start of initializer");
+            std::vector<std::shared_ptr<Expression>> arguments;
+            while (not is_current_kind(TokenKind::CloseBrace)) {
+                arguments.push_back(parse_expression());
+                if (is_current_kind(TokenKind::Comma)) {
+                    advanced_token();
+                }
+                else {
+                    break;
+                }
             }
-            else {
-                break;
-            }
+            assert_kind(TokenKind::CloseBrace, "Expect } at the end of initializer");
+            return std::make_shared<InitializeExpression>(token, type, arguments);
         }
-        assert_kind(TokenKind::CloseBrace, "Expect } at the end of initializer");
-        return std::make_shared<InitializeExpression>(token, type, arguments);
     }
 
     return parse_function_call_with_lambda_argument();
 }
 
-std::shared_ptr<Expression> JotParser::parse_function_call_with_lambda_argument()
+auto JotParser::parse_function_call_with_lambda_argument() -> Shared<Expression>
 {
     if (is_current_kind(TokenKind::Symbol) and is_next_kind(TokenKind::OpenBrace) and
         is_function_declaration_kind(current_token->literal, NORMAL_FUNCTION)) {
         auto symbol_token = peek_current();
         auto literal = parse_literal_expression();
 
-        std::vector<std::shared_ptr<Expression>> arguments;
+        std::vector<Shared<Expression>> arguments;
         arguments.push_back(parse_lambda_expression());
         return std::make_shared<CallExpression>(symbol_token, literal, arguments);
     }
     return parse_primary_expression();
 }
 
-std::shared_ptr<Expression> JotParser::parse_primary_expression()
+auto JotParser::parse_primary_expression() -> Shared<Expression>
 {
     auto current_token_kind = peek_current().kind;
     switch (current_token_kind) {
@@ -1303,14 +1332,14 @@ std::shared_ptr<Expression> JotParser::parse_primary_expression()
     }
 }
 
-std::shared_ptr<LambdaExpression> JotParser::parse_lambda_expression()
+auto JotParser::parse_lambda_expression() -> Shared<LambdaExpression>
 {
     auto open_paren =
         consume_kind(TokenKind::OpenBrace, "Expect { at the start of lambda expression");
 
-    std::vector<std::shared_ptr<Parameter>> parameters;
+    std::vector<Shared<Parameter>> parameters;
 
-    std::shared_ptr<JotType> return_type;
+    Shared<JotType> return_type;
 
     if (is_current_kind(TokenKind::OpenParen)) {
         advanced_token();
@@ -1339,7 +1368,7 @@ std::shared_ptr<LambdaExpression> JotParser::parse_lambda_expression()
     loop_levels_stack.push(0);
 
     // Parse lambda expression body
-    std::vector<std::shared_ptr<Statement>> body;
+    std::vector<Shared<Statement>> body;
     while (not is_current_kind(TokenKind::CloseBrace)) {
         body.push_back(parse_statement());
     }
@@ -1362,7 +1391,7 @@ std::shared_ptr<LambdaExpression> JotParser::parse_lambda_expression()
     return std::make_shared<LambdaExpression>(open_paren, parameters, return_type, lambda_body);
 }
 
-std::shared_ptr<NumberExpression> JotParser::parse_number_expression()
+auto JotParser::parse_number_expression() -> Shared<NumberExpression>
 {
     auto number_token = peek_and_advance_token();
     auto number_kind = get_number_kind(number_token.kind);
@@ -1370,14 +1399,14 @@ std::shared_ptr<NumberExpression> JotParser::parse_number_expression()
     return std::make_shared<NumberExpression>(number_token, number_type);
 }
 
-std::shared_ptr<LiteralExpression> JotParser::parse_literal_expression()
+auto JotParser::parse_literal_expression() -> Shared<LiteralExpression>
 {
     Token symbol_token = peek_and_advance_token();
     auto  type = std::make_shared<JotNoneType>();
     return std::make_shared<LiteralExpression>(symbol_token, type);
 }
 
-std::shared_ptr<IfExpression> JotParser::parse_if_expression()
+auto JotParser::parse_if_expression() -> Shared<IfExpression>
 {
     Token if_token = peek_and_advance_token();
     auto  condition = parse_expression();
@@ -1388,15 +1417,15 @@ std::shared_ptr<IfExpression> JotParser::parse_if_expression()
     return std::make_shared<IfExpression>(if_token, else_token, condition, then_value, else_value);
 }
 
-std::shared_ptr<SwitchExpression> JotParser::parse_switch_expression()
+auto JotParser::parse_switch_expression() -> Shared<SwitchExpression>
 {
     auto keyword = consume_kind(TokenKind::SwitchKeyword, "Expect switch keyword.");
     auto argument = parse_expression();
     assert_kind(TokenKind::OpenBrace, "Expect { after switch value");
-    std::vector<std::shared_ptr<Expression>> cases;
-    std::vector<std::shared_ptr<Expression>> values;
-    std::shared_ptr<Expression>              default_value;
-    bool                                     has_default_branch = false;
+    std::vector<Shared<Expression>> cases;
+    std::vector<Shared<Expression>> values;
+    Shared<Expression>              default_value;
+    bool                            has_default_branch = false;
     while (is_source_available() and !is_current_kind(TokenKind::CloseBrace)) {
         if (is_current_kind(TokenKind::ElseKeyword)) {
             if (has_default_branch) {
@@ -1465,7 +1494,7 @@ std::shared_ptr<SwitchExpression> JotParser::parse_switch_expression()
     return std::make_shared<SwitchExpression>(keyword, argument, cases, values, default_value);
 }
 
-std::shared_ptr<GroupExpression> JotParser::parse_group_expression()
+auto JotParser::parse_group_expression() -> Shared<GroupExpression>
 {
     Token position = peek_and_advance_token();
     auto  expression = parse_expression();
@@ -1473,20 +1502,21 @@ std::shared_ptr<GroupExpression> JotParser::parse_group_expression()
     return std::make_shared<GroupExpression>(position, expression);
 }
 
-std::shared_ptr<ArrayExpression> JotParser::parse_array_expression()
+auto JotParser::parse_array_expression() -> Shared<ArrayExpression>
 {
-    Token                                    position = peek_and_advance_token();
-    std::vector<std::shared_ptr<Expression>> values;
+    Token                           position = peek_and_advance_token();
+    std::vector<Shared<Expression>> values;
     while (is_source_available() && not is_current_kind(CloseBracket)) {
         values.push_back(parse_expression());
-        if (is_current_kind(TokenKind::Comma))
+        if (is_current_kind(TokenKind::Comma)) {
             advanced_token();
+        }
     }
     assert_kind(TokenKind::CloseBracket, "Expect ] at the end of array values");
     return std::make_shared<ArrayExpression>(position, values);
 }
 
-std::shared_ptr<CastExpression> JotParser::parse_cast_expression()
+auto JotParser::parse_cast_expression() -> Shared<CastExpression>
 {
     auto cast_token = consume_kind(TokenKind::CastKeyword, "Expect cast keyword");
     assert_kind(TokenKind::OpenParen, "Expect `(` after cast keyword");
@@ -1496,7 +1526,7 @@ std::shared_ptr<CastExpression> JotParser::parse_cast_expression()
     return std::make_shared<CastExpression>(cast_token, cast_to_type, expression);
 }
 
-std::shared_ptr<TypeSizeExpression> JotParser::parse_type_size_expression()
+auto JotParser::parse_type_size_expression() -> Shared<TypeSizeExpression>
 {
     auto token = consume_kind(TokenKind::TypeSizeKeyword, "Expect type_size keyword");
     assert_kind(TokenKind::OpenParen, "Expect `(` after type_size keyword");
@@ -1505,7 +1535,7 @@ std::shared_ptr<TypeSizeExpression> JotParser::parse_type_size_expression()
     return std::make_shared<TypeSizeExpression>(token, type);
 }
 
-std::shared_ptr<ValueSizeExpression> JotParser::parse_value_size_expression()
+auto JotParser::parse_value_size_expression() -> Shared<ValueSizeExpression>
 {
     auto token = consume_kind(TokenKind::ValueSizeKeyword, "Expect value_size keyword");
     assert_kind(TokenKind::OpenParen, "Expect `(` after value_size keyword");
@@ -1514,9 +1544,9 @@ std::shared_ptr<ValueSizeExpression> JotParser::parse_value_size_expression()
     return std::make_shared<ValueSizeExpression>(token, value);
 }
 
-std::shared_ptr<JotType> JotParser::parse_type() { return parse_type_with_prefix(); }
+auto JotParser::parse_type() -> Shared<JotType> { return parse_type_with_prefix(); }
 
-std::shared_ptr<JotType> JotParser::parse_type_with_prefix()
+auto JotParser::parse_type_with_prefix() -> Shared<JotType>
 {
     // Parse pointer type
     if (is_current_kind(TokenKind::Star)) {
@@ -1536,29 +1566,30 @@ std::shared_ptr<JotType> JotParser::parse_type_with_prefix()
     return parse_type_with_postfix();
 }
 
-std::shared_ptr<JotType> JotParser::parse_pointer_to_type()
+auto JotParser::parse_pointer_to_type() -> Shared<JotType>
 {
     auto star_token = consume_kind(TokenKind::Star, "Pointer type must start with *");
     auto base_type = parse_type_with_prefix();
     return std::make_shared<JotPointerType>(base_type);
 }
 
-std::shared_ptr<JotType> JotParser::parse_function_type()
+auto JotParser::parse_function_type() -> Shared<JotType>
 {
     auto paren = consume_kind(TokenKind::OpenParen, "Function type expect to start with {");
 
-    std::vector<std::shared_ptr<JotType>> parameters_types;
+    std::vector<Shared<JotType>> parameters_types;
     while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
         parameters_types.push_back(parse_type());
-        if (is_current_kind(TokenKind::Comma))
+        if (is_current_kind(TokenKind::Comma)) {
             advanced_token();
+        }
     }
     assert_kind(TokenKind::CloseParen, "Expect ) after function type parameters");
     auto return_type = parse_type();
     return std::make_shared<JotFunctionType>(paren, parameters_types, return_type);
 }
 
-std::shared_ptr<JotType> JotParser::parse_fixed_size_array_type()
+auto JotParser::parse_fixed_size_array_type() -> Shared<JotType>
 {
     auto bracket = consume_kind(TokenKind::OpenBracket, "Expect [ for fixed size array type");
 
@@ -1597,14 +1628,72 @@ std::shared_ptr<JotType> JotParser::parse_fixed_size_array_type()
     return std::make_shared<JotArrayType>(element_type, number_value);
 }
 
-std::shared_ptr<JotType> JotParser::parse_type_with_postfix()
+auto JotParser::parse_type_with_postfix() -> Shared<JotType> { return parse_generic_struct_type(); }
+
+auto JotParser::parse_generic_struct_type() -> Shared<JotType>
 {
     auto primary_type = parse_primary_type();
-    // TODO: Can used later to provide sume postfix features such as ? for null safty
+
+    // Parse generic struct type with types parameters
+    if (is_current_kind(TokenKind::Smaller)) {
+        if (primary_type->type_kind == TypeKind::STRUCT) {
+            auto smaller_token = consume_kind(TokenKind::Smaller, "Expect < after struct name");
+            auto struct_type = std::static_pointer_cast<JotStructType>(primary_type);
+
+            // Prevent use non generic struct type with any type parameters
+            if (!struct_type->is_generic) {
+                context->diagnostics.add_diagnostic_error(
+                    smaller_token.position,
+                    "Non generic struct type don't accept any types parameters");
+                throw "Stop";
+            }
+
+            std::vector<Shared<JotType>> generic_parameters;
+            while (is_source_available() && !is_current_kind(TokenKind::Greater)) {
+                auto parameter = parse_type();
+                generic_parameters.push_back(parameter);
+
+                if (is_current_kind(TokenKind::Comma)) {
+                    advanced_token();
+                }
+            }
+
+            assert_kind(TokenKind::Greater, "Expect > After generic types parameters");
+
+            // Make sure generic struct types is used with correct number of parameters
+            if (struct_type->generic_parameters.size() != generic_parameters.size()) {
+                context->diagnostics.add_diagnostic_error(
+                    smaller_token.position,
+                    "Invalid number of generic parameters expect " +
+                        std::to_string(struct_type->generic_parameters.size()) + " but got " +
+                        std::to_string(generic_parameters.size()));
+                throw "Stop";
+            }
+
+            return std::make_shared<JotGenericStructType>(struct_type, generic_parameters);
+        }
+
+        context->diagnostics.add_diagnostic_error(peek_previous().position,
+                                                  "Only structures can accept generic parameters");
+        throw "Stop";
+    }
+
+    // Assert that generic structs types must be created with parameters types
+    if (primary_type->type_kind == TypeKind::STRUCT) {
+        auto struct_type = std::static_pointer_cast<JotStructType>(primary_type);
+        if (struct_type->is_generic) {
+            auto struct_name = peek_previous();
+            context->diagnostics.add_diagnostic_error(
+                struct_name.position, "Generic struct type must be used with parameters types " +
+                                          struct_name.literal + "<..>");
+            throw "Stop";
+        }
+    }
+
     return primary_type;
 }
 
-std::shared_ptr<JotType> JotParser::parse_primary_type()
+auto JotParser::parse_primary_type() -> Shared<JotType>
 {
     if (is_current_kind(TokenKind::Symbol)) {
         return parse_identifier_type();
@@ -1621,7 +1710,7 @@ std::shared_ptr<JotType> JotParser::parse_primary_type()
     throw "Stop";
 }
 
-std::shared_ptr<JotType> JotParser::parse_identifier_type()
+auto JotParser::parse_identifier_type() -> Shared<JotType>
 {
     Token       symbol_token = consume_kind(TokenKind::Symbol, "Expect identifier as type");
     std::string type_literal = symbol_token.literal;
@@ -1694,28 +1783,33 @@ std::shared_ptr<JotType> JotParser::parse_identifier_type()
         return jot_none_ty;
     }
 
+    // Check if this is a it generic type parameter
+    if (generic_parameters_names.contains(type_literal)) {
+        return std::make_shared<JotGenericParameterType>(type_literal);
+    }
+
     // This type is not permitive, structure or enumerations
     context->diagnostics.add_diagnostic_error(peek_current().position,
                                               "Unexpected identifier type");
     throw "Stop";
 }
 
-NumberKind JotParser::get_number_kind(TokenKind token)
+auto JotParser::get_number_kind(TokenKind token) -> NumberKind
 {
     switch (token) {
-    case TokenKind::Integer: return NumberKind::Integer64;
-    case TokenKind::Integer1Type: return NumberKind::Integer1;
-    case TokenKind::Integer8Type: return NumberKind::Integer8;
-    case TokenKind::Integer16Type: return NumberKind::Integer16;
-    case TokenKind::Integer32Type: return NumberKind::Integer32;
-    case TokenKind::Integer64Type: return NumberKind::Integer64;
-    case TokenKind::UInteger8Type: return NumberKind::UInteger8;
-    case TokenKind::UInteger16Type: return NumberKind::UInteger16;
-    case TokenKind::UInteger32Type: return NumberKind::UInteger32;
-    case TokenKind::UInteger64Type: return NumberKind::UInteger64;
-    case TokenKind::Float: return NumberKind::Float64;
-    case TokenKind::Float32Type: return NumberKind::Float32;
-    case TokenKind::Float64Type: return NumberKind::Float64;
+    case TokenKind::Integer: return NumberKind::INTEGER_64;
+    case TokenKind::Integer1Type: return NumberKind::INTEGER_1;
+    case TokenKind::Integer8Type: return NumberKind::INTEGER_8;
+    case TokenKind::Integer16Type: return NumberKind::INTEGER_16;
+    case TokenKind::Integer32Type: return NumberKind::INTEGER_32;
+    case TokenKind::Integer64Type: return NumberKind::INTEGER_64;
+    case TokenKind::UInteger8Type: return NumberKind::U_INTEGER_8;
+    case TokenKind::UInteger16Type: return NumberKind::U_INTEGER_16;
+    case TokenKind::UInteger32Type: return NumberKind::U_INTEGER_32;
+    case TokenKind::UInteger64Type: return NumberKind::U_INTEGER_64;
+    case TokenKind::Float: return NumberKind::FLOAT_64;
+    case TokenKind::Float32Type: return NumberKind::FLOAT_32;
+    case TokenKind::Float64Type: return NumberKind::FLOAT_64;
     default: {
         context->diagnostics.add_diagnostic_error(peek_current().position,
                                                   "Token kind is not a number");
@@ -1724,7 +1818,8 @@ NumberKind JotParser::get_number_kind(TokenKind token)
     }
 }
 
-bool JotParser::is_function_declaration_kind(std::string& fun_name, FunctionDeclarationKind kind)
+auto JotParser::is_function_declaration_kind(std::string& fun_name, FunctionDeclarationKind kind)
+    -> bool
 {
     if (context->functions.contains(fun_name)) {
         return context->functions[fun_name] == kind;
@@ -1732,33 +1827,33 @@ bool JotParser::is_function_declaration_kind(std::string& fun_name, FunctionDecl
     return false;
 }
 
-void JotParser::advanced_token()
+auto JotParser::advanced_token() -> void
 {
     previous_token = current_token;
     current_token = next_token;
     next_token = tokenizer.scan_next_token();
 }
 
-Token JotParser::peek_and_advance_token()
+auto JotParser::peek_and_advance_token() -> Token
 {
     auto current = peek_current();
     advanced_token();
     return current;
 }
 
-Token JotParser::peek_previous() { return previous_token.value(); }
+auto JotParser::peek_previous() -> Token { return previous_token.value(); }
 
-Token JotParser::peek_current() { return current_token.value(); }
+auto JotParser::peek_current() -> Token { return current_token.value(); }
 
-Token JotParser::peek_next() { return next_token.value(); }
+auto JotParser::peek_next() -> Token { return next_token.value(); }
 
-bool JotParser::is_previous_kind(TokenKind kind) { return peek_previous().kind == kind; }
+auto JotParser::is_previous_kind(TokenKind kind) -> bool { return peek_previous().kind == kind; }
 
-bool JotParser::is_current_kind(TokenKind kind) { return peek_current().kind == kind; }
+auto JotParser::is_current_kind(TokenKind kind) -> bool { return peek_current().kind == kind; }
 
-bool JotParser::is_next_kind(TokenKind kind) { return peek_next().kind == kind; }
+auto JotParser::is_next_kind(TokenKind kind) -> bool { return peek_next().kind == kind; }
 
-Token JotParser::consume_kind(TokenKind kind, const char* message)
+auto JotParser::consume_kind(TokenKind kind, const char* message) -> Token
 {
     if (is_current_kind(kind)) {
         advanced_token();
@@ -1783,4 +1878,7 @@ void JotParser::assert_kind(TokenKind kind, const char* message)
     throw "Stop";
 }
 
-bool JotParser::is_source_available() { return peek_current().kind != TokenKind::EndOfFile; }
+auto JotParser::is_source_available() -> bool
+{
+    return peek_current().kind != TokenKind::EndOfFile;
+}

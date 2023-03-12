@@ -2,6 +2,7 @@
 
 #include "jot_ast.hpp"
 #include "jot_ast_visitor.hpp"
+#include "jot_basic.hpp"
 #include "jot_context.hpp"
 #include "jot_scoped_map.hpp"
 #include "jot_type.hpp"
@@ -110,6 +111,8 @@ class JotTypeChecker : public TreeVisitor {
     bool is_same_type(const std::shared_ptr<JotType>& left, const std::shared_ptr<JotType>& right);
 
     bool check_number_limits(const char* literal, NumberKind kind);
+
+    auto resolve_generic_struct(Shared<JotType> type) -> std::shared_ptr<JotType>;
 
     bool check_missing_return_statement(Shared<Statement> node);
 

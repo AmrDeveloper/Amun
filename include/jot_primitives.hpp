@@ -2,21 +2,21 @@
 
 #include "jot_type.hpp"
 
-static auto jot_int1_ty = std::make_shared<JotNumberType>(NumberKind::Integer1);
-static auto jot_int8_ty = std::make_shared<JotNumberType>(NumberKind::Integer8);
-static auto jot_int16_ty = std::make_shared<JotNumberType>(NumberKind::Integer16);
-static auto jot_int32_ty = std::make_shared<JotNumberType>(NumberKind::Integer32);
-static auto jot_int64_ty = std::make_shared<JotNumberType>(NumberKind::Integer64);
+static auto jot_int1_ty = std::make_shared<JotNumberType>(NumberKind::INTEGER_1);
+static auto jot_int8_ty = std::make_shared<JotNumberType>(NumberKind::INTEGER_8);
+static auto jot_int16_ty = std::make_shared<JotNumberType>(NumberKind::INTEGER_16);
+static auto jot_int32_ty = std::make_shared<JotNumberType>(NumberKind::INTEGER_32);
+static auto jot_int64_ty = std::make_shared<JotNumberType>(NumberKind::INTEGER_64);
 
-static auto jot_uint8_ty = std::make_shared<JotNumberType>(NumberKind::UInteger8);
-static auto jot_uint16_ty = std::make_shared<JotNumberType>(NumberKind::UInteger16);
-static auto jot_uint32_ty = std::make_shared<JotNumberType>(NumberKind::UInteger32);
-static auto jot_uint64_ty = std::make_shared<JotNumberType>(NumberKind::UInteger64);
+static auto jot_uint8_ty = std::make_shared<JotNumberType>(NumberKind::U_INTEGER_8);
+static auto jot_uint16_ty = std::make_shared<JotNumberType>(NumberKind::U_INTEGER_16);
+static auto jot_uint32_ty = std::make_shared<JotNumberType>(NumberKind::U_INTEGER_32);
+static auto jot_uint64_ty = std::make_shared<JotNumberType>(NumberKind::U_INTEGER_64);
 
 static auto jot_int32ptr_ty = std::make_shared<JotPointerType>(jot_int32_ty);
 
-static auto jot_float32_ty = std::make_shared<JotNumberType>(NumberKind::Float32);
-static auto jot_float64_ty = std::make_shared<JotNumberType>(NumberKind::Float64);
+static auto jot_float32_ty = std::make_shared<JotNumberType>(NumberKind::FLOAT_32);
+static auto jot_float64_ty = std::make_shared<JotNumberType>(NumberKind::FLOAT_64);
 
 static auto jot_int8ptr_ty = std::make_shared<JotPointerType>(jot_int8_ty);
 

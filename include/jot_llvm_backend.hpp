@@ -19,163 +19,174 @@ class JotLLVMBackend : public TreeVisitor {
   public:
     JotLLVMBackend() { alloca_inst_table.push_new_scope(); }
 
-    std::unique_ptr<llvm::Module> compile(std::string                      module_name,
-                                          std::shared_ptr<CompilationUnit> compilation_unit);
+    auto compile(std::string module_name, std::shared_ptr<CompilationUnit> compilation_unit)
+        -> std::unique_ptr<llvm::Module>;
 
-    std::any visit(BlockStatement* node) override;
+    auto visit(BlockStatement* node) -> std::any override;
 
-    std::any visit(FieldDeclaration* node) override;
+    auto visit(FieldDeclaration* node) -> std::any override;
 
-    std::any visit(FunctionPrototype* node) override;
+    auto visit(FunctionPrototype* node) -> std::any override;
 
-    std::any visit(FunctionDeclaration* node) override;
+    auto visit(FunctionDeclaration* node) -> std::any override;
 
-    std::any visit(StructDeclaration* node) override;
+    auto visit(StructDeclaration* node) -> std::any override;
 
-    std::any visit(EnumDeclaration* node) override;
+    auto visit(EnumDeclaration* node) -> std::any override;
 
-    std::any visit(IfStatement* node) override;
+    auto visit(IfStatement* node) -> std::any override;
 
-    std::any visit(SwitchExpression* node) override;
+    auto visit(SwitchExpression* node) -> std::any override;
 
-    std::any visit(ForRangeStatement* node) override;
+    auto visit(ForRangeStatement* node) -> std::any override;
 
-    std::any visit(ForEachStatement* node) override;
+    auto visit(ForEachStatement* node) -> std::any override;
 
-    std::any visit(ForeverStatement* node) override;
+    auto visit(ForeverStatement* node) -> std::any override;
 
-    std::any visit(WhileStatement* node) override;
+    auto visit(WhileStatement* node) -> std::any override;
 
-    std::any visit(SwitchStatement* node) override;
+    auto visit(SwitchStatement* node) -> std::any override;
 
-    std::any visit(ReturnStatement* node) override;
+    auto visit(ReturnStatement* node) -> std::any override;
 
-    std::any visit(DeferStatement* node) override;
+    auto visit(DeferStatement* node) -> std::any override;
 
-    std::any visit(BreakStatement* node) override;
+    auto visit(BreakStatement* node) -> std::any override;
 
-    std::any visit(ContinueStatement* node) override;
+    auto visit(ContinueStatement* node) -> std::any override;
 
-    std::any visit(ExpressionStatement* node) override;
+    auto visit(ExpressionStatement* node) -> std::any override;
 
-    std::any visit(IfExpression* node) override;
+    auto visit(IfExpression* node) -> std::any override;
 
-    std::any visit(GroupExpression* node) override;
+    auto visit(GroupExpression* node) -> std::any override;
 
-    std::any visit(AssignExpression* node) override;
+    auto visit(AssignExpression* node) -> std::any override;
 
-    std::any visit(BinaryExpression* node) override;
+    auto visit(BinaryExpression* node) -> std::any override;
 
-    std::any visit(ShiftExpression* node) override;
+    auto visit(ShiftExpression* node) -> std::any override;
 
-    std::any visit(ComparisonExpression* node) override;
+    auto visit(ComparisonExpression* node) -> std::any override;
 
-    std::any visit(LogicalExpression* node) override;
+    auto visit(LogicalExpression* node) -> std::any override;
 
-    std::any visit(PrefixUnaryExpression* node) override;
+    auto visit(PrefixUnaryExpression* node) -> std::any override;
 
-    std::any visit(PostfixUnaryExpression* node) override;
+    auto visit(PostfixUnaryExpression* node) -> std::any override;
 
-    std::any visit(CallExpression* node) override;
+    auto visit(CallExpression* node) -> std::any override;
 
-    std::any visit(InitializeExpression* node) override;
+    auto visit(InitializeExpression* node) -> std::any override;
 
-    std::any visit(LambdaExpression* node) override;
+    auto visit(LambdaExpression* node) -> std::any override;
 
-    std::any visit(DotExpression* node) override;
+    auto visit(DotExpression* node) -> std::any override;
 
-    std::any visit(CastExpression* node) override;
+    auto visit(CastExpression* node) -> std::any override;
 
-    std::any visit(TypeSizeExpression* node) override;
+    auto visit(TypeSizeExpression* node) -> std::any override;
 
-    std::any visit(ValueSizeExpression* node) override;
+    auto visit(ValueSizeExpression* node) -> std::any override;
 
-    std::any visit(IndexExpression* node) override;
+    auto visit(IndexExpression* node) -> std::any override;
 
-    std::any visit(EnumAccessExpression* node) override;
+    auto visit(EnumAccessExpression* node) -> std::any override;
 
-    std::any visit(LiteralExpression* node) override;
+    auto visit(LiteralExpression* node) -> std::any override;
 
-    std::any visit(NumberExpression* node) override;
+    auto visit(NumberExpression* node) -> std::any override;
 
-    std::any visit(ArrayExpression* node) override;
+    auto visit(ArrayExpression* node) -> std::any override;
 
-    std::any visit(StringExpression* node) override;
+    auto visit(StringExpression* node) -> std::any override;
 
-    std::any visit(CharacterExpression* node) override;
+    auto visit(CharacterExpression* node) -> std::any override;
 
-    std::any visit(BooleanExpression* node) override;
+    auto visit(BooleanExpression* node) -> std::any override;
 
-    std::any visit(NullExpression* node) override;
+    auto visit(NullExpression* node) -> std::any override;
 
   private:
-    llvm::Value* llvm_node_value(std::any any_value);
+    auto llvm_node_value(std::any any_value) -> llvm::Value*;
 
-    llvm::Value* llvm_resolve_value(std::any any_value);
+    auto llvm_resolve_value(std::any any_value) -> llvm::Value*;
 
-    llvm::Value* llvm_resolve_variable(const std::string& name);
+    auto llvm_resolve_variable(const std::string& name) -> llvm::Value*;
 
-    llvm::Value* llvm_number_value(const std::string& value_litearl, NumberKind size);
+    auto llvm_number_value(const std::string& value_litearl, NumberKind size) -> llvm::Value*;
 
-    llvm::Type* llvm_type_from_jot_type(std::shared_ptr<JotType> type);
+    auto llvm_type_from_jot_type(std::shared_ptr<JotType> type) -> llvm::Type*;
 
-    llvm::Value* create_llvm_numbers_bianry(TokenKind op, llvm::Value* left, llvm::Value* right);
+    auto create_llvm_numbers_bianry(TokenKind op, llvm::Value* left, llvm::Value* right)
+        -> llvm::Value*;
 
-    llvm::Value* create_llvm_integers_bianry(TokenKind op, llvm::Value* left, llvm::Value* right);
+    auto create_llvm_integers_bianry(TokenKind op, llvm::Value* left, llvm::Value* right)
+        -> llvm::Value*;
 
-    llvm::Value* create_llvm_floats_bianry(TokenKind op, llvm::Value* left, llvm::Value* right);
+    auto create_llvm_floats_bianry(TokenKind op, llvm::Value* left, llvm::Value* right)
+        -> llvm::Value*;
 
-    llvm::Value* create_llvm_numbers_comparison(TokenKind op, llvm::Value* left,
-                                                llvm::Value* right);
+    auto create_llvm_numbers_comparison(TokenKind op, llvm::Value* left, llvm::Value* right)
+        -> llvm::Value*;
 
-    llvm::Value* create_llvm_integers_comparison(TokenKind op, llvm::Value* left,
-                                                 llvm::Value* right);
+    auto create_llvm_integers_comparison(TokenKind op, llvm::Value* left, llvm::Value* right)
+        -> llvm::Value*;
 
-    llvm::Value* create_llvm_floats_comparison(TokenKind op, llvm::Value* left, llvm::Value* right);
+    auto create_llvm_floats_comparison(TokenKind op, llvm::Value* left, llvm::Value* right)
+        -> llvm::Value*;
 
-    llvm::Value* create_llvm_value_increment(std::shared_ptr<Expression> right, bool is_prefix);
+    auto create_llvm_value_increment(std::shared_ptr<Expression> right, bool is_prefix)
+        -> llvm::Value*;
 
-    llvm::Value* create_llvm_value_decrement(std::shared_ptr<Expression> right, bool is_prefix);
+    auto create_llvm_value_decrement(std::shared_ptr<Expression> right, bool is_prefix)
+        -> llvm::Value*;
 
-    llvm::Value* access_struct_member_pointer(DotExpression* expression);
+    auto access_struct_member_pointer(DotExpression* expression) -> llvm::Value*;
 
-    llvm::Value* access_array_element(std::shared_ptr<Expression> array, llvm::Value* index);
+    auto access_array_element(std::shared_ptr<Expression> array, llvm::Value* index)
+        -> llvm::Value*;
 
-    llvm::Constant* resolve_constant_expression(std::shared_ptr<Expression> value);
+    auto resolve_constant_expression(std::shared_ptr<Expression> value) -> llvm::Constant*;
 
-    llvm::Constant* resolve_constant_index_expression(std::shared_ptr<IndexExpression> expression);
+    auto resolve_constant_index_expression(std::shared_ptr<IndexExpression> expression)
+        -> llvm::Constant*;
 
-    llvm::Constant* resolve_constant_if_expression(std::shared_ptr<IfExpression> expression);
+    auto resolve_constant_if_expression(std::shared_ptr<IfExpression> expression)
+        -> llvm::Constant*;
 
-    llvm::Constant*
-    resolve_constant_switch_expression(std::shared_ptr<SwitchExpression> expression);
+    auto resolve_constant_switch_expression(std::shared_ptr<SwitchExpression> expression)
+        -> llvm::Constant*;
 
-    llvm::Constant* resolve_constant_string_expression(const std::string& literal);
+    auto resolve_constant_string_expression(const std::string& literal) -> llvm::Constant*;
 
-    llvm::AllocaInst* create_entry_block_alloca(llvm::Function*   function,
-                                                const std::string var_name, llvm::Type* type);
+    auto resolve_generic_struct(Shared<JotGenericStructType> generic) -> llvm::StructType*;
 
-    void create_switch_case_branch(llvm::SwitchInst* switch_inst, llvm::Function* current_function,
+    auto create_entry_block_alloca(llvm::Function* function, std::string var_name, llvm::Type* type)
+        -> llvm::AllocaInst*;
+
+    auto create_switch_case_branch(llvm::SwitchInst* switch_inst, llvm::Function* current_function,
                                    llvm::BasicBlock*           basic_block,
-                                   std::shared_ptr<SwitchCase> switch_case);
+                                   std::shared_ptr<SwitchCase> switch_case) -> void;
 
-    llvm::Function* lookup_function(std::string& name);
+    auto lookup_function(std::string& name) -> llvm::Function*;
 
-    bool is_lambda_function_name(const std::string& name);
+    auto is_lambda_function_name(const std::string& name) -> bool;
 
-    bool is_global_block();
+    auto is_global_block() -> bool;
 
-    void execute_defer_call(std::shared_ptr<DeferCall>& defer_call);
+    auto execute_defer_call(std::shared_ptr<DeferCall>& defer_call) -> void;
 
-    void execute_scope_defer_calls();
+    auto execute_scope_defer_calls() -> void;
 
-    void execute_all_defer_calls();
+    auto execute_all_defer_calls() -> void;
 
-    void push_alloca_inst_scope();
+    auto push_alloca_inst_scope() -> void;
 
-    void pop_alloca_inst_scope();
+    auto pop_alloca_inst_scope() -> void;
 
-    void internal_compiler_error(const char* message);
+    auto internal_compiler_error(const char* message) -> void;
 
     std::unique_ptr<llvm::Module> llvm_module;
 
@@ -192,6 +203,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     bool has_return_statement = false;
     bool has_break_or_continue_statement = false;
+
+    bool is_on_global_scope = true;
 
     // counter to generate unquie lambda names
     size_t lambda_unique_id = 0;

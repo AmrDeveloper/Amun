@@ -13,16 +13,17 @@
 #include <stack>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 
 enum class AstNodeScope {
-    GlobalScope,
-    FunctionScope,
-    ConditionalScope,
+    GLOBAL_SCOPE,
+    FUNCTION_SCOPE,
+    CONDITION_SCOPE,
 };
 
 class JotParser {
   public:
-    JotParser(std::shared_ptr<JotContext> context, JotTokenizer& tokenizer)
+    JotParser(Shared<JotContext> context, JotTokenizer& tokenizer)
         : context(context), tokenizer(tokenizer)
     {
         advanced_token();
@@ -31,168 +32,169 @@ class JotParser {
         file_parent_path = find_parent_path(file_path) + "/";
     }
 
-    std::shared_ptr<CompilationUnit> parse_compilation_unit();
+    auto parse_compilation_unit() -> Shared<CompilationUnit>;
 
   private:
-    std::vector<std::shared_ptr<Statement>> parse_import_declaration();
+    auto parse_import_declaration() -> std::vector<Shared<Statement>>;
 
-    std::vector<std::shared_ptr<Statement>> parse_load_declaration();
+    auto parse_load_declaration() -> std::vector<Shared<Statement>>;
 
-    std::vector<std::shared_ptr<Statement>> parse_single_source_file(std::string& path);
+    auto parse_single_source_file(std::string& path) -> std::vector<Shared<Statement>>;
 
-    void merge_tree_nodes(std::vector<std::shared_ptr<Statement>>& distany,
-                          std::vector<std::shared_ptr<Statement>>& source);
+    auto parse_declaration_statement() -> Shared<Statement>;
 
-    std::shared_ptr<Statement> parse_declaration_statement();
+    auto parse_statement() -> Shared<Statement>;
 
-    std::shared_ptr<Statement> parse_statement();
+    auto parse_field_declaration(bool is_global) -> Shared<FieldDeclaration>;
 
-    std::shared_ptr<FieldDeclaration> parse_field_declaration(bool is_global);
+    auto parse_function_prototype(FunctionDeclarationKind kind, bool is_external)
+        -> Shared<FunctionPrototype>;
 
-    std::shared_ptr<FunctionPrototype> parse_function_prototype(FunctionDeclarationKind kind,
-                                                                bool is_external);
+    auto parse_function_declaration(FunctionDeclarationKind kind) -> Shared<FunctionDeclaration>;
 
-    std::shared_ptr<FunctionDeclaration> parse_function_declaration(FunctionDeclarationKind kind);
+    auto parse_structure_declaration(bool is_packed) -> Shared<StructDeclaration>;
 
-    std::shared_ptr<StructDeclaration> parse_structure_declaration(bool is_packed);
+    auto parse_enum_declaration() -> Shared<EnumDeclaration>;
 
-    std::shared_ptr<EnumDeclaration> parse_enum_declaration();
+    auto parse_parameter() -> Shared<Parameter>;
 
-    std::shared_ptr<Parameter> parse_parameter();
+    auto parse_return_statement() -> Shared<ReturnStatement>;
 
-    std::shared_ptr<ReturnStatement> parse_return_statement();
+    auto parse_defer_statement() -> Shared<DeferStatement>;
 
-    std::shared_ptr<DeferStatement> parse_defer_statement();
+    auto parse_break_statement() -> Shared<BreakStatement>;
 
-    std::shared_ptr<BreakStatement> parse_break_statement();
+    auto parse_continue_statement() -> Shared<ContinueStatement>;
 
-    std::shared_ptr<ContinueStatement> parse_continue_statement();
+    auto parse_if_statement() -> Shared<IfStatement>;
 
-    std::shared_ptr<IfStatement> parse_if_statement();
+    auto parse_for_statement() -> Shared<Statement>;
 
-    std::shared_ptr<Statement> parse_for_statement();
+    auto parse_while_statement() -> Shared<WhileStatement>;
 
-    std::shared_ptr<WhileStatement> parse_while_statement();
+    auto parse_switch_statement() -> Shared<SwitchStatement>;
 
-    std::shared_ptr<SwitchStatement> parse_switch_statement();
+    auto parse_block_statement() -> Shared<BlockStatement>;
 
-    std::shared_ptr<BlockStatement> parse_block_statement();
+    auto parse_expression_statement() -> Shared<ExpressionStatement>;
 
-    std::shared_ptr<ExpressionStatement> parse_expression_statement();
+    auto parse_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_expression();
+    auto parse_assignment_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_assignment_expression();
+    auto parse_logical_or_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_logical_or_expression();
+    auto parse_logical_and_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_logical_and_expression();
+    auto parse_equality_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_equality_expression();
+    auto parse_comparison_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_comparison_expression();
+    auto parse_shift_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_shift_expression();
+    auto parse_term_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_term_expression();
+    auto parse_factor_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_factor_expression();
+    auto parse_enum_access_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_enum_access_expression();
+    auto parse_infix_call_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_infix_call_expression();
+    auto parse_prefix_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_prefix_expression();
+    auto parse_prefix_call_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_prefix_call_expression();
+    auto parse_postfix_increment_or_decrement() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_postfix_increment_or_decrement();
+    auto parse_enumeration_attribute_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_enumeration_attribute_expression();
+    auto parse_call_or_access_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_call_or_access_expression();
+    auto parse_postfix_call_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_postfix_call_expression();
+    auto parse_initializer_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_initializer_expression();
+    auto parse_function_call_with_lambda_argument() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_function_call_with_lambda_argument();
+    auto parse_primary_expression() -> Shared<Expression>;
 
-    std::shared_ptr<Expression> parse_primary_expression();
+    auto parse_lambda_expression() -> Shared<LambdaExpression>;
 
-    std::shared_ptr<LambdaExpression> parse_lambda_expression();
+    auto parse_number_expression() -> Shared<NumberExpression>;
 
-    std::shared_ptr<NumberExpression> parse_number_expression();
+    auto parse_literal_expression() -> Shared<LiteralExpression>;
 
-    std::shared_ptr<LiteralExpression> parse_literal_expression();
+    auto parse_if_expression() -> Shared<IfExpression>;
 
-    std::shared_ptr<IfExpression> parse_if_expression();
+    auto parse_switch_expression() -> Shared<SwitchExpression>;
 
-    std::shared_ptr<SwitchExpression> parse_switch_expression();
+    auto parse_group_expression() -> Shared<GroupExpression>;
 
-    std::shared_ptr<GroupExpression> parse_group_expression();
+    auto parse_array_expression() -> Shared<ArrayExpression>;
 
-    std::shared_ptr<ArrayExpression> parse_array_expression();
+    auto parse_cast_expression() -> Shared<CastExpression>;
 
-    std::shared_ptr<CastExpression> parse_cast_expression();
+    auto parse_type_size_expression() -> Shared<TypeSizeExpression>;
 
-    std::shared_ptr<TypeSizeExpression> parse_type_size_expression();
+    auto parse_value_size_expression() -> Shared<ValueSizeExpression>;
 
-    std::shared_ptr<ValueSizeExpression> parse_value_size_expression();
+    auto parse_type() -> Shared<JotType>;
 
-    std::shared_ptr<JotType> parse_type();
+    auto parse_type_with_prefix() -> Shared<JotType>;
 
-    std::shared_ptr<JotType> parse_type_with_prefix();
+    auto parse_pointer_to_type() -> Shared<JotType>;
 
-    std::shared_ptr<JotType> parse_pointer_to_type();
+    auto parse_function_type() -> Shared<JotType>;
 
-    std::shared_ptr<JotType> parse_function_type();
+    auto parse_fixed_size_array_type() -> Shared<JotType>;
 
-    std::shared_ptr<JotType> parse_fixed_size_array_type();
+    auto parse_type_with_postfix() -> Shared<JotType>;
 
-    std::shared_ptr<JotType> parse_type_with_postfix();
+    auto parse_generic_struct_type() -> Shared<JotType>;
 
-    std::shared_ptr<JotType> parse_primary_type();
+    auto parse_primary_type() -> Shared<JotType>;
 
-    std::shared_ptr<JotType> parse_identifier_type();
+    auto parse_identifier_type() -> Shared<JotType>;
 
-    NumberKind get_number_kind(TokenKind token);
+    auto get_number_kind(TokenKind token) -> NumberKind;
 
-    bool is_function_declaration_kind(std::string& fun_name, FunctionDeclarationKind kind);
+    auto is_function_declaration_kind(std::string& fun_name, FunctionDeclarationKind kind) -> bool;
 
-    void advanced_token();
+    auto advanced_token() -> void;
 
-    Token peek_and_advance_token();
+    auto peek_and_advance_token() -> Token;
 
-    Token peek_previous();
+    auto peek_previous() -> Token;
 
-    Token peek_current();
+    auto peek_current() -> Token;
 
-    Token peek_next();
+    auto peek_next() -> Token;
 
-    bool is_previous_kind(TokenKind);
+    auto is_previous_kind(TokenKind) -> bool;
 
-    bool is_current_kind(TokenKind);
+    auto is_current_kind(TokenKind) -> bool;
 
-    bool is_next_kind(TokenKind);
+    auto is_next_kind(TokenKind) -> bool;
 
-    Token consume_kind(TokenKind, const char*);
+    auto consume_kind(TokenKind, const char*) -> Token;
 
-    void assert_kind(TokenKind, const char*);
+    auto assert_kind(TokenKind, const char*) -> void;
 
-    bool is_source_available();
+    auto is_source_available() -> bool;
 
-    std::string                 file_parent_path;
-    std::shared_ptr<JotContext> context;
+    std::string        file_parent_path;
+    Shared<JotContext> context;
 
     JotTokenizer&        tokenizer;
     std::optional<Token> previous_token;
     std::optional<Token> current_token;
     std::optional<Token> next_token;
 
-    AstNodeScope    current_ast_scope = AstNodeScope::GlobalScope;
+    std::unordered_set<std::string> generic_parameters_names;
+
+    AstNodeScope    current_ast_scope = AstNodeScope::GLOBAL_SCOPE;
     std::stack<int> loop_levels_stack;
 
-    std::string_view current_struct_name = "";
+    std::string_view current_struct_name;
     int              current_struct_unknown_fields = 0;
 };

@@ -2,6 +2,7 @@
 #include "../include/jot_ast_visitor.hpp"
 #include "../include/jot_basic.hpp"
 #include "../include/jot_logger.hpp"
+#include "../include/jot_name_mangle.hpp"
 #include "../include/jot_type.hpp"
 
 #include <any>
@@ -10,7 +11,8 @@
 #include <string>
 #include <unordered_set>
 
-void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> compilation_unit)
+auto JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> compilation_unit)
+    -> void
 {
     auto statements = compilation_unit->get_tree_nodes();
     try {
@@ -23,7 +25,7 @@ void JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> com
     }
 }
 
-std::any JotTypeChecker::visit(BlockStatement* node)
+auto JotTypeChecker::visit(BlockStatement* node) -> std::any
 {
     push_new_scope();
     for (auto& statement : node->get_nodes()) {
@@ -35,16 +37,36 @@ std::any JotTypeChecker::visit(BlockStatement* node)
     return 0;
 }
 
-std::any JotTypeChecker::visit(FieldDeclaration* node)
+auto JotTypeChecker::visit(FieldDeclaration* node) -> std::any
 {
     auto left_type = node->get_type();
     auto right_value = node->get_value();
     auto name = node->get_name().literal;
 
+    bool should_update_node_type = true;
+
     // If field has initalizer, check that initalizer type is matching the declaration type
     // If declaration type is null, infier it using the rvalue type
     if (right_value != nullptr) {
+        auto origin_right_value_type = right_value->get_type_node();
         auto right_type = node_jot_type(right_value->accept(this));
+
+        bool is_type_updated = false;
+        if (origin_right_value_type != nullptr) {
+            is_type_updated = origin_right_value_type->type_kind == TypeKind::GENERIC_STRUCT;
+            if (is_type_updated) {
+                node->set_type(origin_right_value_type);
+                right_type = resolve_generic_struct(right_type);
+                should_update_node_type = false;
+                bool is_first_defined = types_table.define(name, right_type);
+                if (!is_first_defined) {
+                    context->diagnostics.add_diagnostic_error(
+                        node->get_name().position,
+                        "Field " + name + " is defined twice in the same scope");
+                    throw "Stop";
+                }
+            }
+        }
 
         if (node->is_global() and !right_value->is_constant()) {
             context->diagnostics.add_diagnostic_error(
@@ -56,7 +78,6 @@ std::any JotTypeChecker::visit(FieldDeclaration* node)
         bool is_left_ptr_type = is_pointer_type(left_type);
         bool is_right_none_type = is_none_type(right_type);
         bool is_right_null_type = is_null_type(right_type);
-        bool is_hanlded = false;
 
         if (is_left_none_type and is_right_none_type) {
             context->diagnostics.add_diagnostic_error(
@@ -78,25 +99,25 @@ std::any JotTypeChecker::visit(FieldDeclaration* node)
             throw "Stop";
         }
 
-        if (is_left_none_type) {
+        if (!is_type_updated && is_left_none_type) {
             node->set_type(right_type);
             left_type = right_type;
-            is_hanlded = true;
+            is_type_updated = true;
         }
 
-        if (is_right_none_type) {
+        if (!is_type_updated && is_right_none_type) {
             node->get_value()->set_type_node(left_type);
             right_type = left_type;
-            is_hanlded = true;
+            is_type_updated = true;
         }
 
         if (is_left_ptr_type and is_right_null_type) {
             auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->get_value());
             null_expr->null_base_type = left_type;
-            is_hanlded = true;
+            is_type_updated = true;
         }
 
-        if (!is_hanlded && !is_jot_types_equals(left_type, right_type)) {
+        if (!is_type_updated && !is_jot_types_equals(left_type, right_type)) {
             context->diagnostics.add_diagnostic_error(
                 node->get_name().position, "Type missmatch expect " + jot_type_literal(left_type) +
                                                " but got " + jot_type_literal(right_type));
@@ -104,16 +125,27 @@ std::any JotTypeChecker::visit(FieldDeclaration* node)
         }
     }
 
-    bool is_first_defined = types_table.define(name, left_type);
-    if (not is_first_defined) {
-        context->diagnostics.add_diagnostic_error(
-            node->get_name().position, "Field " + name + " is defined twice in the same scope");
-        throw "Stop";
+    if (should_update_node_type) {
+        bool is_first_defined = true;
+        if (left_type->type_kind == TypeKind::GENERIC_STRUCT) {
+            node->set_type(left_type);
+            is_first_defined = types_table.define(name, resolve_generic_struct(left_type));
+        }
+        else {
+            is_first_defined = types_table.define(name, left_type);
+        }
+
+        if (!is_first_defined) {
+            context->diagnostics.add_diagnostic_error(
+                node->get_name().position, "Field " + name + " is defined twice in the same scope");
+            throw "Stop";
+        }
     }
+
     return 0;
 }
 
-std::any JotTypeChecker::visit(FunctionPrototype* node)
+auto JotTypeChecker::visit(FunctionPrototype* node) -> std::any
 {
     auto                                  name = node->get_name();
     std::vector<std::shared_ptr<JotType>> parameters;
@@ -133,7 +165,7 @@ std::any JotTypeChecker::visit(FunctionPrototype* node)
     return function_type;
 }
 
-std::any JotTypeChecker::visit(FunctionDeclaration* node)
+auto JotTypeChecker::visit(FunctionDeclaration* node) -> std::any
 {
     auto prototype = node->get_prototype();
     auto function_type = node_jot_type(node->get_prototype()->accept(this));
@@ -162,15 +194,18 @@ std::any JotTypeChecker::visit(FunctionDeclaration* node)
     return function_type;
 }
 
-std::any JotTypeChecker::visit(StructDeclaration* node)
+auto JotTypeChecker::visit(StructDeclaration* node) -> std::any
 {
     auto struct_type = node->get_struct_type();
-    auto struct_name = struct_type->name;
-    types_table.define(struct_name, struct_type);
+    // Generic struct are a template and should defined
+    if (!struct_type->is_generic) {
+        auto struct_name = struct_type->name;
+        types_table.define(struct_name, struct_type);
+    }
     return nullptr;
 }
 
-std::any JotTypeChecker::visit(EnumDeclaration* node)
+auto JotTypeChecker::visit(EnumDeclaration* node) -> std::any
 {
     auto name = node->get_name().literal;
     auto enum_type = std::static_pointer_cast<JotEnumType>(node->get_enum_type());
@@ -198,7 +233,7 @@ std::any JotTypeChecker::visit(EnumDeclaration* node)
     return is_first_defined;
 }
 
-std::any JotTypeChecker::visit(IfStatement* node)
+auto JotTypeChecker::visit(IfStatement* node) -> std::any
 {
     for (auto& conditional_block : node->get_conditional_blocks()) {
         auto condition = node_jot_type(conditional_block->get_condition()->accept(this));
@@ -215,7 +250,7 @@ std::any JotTypeChecker::visit(IfStatement* node)
     return 0;
 }
 
-std::any JotTypeChecker::visit(ForRangeStatement* node)
+auto JotTypeChecker::visit(ForRangeStatement* node) -> std::any
 {
     const auto start_type = node_jot_type(node->range_start->accept(this));
     const auto end_type = node_jot_type(node->range_end->accept(this));
@@ -250,11 +285,11 @@ std::any JotTypeChecker::visit(ForRangeStatement* node)
     throw "Stop";
 }
 
-std::any JotTypeChecker::visit(ForEachStatement* node)
+auto JotTypeChecker::visit(ForEachStatement* node) -> std::any
 {
     auto collection_type = node_jot_type(node->collection->accept(this));
 
-    if (collection_type->type_kind != TypeKind::Array) {
+    if (collection_type->type_kind != TypeKind::ARRAY) {
         context->diagnostics.add_diagnostic_error(node->position.position,
                                                   "For each expect array as paramter");
         throw "Stop";
@@ -274,7 +309,7 @@ std::any JotTypeChecker::visit(ForEachStatement* node)
     return 0;
 }
 
-std::any JotTypeChecker::visit(ForeverStatement* node)
+auto JotTypeChecker::visit(ForeverStatement* node) -> std::any
 {
     push_new_scope();
     node->body->accept(this);
@@ -282,7 +317,7 @@ std::any JotTypeChecker::visit(ForeverStatement* node)
     return 0;
 }
 
-std::any JotTypeChecker::visit(WhileStatement* node)
+auto JotTypeChecker::visit(WhileStatement* node) -> std::any
 {
     auto left_type = node_jot_type(node->get_condition()->accept(this));
     if (not is_number_type(left_type)) {
@@ -297,7 +332,7 @@ std::any JotTypeChecker::visit(WhileStatement* node)
     return 0;
 }
 
-std::any JotTypeChecker::visit(SwitchStatement* node)
+auto JotTypeChecker::visit(SwitchStatement* node) -> std::any
 {
     // Check that switch argument is integer type
     auto argument = node_jot_type(node->get_argument()->accept(this));
@@ -373,7 +408,6 @@ std::any JotTypeChecker::visit(SwitchStatement* node)
     // Check default branch body if exists inside new scope
     auto default_branch = node->get_default_case();
     if (default_branch) {
-        auto body = default_branch;
         push_new_scope();
         default_branch->get_body()->accept(this);
         pop_current_scope();
@@ -382,10 +416,10 @@ std::any JotTypeChecker::visit(SwitchStatement* node)
     return 0;
 }
 
-std::any JotTypeChecker::visit(ReturnStatement* node)
+auto JotTypeChecker::visit(ReturnStatement* node) -> std::any
 {
     if (not node->has_value()) {
-        if (return_types_stack.top()->type_kind != TypeKind::Void) {
+        if (return_types_stack.top()->type_kind != TypeKind::VOID) {
             context->diagnostics.add_diagnostic_error(
                 node->get_position().position, "Expect return value to be " +
                                                    jot_type_literal(return_types_stack.top()) +
@@ -396,7 +430,7 @@ std::any JotTypeChecker::visit(ReturnStatement* node)
     }
 
     auto return_type = node_jot_type(node->return_value()->accept(this));
-    auto function_return_type = return_types_stack.top();
+    auto function_return_type = resolve_generic_struct(return_types_stack.top());
 
     if (!is_jot_types_equals(function_return_type, return_type)) {
         // If Function return type is pointer and return value is null
@@ -445,13 +479,13 @@ std::any JotTypeChecker::visit(ReturnStatement* node)
     return 0;
 }
 
-std::any JotTypeChecker::visit(DeferStatement* node)
+auto JotTypeChecker::visit(DeferStatement* node) -> std::any
 {
     node->get_call_expression()->accept(this);
     return 0;
 }
 
-std::any JotTypeChecker::visit(BreakStatement* node)
+auto JotTypeChecker::visit(BreakStatement* node) -> std::any
 {
     if (node->is_has_times() and node->get_times() == 1) {
         context->diagnostics.add_diagnostic_warn(node->get_position().position,
@@ -460,7 +494,7 @@ std::any JotTypeChecker::visit(BreakStatement* node)
     return 0;
 }
 
-std::any JotTypeChecker::visit(ContinueStatement* node)
+auto JotTypeChecker::visit(ContinueStatement* node) -> std::any
 {
     if (node->is_has_times() and node->get_times() == 1) {
         context->diagnostics.add_diagnostic_warn(
@@ -469,12 +503,12 @@ std::any JotTypeChecker::visit(ContinueStatement* node)
     return 0;
 }
 
-std::any JotTypeChecker::visit(ExpressionStatement* node)
+auto JotTypeChecker::visit(ExpressionStatement* node) -> std::any
 {
     return node->get_expression()->accept(this);
 }
 
-std::any JotTypeChecker::visit(IfExpression* node)
+auto JotTypeChecker::visit(IfExpression* node) -> std::any
 {
     auto condition = node_jot_type(node->get_condition()->accept(this));
     if (not is_number_type(condition)) {
@@ -497,7 +531,7 @@ std::any JotTypeChecker::visit(IfExpression* node)
     return if_value;
 }
 
-std::any JotTypeChecker::visit(SwitchExpression* node)
+auto JotTypeChecker::visit(SwitchExpression* node) -> std::any
 {
     auto argument = node_jot_type(node->get_argument()->accept(this));
     auto cases = node->get_switch_cases();
@@ -542,12 +576,12 @@ std::any JotTypeChecker::visit(SwitchExpression* node)
     return expected_type;
 }
 
-std::any JotTypeChecker::visit(GroupExpression* node)
+auto JotTypeChecker::visit(GroupExpression* node) -> std::any
 {
     return node->get_expression()->accept(this);
 }
 
-std::any JotTypeChecker::visit(AssignExpression* node)
+auto JotTypeChecker::visit(AssignExpression* node) -> std::any
 {
     auto left_node = node->get_left();
     auto left_type = node_jot_type(left_node->accept(this));
@@ -593,7 +627,7 @@ std::any JotTypeChecker::visit(AssignExpression* node)
     return right_type;
 }
 
-std::any JotTypeChecker::visit(BinaryExpression* node)
+auto JotTypeChecker::visit(BinaryExpression* node) -> std::any
 {
     auto left_type = node_jot_type(node->get_left()->accept(this));
     auto right_type = node_jot_type(node->get_right()->accept(this));
@@ -629,7 +663,7 @@ std::any JotTypeChecker::visit(BinaryExpression* node)
     return left_type;
 }
 
-std::any JotTypeChecker::visit(ShiftExpression* node)
+auto JotTypeChecker::visit(ShiftExpression* node) -> std::any
 {
     const auto& lhs = node->get_left();
     const auto& rhs = node->get_right();
@@ -699,7 +733,7 @@ std::any JotTypeChecker::visit(ShiftExpression* node)
     return node_jot_type(node->get_type_node());
 }
 
-std::any JotTypeChecker::visit(ComparisonExpression* node)
+auto JotTypeChecker::visit(ComparisonExpression* node) -> std::any
 {
     const auto left_type = node_jot_type(node->get_left()->accept(this));
     const auto right_type = node_jot_type(node->get_right()->accept(this));
@@ -771,7 +805,7 @@ std::any JotTypeChecker::visit(ComparisonExpression* node)
     throw "Stop";
 }
 
-std::any JotTypeChecker::visit(LogicalExpression* node)
+auto JotTypeChecker::visit(LogicalExpression* node) -> std::any
 {
     auto left_type = node_jot_type(node->get_left()->accept(this));
     auto right_type = node_jot_type(node->get_right()->accept(this));
@@ -796,7 +830,7 @@ std::any JotTypeChecker::visit(LogicalExpression* node)
     return node_jot_type(node->get_type_node());
 }
 
-std::any JotTypeChecker::visit(PrefixUnaryExpression* node)
+auto JotTypeChecker::visit(PrefixUnaryExpression* node) -> std::any
 {
     auto operand_type = node_jot_type(node->get_right()->accept(this));
     auto unary_operator = node->get_operator_token().kind;
@@ -838,7 +872,7 @@ std::any JotTypeChecker::visit(PrefixUnaryExpression* node)
     }
 
     if (unary_operator == TokenKind::Star) {
-        if (operand_type->type_kind == TypeKind::Pointer) {
+        if (operand_type->type_kind == TypeKind::POINTER) {
             auto pointer_type = std::static_pointer_cast<JotPointerType>(operand_type);
             auto type = pointer_type->base_type;
             node->set_type_node(type);
@@ -859,7 +893,7 @@ std::any JotTypeChecker::visit(PrefixUnaryExpression* node)
     }
 
     if (unary_operator == TokenKind::PlusPlus || unary_operator == TokenKind::MinusMinus) {
-        if (operand_type->type_kind != TypeKind::Number) {
+        if (operand_type->type_kind != TypeKind::NUMBER) {
             context->diagnostics.add_diagnostic_error(
                 node->get_operator_token().position,
                 "Unary ++ or -- expression expect variable to be number ttype but got " +
@@ -876,13 +910,13 @@ std::any JotTypeChecker::visit(PrefixUnaryExpression* node)
     throw "Stop";
 }
 
-std::any JotTypeChecker::visit(PostfixUnaryExpression* node)
+auto JotTypeChecker::visit(PostfixUnaryExpression* node) -> std::any
 {
     auto operand_type = node_jot_type(node->get_right()->accept(this));
     auto unary_operator = node->get_operator_token().kind;
 
     if (unary_operator == TokenKind::PlusPlus or unary_operator == TokenKind::MinusMinus) {
-        if (operand_type->type_kind != TypeKind::Number) {
+        if (operand_type->type_kind != TypeKind::NUMBER) {
             context->diagnostics.add_diagnostic_error(
                 node->get_operator_token().position,
                 "Unary ++ or -- expression expect variable to be number ttype but got " +
@@ -899,7 +933,7 @@ std::any JotTypeChecker::visit(PostfixUnaryExpression* node)
     throw "Stop";
 }
 
-std::any JotTypeChecker::visit(CallExpression* node)
+auto JotTypeChecker::visit(CallExpression* node) -> std::any
 {
     auto callee = node->get_callee();
     auto callee_ast_node_type = node->get_callee()->get_ast_node_type();
@@ -912,12 +946,12 @@ std::any JotTypeChecker::visit(CallExpression* node)
             auto lookup = types_table.lookup(name);
             auto value = node_jot_type(types_table.lookup(name));
 
-            if (value->type_kind == TypeKind::Pointer) {
+            if (value->type_kind == TypeKind::POINTER) {
                 auto pointer_type = std::static_pointer_cast<JotPointerType>(value);
                 value = pointer_type->base_type;
             }
 
-            if (value->type_kind == TypeKind::Function) {
+            if (value->type_kind == TypeKind::FUNCTION) {
                 auto type = std::static_pointer_cast<JotFunctionType>(value);
                 node->set_type_node(type);
                 auto parameters = type->parameters;
@@ -1012,11 +1046,12 @@ std::any JotTypeChecker::visit(CallExpression* node)
     throw "Stop";
 }
 
-std::any JotTypeChecker::visit(InitializeExpression* node)
+auto JotTypeChecker::visit(InitializeExpression* node) -> std::any
 {
-    auto type = node->type;
+    auto type = resolve_generic_struct(node->type);
+    node->set_type_node(type);
 
-    if (type->type_kind == TypeKind::Structure) {
+    if (type->type_kind == TypeKind::STRUCT) {
         auto struct_type = std::static_pointer_cast<JotStructType>(type);
         auto parameters = struct_type->fields_types;
         auto arguments = node->arguments;
@@ -1030,7 +1065,7 @@ std::any JotTypeChecker::visit(InitializeExpression* node)
     throw "Stop";
 }
 
-std::any JotTypeChecker::visit(LambdaExpression* node)
+auto JotTypeChecker::visit(LambdaExpression* node) -> std::any
 {
     auto function_ptr_type = std::static_pointer_cast<JotPointerType>(node->get_type_node());
     auto function_type = std::static_pointer_cast<JotFunctionType>(function_ptr_type->base_type);
@@ -1074,18 +1109,18 @@ std::any JotTypeChecker::visit(LambdaExpression* node)
     return function_ptr_type;
 }
 
-std::any JotTypeChecker::visit(DotExpression* node)
+auto JotTypeChecker::visit(DotExpression* node) -> std::any
 {
     auto callee = node->get_callee()->accept(this);
     auto callee_type = node_jot_type(callee);
     auto callee_type_kind = callee_type->type_kind;
 
-    if (callee_type_kind == TypeKind::Structure) {
+    if (callee_type_kind == TypeKind::STRUCT) {
         auto struct_type = std::static_pointer_cast<JotStructType>(callee_type);
         auto field_name = node->get_field_name().literal;
         auto fields_names = struct_type->fields_names;
-        if (fields_names.contains(field_name)) {
-            int  member_index = fields_names[field_name];
+        if (is_contains(fields_names, field_name)) {
+            int  member_index = index_of(fields_names, field_name);
             auto field_type = struct_type->fields_types[member_index];
             node->set_type_node(field_type);
             node->field_index = member_index;
@@ -1098,15 +1133,15 @@ std::any JotTypeChecker::visit(DotExpression* node)
         throw "Stop";
     }
 
-    if (callee_type_kind == TypeKind::Pointer) {
+    if (callee_type_kind == TypeKind::POINTER) {
         auto pointer_type = std::static_pointer_cast<JotPointerType>(callee_type);
         auto pointer_to_type = pointer_type->base_type;
-        if (pointer_to_type->type_kind == TypeKind::Structure) {
+        if (pointer_to_type->type_kind == TypeKind::STRUCT) {
             auto struct_type = std::static_pointer_cast<JotStructType>(pointer_to_type);
             auto field_name = node->get_field_name().literal;
             auto fields_names = struct_type->fields_names;
-            if (fields_names.contains(field_name)) {
-                int  member_index = fields_names[field_name];
+            if (is_contains(fields_names, field_name)) {
+                int  member_index = index_of(fields_names, field_name);
                 auto field_type = struct_type->fields_types[member_index];
                 node->set_type_node(field_type);
                 node->field_index = member_index;
@@ -1124,7 +1159,7 @@ std::any JotTypeChecker::visit(DotExpression* node)
         throw "Stop";
     }
 
-    if (callee_type_kind == TypeKind::Array) {
+    if (callee_type_kind == TypeKind::ARRAY) {
         auto attribute_token = node->get_field_name();
         auto literal = attribute_token.literal;
 
@@ -1144,7 +1179,7 @@ std::any JotTypeChecker::visit(DotExpression* node)
     throw "Stop";
 }
 
-std::any JotTypeChecker::visit(CastExpression* node)
+auto JotTypeChecker::visit(CastExpression* node) -> std::any
 {
     auto value = node->get_value();
     auto value_type = node_jot_type(value->accept(this));
@@ -1165,11 +1200,11 @@ std::any JotTypeChecker::visit(CastExpression* node)
     return cast_result_type;
 }
 
-std::any JotTypeChecker::visit(TypeSizeExpression* node) { return node->get_type_node(); }
+auto JotTypeChecker::visit(TypeSizeExpression* node) -> std::any { return node->get_type_node(); }
 
-std::any JotTypeChecker::visit(ValueSizeExpression* node) { return node->get_type_node(); }
+auto JotTypeChecker::visit(ValueSizeExpression* node) -> std::any { return node->get_type_node(); }
 
-std::any JotTypeChecker::visit(IndexExpression* node)
+auto JotTypeChecker::visit(IndexExpression* node) -> std::any
 {
     auto index_expression = node->get_index();
     auto index_type = node_jot_type(index_expression->accept(this));
@@ -1202,7 +1237,7 @@ std::any JotTypeChecker::visit(IndexExpression* node)
     auto callee_expression = node->get_value();
     auto callee_type = node_jot_type(callee_expression->accept(this));
 
-    if (callee_type->type_kind == TypeKind::Array) {
+    if (callee_type->type_kind == TypeKind::ARRAY) {
         auto array_type = std::static_pointer_cast<JotArrayType>(callee_type);
         node->set_type_node(array_type->element_type);
 
@@ -1216,7 +1251,7 @@ std::any JotTypeChecker::visit(IndexExpression* node)
         return array_type->element_type;
     }
 
-    if (callee_type->type_kind == TypeKind::Pointer) {
+    if (callee_type->type_kind == TypeKind::POINTER) {
         auto pointer_type = std::static_pointer_cast<JotPointerType>(callee_type);
         node->set_type_node(pointer_type->base_type);
         return pointer_type->base_type;
@@ -1228,9 +1263,9 @@ std::any JotTypeChecker::visit(IndexExpression* node)
     throw "Stop";
 }
 
-std::any JotTypeChecker::visit(EnumAccessExpression* node) { return node->get_type_node(); }
+auto JotTypeChecker::visit(EnumAccessExpression* node) -> std::any { return node->get_type_node(); }
 
-std::any JotTypeChecker::visit(LiteralExpression* node)
+auto JotTypeChecker::visit(LiteralExpression* node) -> std::any
 {
     const auto name = node->get_name().literal;
     if (!types_table.is_defined(name)) {
@@ -1272,14 +1307,14 @@ std::any JotTypeChecker::visit(LiteralExpression* node)
     auto type = node_jot_type(value);
     node->set_type(type);
 
-    if (type->type_kind == TypeKind::Number || type->type_kind == TypeKind::EnumerationElement) {
+    if (type->type_kind == TypeKind::NUMBER || type->type_kind == TypeKind::ENUM_ELEMENT) {
         node->set_constant(true);
     }
 
     return type;
 }
 
-std::any JotTypeChecker::visit(NumberExpression* node)
+auto JotTypeChecker::visit(NumberExpression* node) -> std::any
 {
     auto number_type = std::static_pointer_cast<JotNumberType>(node->get_type_node());
     auto number_kind = number_type->number_kind;
@@ -1299,7 +1334,7 @@ std::any JotTypeChecker::visit(NumberExpression* node)
     return number_type;
 }
 
-std::any JotTypeChecker::visit(ArrayExpression* node)
+auto JotTypeChecker::visit(ArrayExpression* node) -> std::any
 {
     const auto values = node->get_values();
     const auto values_size = values.size();
@@ -1329,15 +1364,15 @@ std::any JotTypeChecker::visit(ArrayExpression* node)
     return array_type;
 }
 
-std::any JotTypeChecker::visit(StringExpression* node) { return node->get_type_node(); }
+auto JotTypeChecker::visit(StringExpression* node) -> std::any { return node->get_type_node(); }
 
-std::any JotTypeChecker::visit(CharacterExpression* node) { return node->get_type_node(); }
+auto JotTypeChecker::visit(CharacterExpression* node) -> std::any { return node->get_type_node(); }
 
-std::any JotTypeChecker::visit(BooleanExpression* node) { return node->get_type_node(); }
+auto JotTypeChecker::visit(BooleanExpression* node) -> std::any { return node->get_type_node(); }
 
-std::any JotTypeChecker::visit(NullExpression* node) { return node->get_type_node(); }
+auto JotTypeChecker::visit(NullExpression* node) -> std::any { return node->get_type_node(); }
 
-std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type)
+auto JotTypeChecker::node_jot_type(std::any any_type) -> std::shared_ptr<JotType>
 {
     if (any_type.type() == typeid(std::shared_ptr<JotFunctionType>)) {
         return std::any_cast<std::shared_ptr<JotFunctionType>>(any_type);
@@ -1369,14 +1404,15 @@ std::shared_ptr<JotType> JotTypeChecker::node_jot_type(std::any any_type)
     if (any_type.type() == typeid(std::shared_ptr<JotNullType>)) {
         return std::any_cast<std::shared_ptr<JotNullType>>(any_type);
     }
+
     return std::any_cast<std::shared_ptr<JotType>>(any_type);
 }
 
-void JotTypeChecker::check_parameters_types(TokenSpan                                 location,
+auto JotTypeChecker::check_parameters_types(TokenSpan                                 location,
                                             std::vector<std::shared_ptr<Expression>>& arguments,
                                             std::vector<std::shared_ptr<JotType>>&    parameters,
                                             bool has_varargs, std::shared_ptr<JotType> varargs_type,
-                                            int implicit_parameters_count)
+                                            int implicit_parameters_count) -> void
 {
 
     const auto arguments_size = arguments.size();
@@ -1402,6 +1438,8 @@ void JotTypeChecker::check_parameters_types(TokenSpan                           
 
     // Resolve Arguments types
     std::vector<std::shared_ptr<JotType>> arguments_types;
+    arguments_types.reserve(arguments.size());
+
     for (auto& argument : arguments) {
         arguments_types.push_back(node_jot_type(argument->accept(this)));
     }
@@ -1447,73 +1485,73 @@ void JotTypeChecker::check_parameters_types(TokenSpan                           
     }
 }
 
-bool JotTypeChecker::is_same_type(const std::shared_ptr<JotType>& left,
-                                  const std::shared_ptr<JotType>& right)
+auto JotTypeChecker::is_same_type(const std::shared_ptr<JotType>& left,
+                                  const std::shared_ptr<JotType>& right) -> bool
 {
     return left->type_kind == right->type_kind;
 }
 
-bool JotTypeChecker::check_number_limits(const char* literal, NumberKind kind)
+auto JotTypeChecker::check_number_limits(const char* literal, NumberKind kind) -> bool
 {
     switch (kind) {
-    case NumberKind::Integer1: {
+    case NumberKind::INTEGER_1: {
         auto value = str_to_int(literal);
         return value == 0 or value == 1;
     }
-    case NumberKind::Integer8: {
+    case NumberKind::INTEGER_8: {
         auto value = str_to_int(literal);
         ;
         return value >= std::numeric_limits<int8_t>::min() and
                value <= std::numeric_limits<int8_t>::max();
     }
-    case NumberKind::UInteger8: {
+    case NumberKind::U_INTEGER_8: {
         auto value = str_to_int(literal);
         ;
         return value >= std::numeric_limits<uint8_t>::min() and
                value <= std::numeric_limits<uint8_t>::max();
     }
-    case NumberKind::Integer16: {
+    case NumberKind::INTEGER_16: {
         auto value = str_to_int(literal);
         ;
         return value >= std::numeric_limits<int16_t>::min() and
                value <= std::numeric_limits<int16_t>::max();
     }
-    case NumberKind::UInteger16: {
+    case NumberKind::U_INTEGER_16: {
         auto value = str_to_int(literal);
         ;
         return value >= std::numeric_limits<uint16_t>::min() and
                value <= std::numeric_limits<uint16_t>::max();
     }
-    case NumberKind::Integer32: {
+    case NumberKind::INTEGER_32: {
         auto value = str_to_int(literal);
         ;
         return value >= std::numeric_limits<int32_t>::min() and
                value <= std::numeric_limits<int32_t>::max();
     }
-    case NumberKind::UInteger32: {
+    case NumberKind::U_INTEGER_32: {
         auto value = str_to_int(literal);
         ;
         return value >= std::numeric_limits<uint32_t>::min() and
                value <= std::numeric_limits<uint32_t>::max();
     }
-    case NumberKind::Integer64: {
+    case NumberKind::INTEGER_64: {
         auto value = str_to_int(literal);
         ;
         return value >= std::numeric_limits<int64_t>::min() and
                value <= std::numeric_limits<int64_t>::max();
     }
-    case NumberKind::UInteger64: {
+    case NumberKind::U_INTEGER_64: {
         auto value = str_to_int(literal);
         ;
         return value >= std::numeric_limits<uint64_t>::min() and
                value <= std::numeric_limits<uint64_t>::max();
     }
-    case NumberKind::Float32: {
+    case NumberKind::FLOAT_32: {
         auto value = str_to_float(literal);
         return value >= -std::numeric_limits<float>::max() and
                value <= std::numeric_limits<float>::max();
     }
-    case NumberKind::Float64: {
+    case NumberKind::FLOAT_64: {
         auto value = str_to_float(literal);
         return value >= -std::numeric_limits<double>::max() and
                value <= std::numeric_limits<double>::max();
@@ -1521,7 +1559,45 @@ bool JotTypeChecker::check_number_limits(const char* literal, NumberKind kind)
     }
 }
 
-bool JotTypeChecker::check_missing_return_statement(Shared<Statement> node)
+auto JotTypeChecker::resolve_generic_struct(Shared<JotType> type) -> std::shared_ptr<JotType>
+{
+    if (type->type_kind == TypeKind::GENERIC_STRUCT) {
+        auto generic_struct = std::static_pointer_cast<JotGenericStructType>(type);
+        auto structure = generic_struct->struct_type;
+        auto mangled_name = structure->name + mangle_types(generic_struct->parameters);
+        if (types_table.is_defined(mangled_name)) {
+            return std::any_cast<Shared<JotStructType>>(types_table.lookup(mangled_name));
+        }
+
+        std::vector<std::string> fields_names;
+        for (const auto& name : structure->fields_names) {
+            fields_names.push_back(name);
+        }
+
+        std::vector<std::shared_ptr<JotType>> types;
+        for (const auto& type : structure->fields_types) {
+
+            if (type->type_kind == TypeKind::GENERIC_PARAMETER) {
+                auto generic_type = std::static_pointer_cast<JotGenericParameterType>(type);
+                auto position = index_of(structure->generic_parameters, generic_type->name);
+                types.push_back(generic_struct->parameters[position]);
+                continue;
+            }
+
+            types.push_back(type);
+        }
+
+        std::vector<std::string> genericsa;
+
+        auto new_struct = std::make_shared<JotStructType>(mangled_name, fields_names, types,
+                                                          genericsa, structure->is_packed, false);
+        types_table.define(mangled_name, new_struct);
+        return new_struct;
+    }
+    return type;
+}
+
+auto JotTypeChecker::check_missing_return_statement(Shared<Statement> node) -> bool
 {
     // This case for single node function declaration
     if (node->get_ast_node_type() == AstNodeType::Return) {
@@ -1593,6 +1669,6 @@ bool JotTypeChecker::check_missing_return_statement(Shared<Statement> node)
     return false;
 }
 
-inline void JotTypeChecker::push_new_scope() { types_table.push_new_scope(); }
+inline auto JotTypeChecker::push_new_scope() -> void { types_table.push_new_scope(); }
 
-inline void JotTypeChecker::pop_current_scope() { types_table.pop_current_scope(); }
+inline auto JotTypeChecker::pop_current_scope() -> void { types_table.pop_current_scope(); }
