@@ -1,0 +1,12 @@
+extern fun printf(format *char, varargs Any) int64;
+
+struct Container <T> {
+   value T;
+}
+
+var gicon = Container<int64> { 20 };
+
+fun main() int64 {
+   printf("%d\n", gicon.value);
+   return 0;
+}

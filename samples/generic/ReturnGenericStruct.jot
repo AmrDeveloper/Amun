@@ -1,0 +1,15 @@
+extern fun printf(format *char, varargs Any) int64;
+
+struct Container <T> {
+   value T;
+}
+
+fun build_container(value int64) Container<int64> {
+   return Container<int64> { 10 };
+}
+
+fun main() int64 {
+   var bcon = build_container(30);
+   printf("%d\n", bcon.value);
+   return 0;
+}
