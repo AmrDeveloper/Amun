@@ -2,6 +2,7 @@
 #include "../include/jot_type.hpp"
 
 #include <memory>
+#include <string>
 
 static std::unordered_map<NumberKind, std::string> number_type_managler = {
     {NumberKind::INTEGER_1, "i1"},     {NumberKind::INTEGER_8, "i8"},
@@ -29,7 +30,7 @@ auto mangle_type(Shared<JotType> type) -> std::string
 
     if (kind == TypeKind::ARRAY) {
         auto array_type = std::static_pointer_cast<JotArrayType>(type);
-        return &"_a"[array_type->size] + mangle_type(array_type->element_type);
+        return "_a" + std::to_string(array_type->size) + mangle_type(array_type->element_type);
     }
 
     if (kind == TypeKind::ENUM_ELEMENT) {
@@ -44,7 +45,6 @@ auto mangle_type(Shared<JotType> type) -> std::string
 
     return "";
 }
-
 auto mangle_types(std::vector<Shared<JotType>> types) -> std::string
 {
     std::string result;
