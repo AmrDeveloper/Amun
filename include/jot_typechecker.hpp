@@ -10,131 +10,130 @@
 #include <memory>
 #include <stack>
 #include <unordered_map>
+#include <utility>
 
 class JotTypeChecker : public TreeVisitor {
   public:
-    JotTypeChecker(std::shared_ptr<JotContext> context) : context(context)
+    explicit JotTypeChecker(Shared<JotContext> context) : context(std::move(context))
     {
         types_table.push_new_scope();
     }
 
-    void check_compilation_unit(std::shared_ptr<CompilationUnit> compilation_unit);
+    void check_compilation_unit(Shared<CompilationUnit> compilation_unit);
 
-    std::any visit(BlockStatement* node) override;
+    auto visit(BlockStatement* node) -> std::any override;
 
-    std::any visit(FieldDeclaration* node) override;
+    auto visit(FieldDeclaration* node) -> std::any override;
 
-    std::any visit(FunctionPrototype* node) override;
+    auto visit(FunctionPrototype* node) -> std::any override;
 
-    std::any visit(FunctionDeclaration* node) override;
+    auto visit(FunctionDeclaration* node) -> std::any override;
 
-    std::any visit(StructDeclaration* node) override;
+    auto visit(StructDeclaration* node) -> std::any override;
 
-    std::any visit(EnumDeclaration* node) override;
+    auto visit(EnumDeclaration* node) -> std::any override;
 
-    std::any visit(IfStatement* node) override;
+    auto visit(IfStatement* node) -> std::any override;
 
-    std::any visit(ForRangeStatement* node) override;
+    auto visit(ForRangeStatement* node) -> std::any override;
 
-    std::any visit(ForEachStatement* node) override;
+    auto visit(ForEachStatement* node) -> std::any override;
 
-    std::any visit(ForeverStatement* node) override;
+    auto visit(ForeverStatement* node) -> std::any override;
 
-    std::any visit(WhileStatement* node) override;
+    auto visit(WhileStatement* node) -> std::any override;
 
-    std::any visit(SwitchStatement* node) override;
+    auto visit(SwitchStatement* node) -> std::any override;
 
-    std::any visit(ReturnStatement* node) override;
+    auto visit(ReturnStatement* node) -> std::any override;
 
-    std::any visit(DeferStatement* node) override;
+    auto visit(DeferStatement* node) -> std::any override;
 
-    std::any visit(BreakStatement* node) override;
+    auto visit(BreakStatement* node) -> std::any override;
 
-    std::any visit(ContinueStatement* node) override;
+    auto visit(ContinueStatement* node) -> std::any override;
 
-    std::any visit(ExpressionStatement* node) override;
+    auto visit(ExpressionStatement* node) -> std::any override;
 
-    std::any visit(IfExpression* node) override;
+    auto visit(IfExpression* node) -> std::any override;
 
-    std::any visit(SwitchExpression* node) override;
+    auto visit(SwitchExpression* node) -> std::any override;
 
-    std::any visit(GroupExpression* node) override;
+    auto visit(GroupExpression* node) -> std::any override;
 
-    std::any visit(AssignExpression* node) override;
+    auto visit(AssignExpression* node) -> std::any override;
 
-    std::any visit(BinaryExpression* node) override;
+    auto visit(BinaryExpression* node) -> std::any override;
 
-    std::any visit(ShiftExpression* node) override;
+    auto visit(ShiftExpression* node) -> std::any override;
 
-    std::any visit(ComparisonExpression* node) override;
+    auto visit(ComparisonExpression* node) -> std::any override;
 
-    std::any visit(LogicalExpression* node) override;
+    auto visit(LogicalExpression* node) -> std::any override;
 
-    std::any visit(PrefixUnaryExpression* node) override;
+    auto visit(PrefixUnaryExpression* node) -> std::any override;
 
-    std::any visit(PostfixUnaryExpression* node) override;
+    auto visit(PostfixUnaryExpression* node) -> std::any override;
 
-    std::any visit(CallExpression* node) override;
+    auto visit(CallExpression* node) -> std::any override;
 
-    std::any visit(InitializeExpression* node) override;
+    auto visit(InitializeExpression* node) -> std::any override;
 
-    std::any visit(LambdaExpression* node) override;
+    auto visit(LambdaExpression* node) -> std::any override;
 
-    std::any visit(DotExpression* node) override;
+    auto visit(DotExpression* node) -> std::any override;
 
-    std::any visit(CastExpression* node) override;
+    auto visit(CastExpression* node) -> std::any override;
 
-    std::any visit(TypeSizeExpression* node) override;
+    auto visit(TypeSizeExpression* node) -> std::any override;
 
-    std::any visit(ValueSizeExpression* node) override;
+    auto visit(ValueSizeExpression* node) -> std::any override;
 
-    std::any visit(IndexExpression* node) override;
+    auto visit(IndexExpression* node) -> std::any override;
 
-    std::any visit(EnumAccessExpression* node) override;
+    auto visit(EnumAccessExpression* node) -> std::any override;
 
-    std::any visit(LiteralExpression* node) override;
+    auto visit(LiteralExpression* node) -> std::any override;
 
-    std::any visit(NumberExpression* node) override;
+    auto visit(NumberExpression* node) -> std::any override;
 
-    std::any visit(ArrayExpression* node) override;
+    auto visit(ArrayExpression* node) -> std::any override;
 
-    std::any visit(StringExpression* node) override;
+    auto visit(StringExpression* node) -> std::any override;
 
-    std::any visit(CharacterExpression* node) override;
+    auto visit(CharacterExpression* node) -> std::any override;
 
-    std::any visit(BooleanExpression* node) override;
+    auto visit(BooleanExpression* node) -> std::any override;
 
-    std::any visit(NullExpression* node) override;
+    auto visit(NullExpression* node) -> std::any override;
 
-    std::shared_ptr<JotType> node_jot_type(std::any any_type);
+    auto node_jot_type(std::any any_type) -> Shared<JotType>;
 
-    bool is_same_type(const std::shared_ptr<JotType>& left, const std::shared_ptr<JotType>& right);
+    auto is_same_type(const Shared<JotType>& left, const Shared<JotType>& right) -> bool;
 
-    bool check_number_limits(const char* literal, NumberKind kind);
+    auto check_number_limits(const char* literal, NumberKind kind) -> bool;
 
-    auto resolve_generic_struct(Shared<JotType> type) -> std::shared_ptr<JotType>;
+    auto resolve_generic_struct(Shared<JotType> type) -> Shared<JotType>;
 
-    bool check_missing_return_statement(Shared<Statement> node);
+    auto check_missing_return_statement(Shared<Statement> node) -> bool;
 
-    void check_parameters_types(TokenSpan                                 location,
-                                std::vector<std::shared_ptr<Expression>>& arguments,
-                                std::vector<std::shared_ptr<JotType>>& parameters, bool has_varargs,
-                                std::shared_ptr<JotType> varargs_type,
-                                int                      implicit_parameters_count);
+    auto check_parameters_types(TokenSpan location, std::vector<Shared<Expression>>& arguments,
+                                std::vector<Shared<JotType>>& parameters, bool has_varargs,
+                                Shared<JotType> varargs_type, int implicit_parameters_count)
+        -> void;
 
-    void push_new_scope();
+    auto push_new_scope() -> void;
 
-    void pop_current_scope();
+    auto pop_current_scope() -> void;
 
   private:
-    std::shared_ptr<JotContext>         context;
+    Shared<JotContext>                  context;
     JotScopedMap<std::string, std::any> types_table;
 
     // Used to track the return types of functions and inner lambda expression
-    std::stack<std::shared_ptr<JotType>> return_types_stack;
+    std::stack<Shared<JotType>> return_types_stack;
 
     // Flag that tell us when we are inside lambda expression body
-    bool is_inside_lambda_body;
-    std::stack<std::vector<std::pair<std::string, std::shared_ptr<JotType>>>>
-        lambda_implicit_parameters;
+    bool                                                             is_inside_lambda_body;
+    std::stack<std::vector<std::pair<std::string, Shared<JotType>>>> lambda_implicit_parameters;
 };

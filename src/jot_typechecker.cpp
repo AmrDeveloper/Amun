@@ -1441,7 +1441,13 @@ auto JotTypeChecker::check_parameters_types(TokenSpan                           
     arguments_types.reserve(arguments.size());
 
     for (auto& argument : arguments) {
-        arguments_types.push_back(node_jot_type(argument->accept(this)));
+        auto argument_type = node_jot_type(argument->accept(this));
+        if (argument_type->type_kind == TypeKind::GENERIC_STRUCT) {
+            arguments_types.push_back(resolve_generic_struct(argument_type));
+        }
+        else {
+            arguments_types.push_back(argument_type);
+        }
     }
 
     auto coun = parameters_size > arguments_size ? arguments_size : parameters_size;
@@ -1584,6 +1590,35 @@ auto JotTypeChecker::resolve_generic_struct(Shared<JotType> type) -> std::shared
                 continue;
             }
 
+            if (type->type_kind == TypeKind::GENERIC_STRUCT) {
+                auto generic_type = std::static_pointer_cast<JotGenericStructType>(type);
+                auto struct_type = generic_type->struct_type;
+
+                // Resolve Generic parameters from parent structure
+                auto index = 0;
+                for (auto& paramter : generic_type->parameters) {
+                    if (paramter->type_kind == TypeKind::GENERIC_PARAMETER) {
+                        auto generic_field =
+                            std::static_pointer_cast<JotGenericParameterType>(paramter);
+                        auto position =
+                            index_of(structure->generic_parameters, generic_field->name);
+                        generic_type->parameters[index] = generic_struct->parameters[position];
+                    }
+                    index++;
+                }
+
+                if (types_table.is_defined(mangled_name)) {
+                    auto resolved_struct = types_table.lookup(mangled_name);
+                    types.push_back(std::any_cast<Shared<JotStructType>>(resolved_struct));
+                    continue;
+                }
+
+                auto resolved_struct = resolve_generic_struct(generic_type);
+                types_table.define(mangled_name, resolved_struct);
+                types.push_back(resolved_struct);
+                continue;
+            }
+
             types.push_back(type);
         }
 
@@ -1607,7 +1642,7 @@ auto JotTypeChecker::check_missing_return_statement(Shared<Statement> node) -> b
     const auto& body = std::dynamic_pointer_cast<BlockStatement>(node);
     const auto& statements = body->statements;
 
-    // This check called only for non void function so it must have return statement in empty body
+    // This check called only for non void function so it must have return in empty body
     if (statements.empty()) {
         return false;
     }
