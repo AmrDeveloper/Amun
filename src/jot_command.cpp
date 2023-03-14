@@ -1,12 +1,13 @@
 #include "../include/jot_command.hpp"
+
 #include <cstdio>
 
-void JotCommands::registerCommand(const char* literal, const CommandFunction& command)
+auto JotCommands::registerCommand(const char* literal, const CommandFunction& command) -> void
 {
     commands_map[literal] = command;
 }
 
-int JotCommands::executeCommand(int argc, char** argv)
+auto JotCommands::executeCommand(int argc, char** argv) -> int
 {
     if (argc < 2) {
         printf("Usage: %s <command> <options>\n", argv[0]);

@@ -1,3 +1,4 @@
+#include "../include/jot_basic.hpp"
 #include "../include/jot_command.hpp"
 #include "../include/jot_compiler.hpp"
 #include "../include/jot_context.hpp"
@@ -8,7 +9,7 @@
 #define unused [[maybe_unused]]
 #define JOT_VERSION "0.0.1"
 
-int execute_create_command(unused int argc, char** argv)
+auto execute_create_command(unused int argc, char** argv) -> int
 {
     if (argc < 3) {
         printf("Invalid number of arguments for create command expect %i but got %i\n", 3, argc);
@@ -39,7 +40,7 @@ int execute_create_command(unused int argc, char** argv)
     return EXIT_SUCCESS;
 }
 
-int execute_compile_command(unused int argc, char** argv)
+auto execute_compile_command(unused int argc, char** argv) -> int
 {
     if (argc < 3) {
         printf("Invalid number of arguments for `compile` command expect at last %i but got %i\n",
@@ -48,34 +49,55 @@ int execute_compile_command(unused int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    const char* source = argv[2];
-    auto        jot_context = std::make_shared<JotContext>();
+    const char* source_file = argv[2];
+    if (!is_file_exists(source_file)) {
+        printf("Path %s not exists\n", source_file);
+        return EXIT_FAILURE;
+    }
+
+    if (!is_ends_with(source_file, ".jot")) {
+        printf("Invalid source file extension, valid source file must end with `.jot`\n");
+        return EXIT_FAILURE;
+    }
+
+    auto jot_context = std::make_shared<JotContext>();
     parse_compiler_options(&jot_context->options, argc, argv);
 
     JotCompiler jot_compiler(jot_context);
-    return jot_compiler.compile_source_code(source);
+    return jot_compiler.compile_source_code(source_file);
 }
 
-int execute_check_command(unused int argc, char** argv)
+auto execute_check_command(unused int argc, char** argv) -> int
 {
     if (argc < 3) {
         printf("Invalid number of arguments for `check` command expect %i but got %i\n", 3, argc);
         printf("Usage : %s check <file>\n", argv[0]);
         return EXIT_FAILURE;
     }
-    const char* source = argv[2];
+
+    const char* source_file = argv[2];
+    if (!is_file_exists(source_file)) {
+        printf("Path %s not exists\n", source_file);
+        return EXIT_FAILURE;
+    }
+
+    if (!is_ends_with(source_file, ".jot")) {
+        printf("Invalid source file extension, valid source file must end with `.jot`\n");
+        return EXIT_FAILURE;
+    }
+
     auto        jot_context = std::make_shared<JotContext>();
     JotCompiler jot_compiler(jot_context);
-    return jot_compiler.check_source_code(source);
+    return jot_compiler.check_source_code(source_file);
 }
 
-int execute_version_command(unused int argc, unused char** argv)
+auto execute_version_command(unused int argc, unused char** argv) -> int
 {
     printf("Jot version is %s\n", JOT_VERSION);
     return EXIT_SUCCESS;
 }
 
-int execute_help_command(unused int argc, char** argv)
+auto execute_help_command(unused int argc, char** argv) -> int
 {
     printf("Usage: %s <command> <options>\n", argv[0]);
     printf("Commands:\n");
@@ -91,7 +113,7 @@ int execute_help_command(unused int argc, char** argv)
     return EXIT_SUCCESS;
 }
 
-int main(int argc, char** argv)
+auto main(int argc, char** argv) -> int
 {
     JotCommands jot_commands;
     jot_commands.registerCommand("create", execute_create_command);

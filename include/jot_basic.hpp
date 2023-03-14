@@ -61,6 +61,8 @@ auto str_to_int(const char* p) -> int64;
 // Convert string to float
 auto str_to_float(const char* p) -> float64;
 
+auto is_ends_with(const std::string& str, const std::string& part) -> bool;
+
 // Return true if element is in the vector
 template <typename T>
 auto is_contains(const std::vector<T>& vec, const T& element) -> bool

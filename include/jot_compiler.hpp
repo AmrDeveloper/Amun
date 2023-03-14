@@ -8,14 +8,14 @@
 
 class JotCompiler {
   public:
-    JotCompiler(std::shared_ptr<JotContext> jot_context) : jot_context(jot_context) {}
+    explicit JotCompiler(Shared<JotContext> jot_context) : jot_context(std::move(jot_context)) {}
 
-    int compile_source_code(const char* source_file);
+    auto compile_source_code(const char* source_file) -> int;
 
-    int check_source_code(const char* source_file);
+    auto check_source_code(const char* source_file) -> int;
 
-    std::shared_ptr<CompilationUnit> parse_source_code(const char* source_file);
+    auto parse_source_code(const char* source_file) -> Shared<CompilationUnit>;
 
   private:
-    std::shared_ptr<JotContext> jot_context;
+    Shared<JotContext> jot_context;
 };

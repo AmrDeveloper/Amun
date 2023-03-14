@@ -5,7 +5,7 @@
 #include "../include/jot_parser.hpp"
 #include "../include/jot_typechecker.hpp"
 
-int JotCompiler::compile_source_code(const char* source_file)
+auto JotCompiler::compile_source_code(const char* source_file) -> int
 {
     auto compilation_unit = parse_source_code(source_file);
 
@@ -42,7 +42,7 @@ int JotCompiler::compile_source_code(const char* source_file)
     return EXIT_SUCCESS;
 }
 
-int JotCompiler::check_source_code(const char* source_file)
+auto JotCompiler::check_source_code(const char* source_file) -> int
 {
     auto compilation_unit = parse_source_code(source_file);
 
@@ -68,7 +68,7 @@ int JotCompiler::check_source_code(const char* source_file)
     return EXIT_SUCCESS;
 }
 
-std::shared_ptr<CompilationUnit> JotCompiler::parse_source_code(const char* source_file)
+auto JotCompiler::parse_source_code(const char* source_file) -> std::shared_ptr<CompilationUnit>
 {
     if (not is_file_exists(source_file)) {
         jot::loge << "Path " << source_file << " not exists\n";
