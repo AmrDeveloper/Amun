@@ -11,8 +11,7 @@
 #include <string>
 #include <unordered_set>
 
-auto JotTypeChecker::check_compilation_unit(std::shared_ptr<CompilationUnit> compilation_unit)
-    -> void
+auto JotTypeChecker::check_compilation_unit(Shared<CompilationUnit> compilation_unit) -> void
 {
     auto statements = compilation_unit->get_tree_nodes();
     try {
@@ -147,8 +146,8 @@ auto JotTypeChecker::visit(FieldDeclaration* node) -> std::any
 
 auto JotTypeChecker::visit(FunctionPrototype* node) -> std::any
 {
-    auto                                  name = node->get_name();
-    std::vector<std::shared_ptr<JotType>> parameters;
+    auto                         name = node->get_name();
+    std::vector<Shared<JotType>> parameters;
     for (auto& parameter : node->get_parameters()) {
         parameters.push_back(parameter->get_type());
     }
@@ -1372,46 +1371,46 @@ auto JotTypeChecker::visit(BooleanExpression* node) -> std::any { return node->g
 
 auto JotTypeChecker::visit(NullExpression* node) -> std::any { return node->get_type_node(); }
 
-auto JotTypeChecker::node_jot_type(std::any any_type) -> std::shared_ptr<JotType>
+auto JotTypeChecker::node_jot_type(std::any any_type) -> Shared<JotType>
 {
-    if (any_type.type() == typeid(std::shared_ptr<JotFunctionType>)) {
-        return std::any_cast<std::shared_ptr<JotFunctionType>>(any_type);
+    if (any_type.type() == typeid(Shared<JotFunctionType>)) {
+        return std::any_cast<Shared<JotFunctionType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotPointerType>)) {
-        return std::any_cast<std::shared_ptr<JotPointerType>>(any_type);
+    if (any_type.type() == typeid(Shared<JotPointerType>)) {
+        return std::any_cast<Shared<JotPointerType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotNumberType>)) {
-        return std::any_cast<std::shared_ptr<JotNumberType>>(any_type);
+    if (any_type.type() == typeid(Shared<JotNumberType>)) {
+        return std::any_cast<Shared<JotNumberType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotArrayType>)) {
-        return std::any_cast<std::shared_ptr<JotArrayType>>(any_type);
+    if (any_type.type() == typeid(Shared<JotArrayType>)) {
+        return std::any_cast<Shared<JotArrayType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotStructType>)) {
-        return std::any_cast<std::shared_ptr<JotStructType>>(any_type);
+    if (any_type.type() == typeid(Shared<JotStructType>)) {
+        return std::any_cast<Shared<JotStructType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotEnumType>)) {
-        return std::any_cast<std::shared_ptr<JotEnumType>>(any_type);
+    if (any_type.type() == typeid(Shared<JotEnumType>)) {
+        return std::any_cast<Shared<JotEnumType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotEnumElementType>)) {
-        return std::any_cast<std::shared_ptr<JotEnumElementType>>(any_type);
+    if (any_type.type() == typeid(Shared<JotEnumElementType>)) {
+        return std::any_cast<Shared<JotEnumElementType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotNoneType>)) {
-        return std::any_cast<std::shared_ptr<JotNoneType>>(any_type);
+    if (any_type.type() == typeid(Shared<JotNoneType>)) {
+        return std::any_cast<Shared<JotNoneType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotVoidType>)) {
-        return std::any_cast<std::shared_ptr<JotVoidType>>(any_type);
+    if (any_type.type() == typeid(Shared<JotVoidType>)) {
+        return std::any_cast<Shared<JotVoidType>>(any_type);
     }
-    if (any_type.type() == typeid(std::shared_ptr<JotNullType>)) {
-        return std::any_cast<std::shared_ptr<JotNullType>>(any_type);
+    if (any_type.type() == typeid(Shared<JotNullType>)) {
+        return std::any_cast<Shared<JotNullType>>(any_type);
     }
 
-    return std::any_cast<std::shared_ptr<JotType>>(any_type);
+    return std::any_cast<Shared<JotType>>(any_type);
 }
 
-auto JotTypeChecker::check_parameters_types(TokenSpan                                 location,
-                                            std::vector<std::shared_ptr<Expression>>& arguments,
-                                            std::vector<std::shared_ptr<JotType>>&    parameters,
-                                            bool has_varargs, std::shared_ptr<JotType> varargs_type,
+auto JotTypeChecker::check_parameters_types(TokenSpan                        location,
+                                            std::vector<Shared<Expression>>& arguments,
+                                            std::vector<Shared<JotType>>&    parameters,
+                                            bool has_varargs, Shared<JotType> varargs_type,
                                             int implicit_parameters_count) -> void
 {
 
@@ -1437,7 +1436,7 @@ auto JotTypeChecker::check_parameters_types(TokenSpan                           
     }
 
     // Resolve Arguments types
-    std::vector<std::shared_ptr<JotType>> arguments_types;
+    std::vector<Shared<JotType>> arguments_types;
     arguments_types.reserve(arguments.size());
 
     for (auto& argument : arguments) {
@@ -1491,8 +1490,7 @@ auto JotTypeChecker::check_parameters_types(TokenSpan                           
     }
 }
 
-auto JotTypeChecker::is_same_type(const std::shared_ptr<JotType>& left,
-                                  const std::shared_ptr<JotType>& right) -> bool
+auto JotTypeChecker::is_same_type(const Shared<JotType>& left, const Shared<JotType>& right) -> bool
 {
     return left->type_kind == right->type_kind;
 }
@@ -1565,7 +1563,7 @@ auto JotTypeChecker::check_number_limits(const char* literal, NumberKind kind) -
     }
 }
 
-auto JotTypeChecker::resolve_generic_struct(Shared<JotType> type) -> std::shared_ptr<JotType>
+auto JotTypeChecker::resolve_generic_struct(Shared<JotType> type) -> Shared<JotType>
 {
     if (type->type_kind == TypeKind::GENERIC_STRUCT) {
         auto generic_struct = std::static_pointer_cast<JotGenericStructType>(type);
@@ -1580,7 +1578,7 @@ auto JotTypeChecker::resolve_generic_struct(Shared<JotType> type) -> std::shared
             fields_names.push_back(name);
         }
 
-        std::vector<std::shared_ptr<JotType>> types;
+        std::vector<Shared<JotType>> types;
         for (const auto& type : structure->fields_types) {
 
             if (type->type_kind == TypeKind::GENERIC_PARAMETER) {
@@ -1617,6 +1615,19 @@ auto JotTypeChecker::resolve_generic_struct(Shared<JotType> type) -> std::shared
                 types_table.define(mangled_name, resolved_struct);
                 types.push_back(resolved_struct);
                 continue;
+            }
+
+            if (type->type_kind == TypeKind::ARRAY) {
+                auto array_type = std::static_pointer_cast<JotArrayType>(type);
+                auto element_type = array_type->element_type;
+                if (element_type->type_kind == TypeKind::GENERIC_PARAMETER) {
+                    auto generic_type =
+                        std::static_pointer_cast<JotGenericParameterType>(element_type);
+                    auto position = index_of(structure->generic_parameters, generic_type->name);
+                    array_type->element_type = generic_struct->parameters[position];
+                    types.push_back(array_type);
+                    continue;
+                }
             }
 
             types.push_back(type);

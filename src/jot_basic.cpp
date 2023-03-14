@@ -19,3 +19,8 @@ auto str_to_int(const char* p) -> int64
 }
 
 auto str_to_float(const char* p) -> float64 { return std::atof(p); }
+
+auto is_ends_with(const std::string& str, const std::string& part) -> bool
+{
+    return str.find(part, str.size() - part.size()) != std::string::npos;
+}
