@@ -1630,6 +1630,19 @@ auto JotTypeChecker::resolve_generic_struct(Shared<JotType> type) -> Shared<JotT
                 }
             }
 
+            if (type->type_kind == TypeKind::POINTER) {
+                auto pointer_type = std::static_pointer_cast<JotPointerType>(type);
+                auto element_type = pointer_type->base_type;
+                if (element_type->type_kind == TypeKind::GENERIC_PARAMETER) {
+                    auto generic_type =
+                        std::static_pointer_cast<JotGenericParameterType>(element_type);
+                    auto position = index_of(structure->generic_parameters, generic_type->name);
+                    pointer_type->base_type = generic_struct->parameters[position];
+                    types.push_back(pointer_type);
+                    continue;
+                }
+            }
+
             types.push_back(type);
         }
 
