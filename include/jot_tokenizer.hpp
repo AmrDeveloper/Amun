@@ -12,32 +12,33 @@ class JotTokenizer {
           line_number(1), column_start(0), column_current(0)
     {
     }
-    std::vector<Token> scan_all_tokens();
 
-    Token scan_next_token();
+    auto scan_all_tokens() -> std::vector<Token>;
+
+    auto scan_next_token() -> Token;
 
     int source_file_id;
 
   private:
-    Token consume_symbol();
+    auto consume_symbol() -> Token;
 
-    Token consume_number();
+    auto consume_number() -> Token;
 
-    Token consume_hex_number();
+    auto consume_hex_number() -> Token;
 
-    Token consume_binary_number();
+    auto consume_binary_number() -> Token;
 
-    Token consume_string();
+    auto consume_string() -> Token;
 
-    Token consume_character();
+    auto consume_character() -> Token;
 
-    char consume_one_character();
+    auto consume_one_character() -> char;
 
-    Token build_token(TokenKind);
+    auto build_token(TokenKind) -> Token;
 
-    Token build_token(TokenKind, std::string);
+    auto build_token(TokenKind, std::string) -> Token;
 
-    TokenSpan build_token_span();
+    auto build_token_span() -> TokenSpan;
 
     void skip_whitespaces();
 
@@ -45,33 +46,33 @@ class JotTokenizer {
 
     void skip_multi_lines_comment();
 
-    bool match(char);
+    auto match(char) -> bool;
 
-    char advance();
+    auto advance() -> char;
 
-    char peek();
+    auto peek() -> char;
 
-    char peek_next();
+    auto peek_next() -> char;
 
-    static bool is_digit(char);
+    static auto is_digit(char) -> bool;
 
-    static bool is_hex_digit(char);
+    static auto is_hex_digit(char) -> bool;
 
-    static bool is_binary_digit(char);
+    static auto is_binary_digit(char) -> bool;
 
-    static bool is_alpha(char);
+    static auto is_alpha(char) -> bool;
 
-    static bool is_alpha_num(char);
+    static auto is_alpha_num(char) -> bool;
 
-    static bool is_underscore(char);
+    static auto is_underscore(char) -> bool;
 
-    static int8_t hex_to_int(char c);
+    static auto hex_to_int(char c) -> int8_t;
 
-    static int64_t hex_to_decimal(const std::string&);
+    static auto hex_to_decimal(const std::string&) -> int64_t;
 
-    static int64_t binary_to_decimal(const std::string&);
+    static auto binary_to_decimal(const std::string&) -> int64_t;
 
-    bool is_source_available();
+    auto is_source_available() -> bool;
 
     std::string source_code;
     size_t      source_code_length;

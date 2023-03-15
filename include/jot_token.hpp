@@ -248,88 +248,115 @@ struct Token {
     std::string literal;
 };
 
-static TokenKind resolve_keyword_kind(const char* keyword)
+static auto resolve_keyword_kind(const char* keyword) -> TokenKind
 {
     switch (strlen(keyword)) {
     case 2: {
-        if (str2Equals("if", keyword))
+        if (str2Equals("if", keyword)) {
             return TokenKind::IfKeyword;
+        }
         return TokenKind::Symbol;
     }
     case 3: {
-        if (str3Equals("fun", keyword))
+        if (str3Equals("fun", keyword)) {
             return TokenKind::FunKeyword;
-        if (str3Equals("var", keyword))
+        }
+        if (str3Equals("var", keyword)) {
             return TokenKind::VarKeyword;
-        if (str3Equals("for", keyword))
+        }
+        if (str3Equals("for", keyword)) {
             return TokenKind::ForKeyword;
+        }
         return TokenKind::Symbol;
     }
     case 4: {
-        if (str4Equals("load", keyword))
+        if (str4Equals("load", keyword)) {
             return TokenKind::LoadKeyword;
-        if (str4Equals("null", keyword))
+        }
+        if (str4Equals("null", keyword)) {
             return TokenKind::NullKeyword;
-        if (str4Equals("true", keyword))
+        }
+        if (str4Equals("true", keyword)) {
             return TokenKind::TrueKeyword;
-        if (str4Equals("cast", keyword))
+        }
+        if (str4Equals("cast", keyword)) {
             return TokenKind::CastKeyword;
-        if (str4Equals("else", keyword))
+        }
+        if (str4Equals("else", keyword)) {
             return TokenKind::ElseKeyword;
-        if (str4Equals("enum", keyword))
+        }
+        if (str4Equals("enum", keyword)) {
             return TokenKind::EnumKeyword;
+        }
         return TokenKind::Symbol;
     }
     case 5: {
-        if (str5Equals("while", keyword))
+        if (str5Equals("while", keyword)) {
             return TokenKind::WhileKeyword;
-        if (str5Equals("defer", keyword))
+        }
+        if (str5Equals("defer", keyword)) {
             return TokenKind::DeferKeyword;
-        if (str5Equals("false", keyword))
+        }
+        if (str5Equals("false", keyword)) {
             return TokenKind::FalseKeyword;
-        if (str5Equals("break", keyword))
+        }
+        if (str5Equals("break", keyword)) {
             return TokenKind::BreakKeyword;
-        if (str5Equals("infix", keyword))
+        }
+        if (str5Equals("infix", keyword)) {
             return TokenKind::InfixKeyword;
+        }
         return TokenKind::Symbol;
     }
     case 6: {
-        if (str6Equals("import", keyword))
+        if (str6Equals("import", keyword)) {
             return TokenKind::ImportKeyword;
-        if (str6Equals("struct", keyword))
+        }
+        if (str6Equals("struct", keyword)) {
             return TokenKind::StructKeyword;
-        if (str6Equals("return", keyword))
+        }
+        if (str6Equals("return", keyword)) {
             return TokenKind::ReturnKeyword;
-        if (str6Equals("extern", keyword))
+        }
+        if (str6Equals("extern", keyword)) {
             return TokenKind::ExternKeyword;
-        if (str6Equals("prefix", keyword))
+        }
+        if (str6Equals("prefix", keyword)) {
             return TokenKind::PrefixKeyword;
-        if (str6Equals("switch", keyword))
+        }
+        if (str6Equals("switch", keyword)) {
             return TokenKind::SwitchKeyword;
-        if (str6Equals("packed", keyword))
+        }
+        if (str6Equals("packed", keyword)) {
             return TokenKind::PackedKeyword;
+        }
         return TokenKind::Symbol;
     }
     case 7: {
-        if (str7Equals("postfix", keyword))
+        if (str7Equals("postfix", keyword)) {
             return TokenKind::PostfixKeyword;
-        if (str7Equals("varargs", keyword))
+        }
+        if (str7Equals("varargs", keyword)) {
             return TokenKind::VarargsKeyword;
+        }
         return TokenKind::Symbol;
     }
     case 8: {
-        if (str8Equals("continue", keyword))
+        if (str8Equals("continue", keyword)) {
             return TokenKind::ContinueKeyword;
+        }
         return TokenKind::Symbol;
     }
     case 9: {
-        if (str9Equals("type_size", keyword))
+        if (str9Equals("type_size", keyword)) {
             return TokenKind::TypeSizeKeyword;
+        }
         return TokenKind::Symbol;
     }
     case 10: {
-        if (str10Equals("value_size", keyword))
+        if (str10Equals("value_size", keyword)) {
             return TokenKind::ValueSizeKeyword;
+        }
         return TokenKind::Symbol;
     }
     default: {
@@ -338,19 +365,22 @@ static TokenKind resolve_keyword_kind(const char* keyword)
     }
 }
 
-inline const char* get_token_kind_literal(TokenKind kind) { return token_kind_literal[kind]; }
+inline auto get_token_kind_literal(TokenKind kind) -> const char*
+{
+    return token_kind_literal[kind];
+}
 
-inline bool is_assignments_operator_token(Token token)
+inline auto is_assignments_operator_token(Token token) -> bool
 {
     return assignments_operators.find(token.kind) != assignments_operators.end();
 }
 
-inline bool is_unary_operator_token(Token token)
+inline auto is_unary_operator_token(Token token) -> bool
 {
     return unary_operators.find(token.kind) != unary_operators.end();
 }
 
-inline bool is_float_number_token(Token token)
+inline auto is_float_number_token(Token token) -> bool
 {
     const auto token_kind = token.kind;
     return token_kind == TokenKind::Float or token_kind == TokenKind::Float32Type or

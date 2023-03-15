@@ -4,7 +4,7 @@
 #include <iostream>
 #include <sstream>
 
-std::vector<Token> JotTokenizer::scan_all_tokens()
+auto JotTokenizer::scan_all_tokens() -> std::vector<Token>
 {
     std::vector<Token> tokens;
     while (is_source_available()) {
@@ -14,7 +14,7 @@ std::vector<Token> JotTokenizer::scan_all_tokens()
     return tokens;
 }
 
-Token JotTokenizer::scan_next_token()
+auto JotTokenizer::scan_next_token() -> Token
 {
     skip_whitespaces();
 
@@ -53,44 +53,49 @@ Token JotTokenizer::scan_next_token()
     case '%': return build_token(match('=') ? TokenKind::PercentEqual : TokenKind::Percent);
 
     case '+': {
-        if (match('='))
+        if (match('=')) {
             return build_token(TokenKind::PlusEqual);
+        }
 
-        if (match('+'))
+        if (match('+')) {
             return build_token(TokenKind::PlusPlus);
+        }
 
         return build_token(TokenKind::Plus);
     }
 
     case '-': {
-        if (match('='))
+        if (match('=')) {
             return build_token(TokenKind::MinusEqual);
+        }
 
-        if (match('-'))
+        if (match('-')) {
             return build_token(TokenKind::MinusMinus);
+        }
 
-        if (match('>'))
+        if (match('>')) {
             return build_token(TokenKind::RightArrow);
+        }
 
         return build_token(TokenKind::Minus);
     }
 
     case '>': {
-        if (match('='))
+        if (match('=')) {
             return build_token(TokenKind::GreaterEqual);
-
-        if (match('>'))
-            return build_token(TokenKind::RightShift);
+        }
 
         return build_token(TokenKind::Greater);
     }
 
     case '<': {
-        if (match('='))
+        if (match('=')) {
             return build_token(TokenKind::SmallerEqual);
+        }
 
-        if (match('<'))
+        if (match('<')) {
             return build_token(TokenKind::LeftShift);
+        }
 
         return build_token(TokenKind::Smaller);
     }
@@ -154,11 +159,13 @@ Token JotTokenizer::scan_next_token()
     case '\'': return consume_character();
 
     case '0': {
-        if (match('x'))
+        if (match('x')) {
             return consume_hex_number();
+        }
 
-        if (match('o'))
+        if (match('o')) {
             return consume_binary_number();
+        }
 
         return consume_number();
     }
@@ -178,7 +185,7 @@ Token JotTokenizer::scan_next_token()
     }
 }
 
-Token JotTokenizer::consume_symbol()
+auto JotTokenizer::consume_symbol() -> Token
 {
     while (is_alpha_num(peek()) or peek() == '_') {
         advance();
@@ -189,7 +196,7 @@ Token JotTokenizer::consume_symbol()
     return build_token(kind, literal);
 }
 
-Token JotTokenizer::consume_number()
+auto JotTokenizer::consume_number() -> Token
 {
     auto kind = TokenKind::Integer;
     while (is_digit(peek()) or is_underscore(peek())) {
@@ -208,38 +215,51 @@ Token JotTokenizer::consume_number()
 
     // Signed Integers types
     if (match('i')) {
-        if (match('1'))
+        if (match('1')) {
             kind = match('6') ? Integer16Type : Integer1Type;
-        else if (match('8'))
+        }
+        else if (match('8')) {
             kind = Integer8Type;
-        else if (match('3') && match('2'))
+        }
+        else if (match('3') && match('2')) {
             kind = Integer32Type;
-        else if (match('6') && match('4'))
+        }
+        else if (match('6') && match('4')) {
             kind = Integer64Type;
-        else
+        }
+        else {
             return build_token(TokenKind::Invalid, "Invalid integer type");
+        }
     }
     // Un Signed Integers types
     if (match('u')) {
-        if (match('1') && match('6'))
+        if (match('1') && match('6')) {
             kind = UInteger16Type;
-        else if (match('8'))
+        }
+        else if (match('8')) {
             kind = UInteger8Type;
-        else if (match('3') && match('2'))
+        }
+        else if (match('3') && match('2')) {
             kind = UInteger32Type;
-        else if (match('6') && match('4'))
+        }
+        else if (match('6') && match('4')) {
             kind = UInteger64Type;
-        else
+        }
+        else {
             return build_token(TokenKind::Invalid, "Invalid integer type");
+        }
     }
     // Floating Pointers types
     else if (match('f')) {
-        if (match('3') && match('2'))
+        if (match('3') && match('2')) {
             kind = Float32Type;
-        else if (match('6') && match('4'))
+        }
+        else if (match('6') && match('4')) {
             kind = Float64Type;
-        else
+        }
+        else {
             return build_token(TokenKind::Invalid, "Invalid Float type");
+        }
     }
 
     size_t len = number_end_position - start_position + 1;
@@ -248,7 +268,7 @@ Token JotTokenizer::consume_number()
     return build_token(kind, literal);
 }
 
-Token JotTokenizer::consume_hex_number()
+auto JotTokenizer::consume_hex_number() -> Token
 {
     while (is_hex_digit(peek()) or is_underscore(peek())) {
         advance();
@@ -266,7 +286,7 @@ Token JotTokenizer::consume_hex_number()
     return build_token(TokenKind::Integer, std::to_string(decimal_value));
 }
 
-Token JotTokenizer::consume_binary_number()
+auto JotTokenizer::consume_binary_number() -> Token
 {
     while (is_binary_digit(peek()) or is_underscore(peek())) {
         advance();
@@ -284,7 +304,7 @@ Token JotTokenizer::consume_binary_number()
     return build_token(TokenKind::Integer, std::to_string(decimal_value));
 }
 
-Token JotTokenizer::consume_string()
+auto JotTokenizer::consume_string() -> Token
 {
     std::stringstream stream;
     while (is_source_available() && peek() != '"') {
@@ -299,7 +319,7 @@ Token JotTokenizer::consume_string()
     return build_token(TokenKind::String, stream.str());
 }
 
-Token JotTokenizer::consume_character()
+auto JotTokenizer::consume_character() -> Token
 {
     char c = consume_one_character();
 
@@ -312,7 +332,7 @@ Token JotTokenizer::consume_character()
     return build_token(TokenKind::Character, std::string(1, c));
 }
 
-char JotTokenizer::consume_one_character()
+auto JotTokenizer::consume_one_character() -> char
 {
     char c = advance();
     if (c == '\\') {
@@ -377,8 +397,9 @@ char JotTokenizer::consume_one_character()
             advance();
             char first_digit = advance();
             char second_digit = advance();
-            if (is_digit(first_digit) && is_digit(second_digit))
+            if (is_digit(first_digit) && is_digit(second_digit)) {
                 c = (hex_to_int(first_digit) << 4) + hex_to_int(second_digit);
+            }
             else {
                 jot::loge << "escaped hex 2 character must be integers\n";
                 return -1;
@@ -394,19 +415,19 @@ char JotTokenizer::consume_one_character()
     return c;
 }
 
-Token JotTokenizer::build_token(TokenKind kind) { return build_token(kind, ""); }
+auto JotTokenizer::build_token(TokenKind kind) -> Token { return build_token(kind, ""); }
 
-Token JotTokenizer::build_token(TokenKind kind, std::string literal)
+auto JotTokenizer::build_token(TokenKind kind, std::string literal) -> Token
 {
     return {kind, build_token_span(), literal};
 }
 
-TokenSpan JotTokenizer::build_token_span()
+auto JotTokenizer::build_token_span() -> TokenSpan
 {
     return {source_file_id, line_number, column_start, column_current};
 }
 
-void JotTokenizer::skip_whitespaces()
+auto JotTokenizer::skip_whitespaces() -> void
 {
     while (is_source_available()) {
         char c = peek();
@@ -420,14 +441,18 @@ void JotTokenizer::skip_whitespaces()
             column_current = 0;
             break;
         case '/': {
-            if (peek_next() == '/' || peek_next() == '*')
+            if (peek_next() == '/' || peek_next() == '*') {
                 advance();
-            else
+            }
+            else {
                 return;
-            if (match('/'))
+            }
+            if (match('/')) {
                 skip_single_line_comment();
-            else if (match('*'))
+            }
+            else if (match('*')) {
                 skip_multi_lines_comment();
+            }
             break;
         }
         default: return;
@@ -435,16 +460,16 @@ void JotTokenizer::skip_whitespaces()
     }
 }
 
-void JotTokenizer::skip_single_line_comment()
+auto JotTokenizer::skip_single_line_comment() -> void
 {
     while (is_source_available() && peek() != '\n') {
         advance();
     }
 }
 
-void JotTokenizer::skip_multi_lines_comment()
+auto JotTokenizer::skip_multi_lines_comment() -> void
 {
-    while (is_source_available() && !(peek() == '*' && peek_next() == '/')) {
+    while (is_source_available() && (peek() != '*' || peek_next() != '/')) {
         advance();
         if (peek() == '\n') {
             line_number++;
@@ -455,7 +480,7 @@ void JotTokenizer::skip_multi_lines_comment()
     advance();
 }
 
-bool JotTokenizer::match(char expected)
+auto JotTokenizer::match(char expected) -> bool
 {
     if (!is_source_available() || expected != peek()) {
         return false;
@@ -465,7 +490,7 @@ bool JotTokenizer::match(char expected)
     return true;
 }
 
-char JotTokenizer::advance()
+auto JotTokenizer::advance() -> char
 {
     if (is_source_available()) {
         current_position++;
@@ -475,9 +500,9 @@ char JotTokenizer::advance()
     return '\0';
 }
 
-inline char JotTokenizer::peek() { return source_code[current_position]; }
+inline auto JotTokenizer::peek() -> char { return source_code[current_position]; }
 
-char JotTokenizer::peek_next()
+auto JotTokenizer::peek_next() -> char
 {
     if (current_position + 1 < source_code_length) {
         return source_code[current_position + 1];
@@ -485,32 +510,33 @@ char JotTokenizer::peek_next()
     return '\0';
 }
 
-inline bool JotTokenizer::is_digit(char c) { return '9' >= c && c >= '0'; }
+inline auto JotTokenizer::is_digit(char c) -> bool { return '9' >= c && c >= '0'; }
 
-inline bool JotTokenizer::is_hex_digit(char c)
+inline auto JotTokenizer::is_hex_digit(char c) -> bool
 {
     return is_digit(c) || ('F' >= c && c >= 'A') || ('f' >= c && c >= 'a');
 }
 
-inline bool JotTokenizer::is_binary_digit(char c) { return '1' == c || '0' == c; }
+inline auto JotTokenizer::is_binary_digit(char c) -> bool { return '1' == c || '0' == c; }
 
-inline bool JotTokenizer::is_alpha(char c)
+inline auto JotTokenizer::is_alpha(char c) -> bool
 {
-    if ('z' >= c && c >= 'a')
+    if ('z' >= c && c >= 'a') {
         return true;
+    }
     return 'Z' >= c && c >= 'A';
 }
 
-inline bool JotTokenizer::is_alpha_num(char c) { return is_alpha(c) || is_digit(c); }
+inline auto JotTokenizer::is_alpha_num(char c) -> bool { return is_alpha(c) || is_digit(c); }
 
-inline bool JotTokenizer::is_underscore(char c) { return c == '_'; }
+inline auto JotTokenizer::is_underscore(char c) -> bool { return c == '_'; }
 
-int8_t JotTokenizer::hex_to_int(char c)
+auto JotTokenizer::hex_to_int(char c) -> int8_t
 {
     return c <= '9' ? c - '0' : c <= 'F' ? c - 'A' : c - 'a';
 }
 
-int64_t JotTokenizer::hex_to_decimal(const std::string& hex)
+auto JotTokenizer::hex_to_decimal(const std::string& hex) -> int64_t
 {
     try {
         return std::stol(hex, nullptr, 16);
@@ -520,7 +546,7 @@ int64_t JotTokenizer::hex_to_decimal(const std::string& hex)
     }
 }
 
-int64_t JotTokenizer::binary_to_decimal(const std::string& binary)
+auto JotTokenizer::binary_to_decimal(const std::string& binary) -> int64_t
 {
     try {
         return std::stol(binary, nullptr, 2);
@@ -530,4 +556,4 @@ int64_t JotTokenizer::binary_to_decimal(const std::string& binary)
     }
 }
 
-bool JotTokenizer::is_source_available() { return current_position < source_code_length; }
+auto JotTokenizer::is_source_available() -> bool { return current_position < source_code_length; }

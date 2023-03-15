@@ -13,7 +13,7 @@ struct DeferCall {
 
 struct DeferFunctionCall : public DeferCall {
     DeferFunctionCall(llvm::Function* function, std::vector<llvm::Value*> arguments)
-        : function(std::move(function)), arguments(std::move(arguments))
+        : function(function), arguments(std::move(arguments))
     {
         defer_kind = DeferCallKind::DEFER_FUNCTION_CALL;
     }
@@ -24,8 +24,7 @@ struct DeferFunctionCall : public DeferCall {
 struct DeferFunctionPtrCall : public DeferCall {
     DeferFunctionPtrCall(llvm::FunctionType* function_type, llvm::Value* callee,
                          std::vector<llvm::Value*> arguments)
-        : function_type(std::move(function_type)), callee(std::move(callee)),
-          arguments(std::move(arguments))
+        : function_type(function_type), callee(callee), arguments(std::move(arguments))
     {
         defer_kind = DeferCallKind::DEFER_FUNCTION_PTR_CALL;
     }
