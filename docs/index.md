@@ -8,8 +8,14 @@ is to be fast at compiling and runtime but also at writing new programs.
 ```
 import "cstdio"
 
+struct Container <T> {
+   value T;
+}
+
 fun main() int64 {
-    printf("Hello, World!\n");
+    var scon = Container<*char> { "Hello World" };
+    var icon = Container<int64> { 2023 };
+    printf("%s on %d", scon.value, icon.value);
     return 0;
 }
 ```
@@ -41,6 +47,7 @@ fun main() int64 {
 * Defer Statement
 * Default initalization value for global and local variables
 * Resolving Constants Index, If Expressions at Compile time
+- Generic Programming
 
 ## Inspiration
 The design of Jot is inspired by a number of languages such as `C`, `C++`, `Go`, `Rust`, `Jai`,

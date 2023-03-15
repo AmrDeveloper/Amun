@@ -5,12 +5,17 @@ A Statically typed, compiled general purpose low level programming language buil
 ```
 import "cstdio"
 
+struct Container <T> {
+   value T;
+}
+
 fun main() int64 {
-    printf("Hello, World!\n");
+    var scon = Container<*char> { "Hello World" };
+    var icon = Container<int64> { 2023 };
+    printf("%s on %d", scon.value, icon.value);
     return 0;
 }
 ```
-
 ### Features
 - Static Types
 - Type inference
@@ -40,6 +45,7 @@ fun main() int64 {
 - Defer Statement
 - Default initalization value for global and local variables
 - Resolving Constants Index, If Expressions at Compile time
+- Generic Programming
 
 ### Documentations:
   - [Build](https://amrdeveloper.github.io/Jot/build/)
