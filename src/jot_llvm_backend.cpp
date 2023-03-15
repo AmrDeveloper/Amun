@@ -2131,9 +2131,8 @@ auto JotLLVMBackend::access_struct_member_pointer(DotExpression* expression) -> 
     // Access struct member allocaed on the stack or derefernecs from pointer
     // struct.member or (*struct).member
     if (callee_llvm_type->isStructTy()) {
-
         // Access struct member coming from pattern matching if or switch expression
-        if (auto phi_node = llvm::dyn_cast<llvm::PHINode>(callee_value)) {
+        if (auto* phi_node = llvm::dyn_cast<llvm::PHINode>(callee_value)) {
             // Struct type used it to access member from it
             auto struct_type = callee_value->getType();
             assert(struct_type->isStructTy());
@@ -2142,6 +2141,19 @@ auto JotLLVMBackend::access_struct_member_pointer(DotExpression* expression) -> 
             Builder.CreateStore(callee_value, alloca);
             // Access stuct field from alloca inst
             return Builder.CreateGEP(struct_type, alloca, {zero_int32_value, index});
+        }
+
+        // Access struct member in general
+        if (auto* alloca = llvm::dyn_cast<llvm::AllocaInst>(callee_value)) {
+            return Builder.CreateGEP(callee_llvm_type, alloca, {zero_int32_value, index});
+        }
+
+        // Access struct member from other struct member for example elemnet.parent.value
+        if (auto* load = llvm::dyn_cast<llvm::LoadInst>(callee_value)) {
+            auto* operand = load->getPointerOperand();
+            if (auto* alloca = llvm::dyn_cast<llvm::GetElementPtrInst>(operand)) {
+                return Builder.CreateGEP(callee_llvm_type, operand, {zero_int32_value, index});
+            }
         }
 
         // Return a pointer to struct member
@@ -2172,7 +2184,6 @@ auto JotLLVMBackend::access_struct_member_pointer(DotExpression* expression) -> 
 
     internal_compiler_error("Invalid callee type in access_struct_member_pointer");
 }
-
 auto JotLLVMBackend::access_array_element(std::shared_ptr<Expression> node_value,
                                           llvm::Value*                index) -> llvm::Value*
 {

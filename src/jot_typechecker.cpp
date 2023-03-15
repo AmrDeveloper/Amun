@@ -1173,6 +1173,25 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
         throw "Stop";
     }
 
+    if (callee_type_kind == TypeKind::GENERIC_STRUCT) {
+        auto generic_type = std::static_pointer_cast<JotGenericStructType>(callee_type);
+        auto resolved_type = resolve_generic_struct(generic_type);
+        auto struct_type = std::static_pointer_cast<JotStructType>(resolved_type);
+        auto fields_names = struct_type->fields_names;
+        auto field_name = node->get_field_name().literal;
+        if (is_contains(fields_names, field_name)) {
+            int  member_index = index_of(fields_names, field_name);
+            auto field_type = struct_type->fields_types[member_index];
+            node->set_type_node(field_type);
+            node->field_index = member_index;
+            return field_type;
+        }
+        context->diagnostics.add_diagnostic_error(node->get_position().position,
+                                                  "Can't find a field with name " + field_name +
+                                                      " in struct " + struct_type->name);
+        throw "Stop";
+    }
+
     context->diagnostics.add_diagnostic_error(
         node->get_position().position, "Dot expression expect struct or enum type as lvalue");
     throw "Stop";
@@ -1439,6 +1458,7 @@ auto JotTypeChecker::check_parameters_types(TokenSpan                        loc
     std::vector<Shared<JotType>> arguments_types;
     arguments_types.reserve(arguments.size());
 
+    // Resolve Arguments
     for (auto& argument : arguments) {
         auto argument_type = node_jot_type(argument->accept(this));
         if (argument_type->type_kind == TypeKind::GENERIC_STRUCT) {
@@ -1449,10 +1469,17 @@ auto JotTypeChecker::check_parameters_types(TokenSpan                        loc
         }
     }
 
-    auto coun = parameters_size > arguments_size ? arguments_size : parameters_size;
+    // Resolve Generic parameters
+    for (size_t i = 0; i < parameters_size; i++) {
+        if (parameters[i]->type_kind == TypeKind::GENERIC_STRUCT) {
+            parameters[i] = resolve_generic_struct(parameters[i]);
+        }
+    }
+
+    auto count = parameters_size > arguments_size ? arguments_size : parameters_size;
 
     // Check non varargs parameters vs arguments
-    for (size_t i = 0; i < coun; i++) {
+    for (size_t i = 0; i < count; i++) {
         size_t p = i + implicit_parameters_count;
 
         if (!is_jot_types_equals(parameters[p], arguments_types[i])) {
