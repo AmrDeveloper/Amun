@@ -1,0 +1,16 @@
+extern fun printf(format *char, varargs Any) int64;
+
+struct Container <T> {
+   value T;
+}
+
+struct ParentContainer <T> {
+    value Container<T>;
+}
+
+fun main() int64 {
+   var icon = Container<int64> { 20 };
+   var parent  = ParentContainer<int64> { icon };
+   printf("%d\n", parent.value.value);
+   return 0;
+}
