@@ -1,5 +1,6 @@
 #include "../include/jot_llvm_backend.hpp"
 #include "../include/jot_ast_visitor.hpp"
+#include "../include/jot_llvm_intrinsic.hpp"
 #include "../include/jot_logger.hpp"
 #include "../include/jot_name_mangle.hpp"
 #include "../include/jot_type.hpp"
@@ -201,6 +202,36 @@ auto JotLLVMBackend::visit(FunctionPrototype* node) -> std::any
         }
         argument.setName(parameters[index++]->get_name().literal);
     }
+
+    return function;
+}
+
+auto JotLLVMBackend::visit(IntrinsicPrototype* node) -> std::any
+{
+    auto prototype = std::make_shared<FunctionPrototype>(
+        node->name, node->parameters, node->return_type, true, node->varargs, node->varargs_type);
+
+    auto name = node->name.literal;
+    functions_table[name] = prototype;
+
+    auto prototype_parameters = prototype->get_parameters();
+
+    std::vector<llvm::Type*> parameters_types;
+    parameters_types.reserve(prototype_parameters.size());
+    for (const auto& parameters : prototype_parameters) {
+        parameters_types.push_back(llvm_type_from_jot_type(parameters->get_type()));
+    }
+
+    auto native_name = node->native_name;
+
+    if (!llvm_intrinsics_map.contains(native_name)) {
+        internal_compiler_error("Trying to call unkown intrinsic function");
+    }
+
+    auto intrinsic_id = llvm_intrinsics_map[native_name];
+
+    auto* function =
+        llvm::Intrinsic::getDeclaration(llvm_module.get(), intrinsic_id, parameters_types);
 
     return function;
 }

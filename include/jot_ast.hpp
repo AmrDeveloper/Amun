@@ -17,6 +17,7 @@ enum class AstNodeType {
     Block,
     Field,
     Prototype,
+    Intrinsic,
     Function,
     Struct,
     Enum,
@@ -179,6 +180,29 @@ class FunctionPrototype : public Statement {
 
     bool                     varargs;
     std::shared_ptr<JotType> varargs_type;
+};
+
+class IntrinsicPrototype : public Statement {
+  public:
+    IntrinsicPrototype(Token name, std::string native_name,
+                       std::vector<std::shared_ptr<Parameter>> parameters,
+                       std::shared_ptr<JotType> return_type, bool varargs,
+                       std::shared_ptr<JotType> varargs_type)
+        : name(name), native_name(native_name), parameters(parameters), return_type(return_type),
+          varargs(varargs), varargs_type(varargs_type)
+    {
+    }
+
+    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::Intrinsic; }
+
+    Token                                   name;
+    std::string                             native_name;
+    std::vector<std::shared_ptr<Parameter>> parameters;
+    std::shared_ptr<JotType>                return_type;
+    bool                                    varargs;
+    std::shared_ptr<JotType>                varargs_type;
 };
 
 class FunctionDeclaration : public Statement {

@@ -6,6 +6,7 @@
 class BlockStatement;
 class FieldDeclaration;
 class FunctionPrototype;
+class IntrinsicPrototype;
 class FunctionDeclaration;
 class StructDeclaration;
 class EnumDeclaration;
@@ -28,6 +29,8 @@ class StatementVisitor {
     virtual std::any visit(FieldDeclaration* node) = 0;
 
     virtual std::any visit(FunctionPrototype* node) = 0;
+
+    virtual std::any visit(IntrinsicPrototype* node) = 0;
 
     virtual std::any visit(FunctionDeclaration* node) = 0;
 

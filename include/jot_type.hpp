@@ -80,10 +80,10 @@ struct JotArrayType : public JotType {
 struct JotFunctionType : public JotType {
     JotFunctionType(Token name, std::vector<Shared<JotType>> parameters,
                     Shared<JotType> return_type, bool varargs = false,
-                    Shared<JotType> varargs_type = nullptr)
+                    Shared<JotType> varargs_type = nullptr, bool is_intrinsic = false)
         : name(std::move(name)), parameters(std::move(parameters)),
           return_type(std::move(return_type)), has_varargs(varargs),
-          varargs_type(std::move(varargs_type))
+          varargs_type(std::move(varargs_type)), is_intrinsic(is_intrinsic)
     {
         type_kind = TypeKind::FUNCTION;
     }
@@ -94,6 +94,7 @@ struct JotFunctionType : public JotType {
     int                          implicit_parameters_count = 0;
     bool                         has_varargs;
     Shared<JotType>              varargs_type;
+    bool                         is_intrinsic;
 };
 
 struct JotStructType : public JotType {

@@ -173,6 +173,9 @@ auto JotParser::parse_declaration_statement() -> Shared<Statement>
     case TokenKind::ExternKeyword: {
         return parse_function_prototype(NORMAL_FUNCTION, true);
     }
+    case TokenKind::IntrinsicKeyword: {
+        return parse_intrinsic_prototype();
+    }
     case TokenKind::FunKeyword: {
         return parse_function_declaration(NORMAL_FUNCTION);
     }
@@ -255,6 +258,87 @@ auto JotParser::parse_field_declaration(bool is_global) -> Shared<FieldDeclarati
     auto value = parse_expression();
     assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after field declaration");
     return std::make_shared<FieldDeclaration>(name, jot_none_ty, value, is_global);
+}
+
+auto JotParser::parse_intrinsic_prototype() -> Shared<IntrinsicPrototype>
+{
+    auto intrinsic_keyword = consume_kind(TokenKind::IntrinsicKeyword, "Expect intrinsic keyword");
+
+    std::string intrinsic_name;
+    if (is_current_kind(TokenKind::OpenParen)) {
+        advanced_token();
+        auto intrinsic_token = consume_kind(TokenKind::String, "Expect intrinsic native name.");
+        intrinsic_name = intrinsic_token.literal;
+        if (!is_valid_intrinsic_name(intrinsic_name)) {
+            context->diagnostics.add_diagnostic_error(
+                intrinsic_token.position, "Intrinsic name can't have space or be empty");
+            throw "Stop";
+        }
+        assert_kind(TokenKind::CloseParen, "Expect ) after native intrinsic name.");
+    }
+
+    assert_kind(TokenKind::FunKeyword, "Expect function keyword.");
+    Token name = consume_kind(TokenKind::Symbol, "Expect identifier as function name.");
+    if (intrinsic_name.empty()) {
+        intrinsic_name = name.literal;
+    }
+
+    bool                           has_varargs = false;
+    Shared<JotType>                varargs_type = nullptr;
+    std::vector<Shared<Parameter>> parameters;
+    if (is_current_kind(TokenKind::OpenParen)) {
+        advanced_token();
+        while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
+            if (has_varargs) {
+                context->diagnostics.add_diagnostic_error(
+                    previous_token->position, "Varargs must be the last parameter in the function");
+                throw "Stop";
+            }
+
+            if (is_current_kind(TokenKind::VarargsKeyword)) {
+                advanced_token();
+                if (is_current_kind(TokenKind::Symbol) && current_token->literal == "Any") {
+                    advanced_token();
+                }
+                else {
+                    varargs_type = parse_type();
+                }
+                has_varargs = true;
+                continue;
+            }
+
+            parameters.push_back(parse_parameter());
+            if (is_current_kind(TokenKind::Comma)) {
+                advanced_token();
+            }
+        }
+        assert_kind(TokenKind::CloseParen, "Expect ) after function parameters.");
+    }
+
+    // Register current function declaration kind
+    context->functions[name.literal] = FunctionDeclarationKind::NORMAL_FUNCTION;
+
+    // If function prototype has no explicit return type,
+    // make return type to be void
+    Shared<JotType> return_type;
+    if (is_current_kind(TokenKind::Semicolon) || is_current_kind(TokenKind::OpenBrace)) {
+        return_type = jot_void_ty;
+    }
+    else {
+        return_type = parse_type();
+    }
+
+    // Function can't return fixed size array, you can use pointer format to return allocated array
+    if (return_type->type_kind == TypeKind::ARRAY) {
+        context->diagnostics.add_diagnostic_error(
+            name.position, "Function cannot return array type " + jot_type_literal(return_type));
+        throw "Stop";
+    }
+
+    assert_kind(TokenKind::Semicolon, "Expect ; after external function declaration");
+
+    return std::make_shared<IntrinsicPrototype>(name, intrinsic_name, parameters, return_type,
+                                                has_varargs, varargs_type);
 }
 
 auto JotParser::parse_function_prototype(FunctionDeclarationKind kind, bool is_external)
@@ -1590,6 +1674,19 @@ auto JotParser::is_function_declaration_kind(std::string& fun_name, FunctionDecl
         return context->functions[fun_name] == kind;
     }
     return false;
+}
+
+auto JotParser::is_valid_intrinsic_name(std::string& name) -> bool
+{
+    if (name.empty()) {
+        return false;
+    }
+
+    if (name.find(' ') != std::string::npos) {
+        return false;
+    }
+
+    return true;
 }
 
 auto JotParser::advanced_token() -> void

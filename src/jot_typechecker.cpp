@@ -161,6 +161,29 @@ auto JotTypeChecker::visit(FunctionPrototype* node) -> std::any
                                                       " is defined twice in the same scope");
         throw "Stop";
     }
+
+    return function_type;
+}
+
+auto JotTypeChecker::visit(IntrinsicPrototype* node) -> std::any
+{
+    auto name = node->name;
+
+    std::vector<Shared<JotType>> parameters;
+    parameters.reserve(node->parameters.size());
+    for (auto& parameter : node->parameters) {
+        parameters.push_back(parameter->get_type());
+    }
+
+    auto return_type = node->return_type;
+    auto function_type = std::make_shared<JotFunctionType>(name, parameters, return_type,
+                                                           node->varargs, node->varargs_type, true);
+    bool is_first_defined = types_table.define(name.literal, function_type);
+    if (not is_first_defined) {
+        context->diagnostics.add_diagnostic_error(
+            name.position, "function " + name.literal + " is defined twice in the same scope");
+        throw "Stop";
+    }
     return function_type;
 }
 
@@ -887,6 +910,14 @@ auto JotTypeChecker::visit(PrefixUnaryExpression* node) -> std::any
 
     if (unary_operator == TokenKind::And) {
         auto pointer_type = std::make_shared<JotPointerType>(operand_type);
+        if (is_function_pointer_type(pointer_type)) {
+            auto function_type = std::static_pointer_cast<JotFunctionType>(pointer_type->base_type);
+            if (function_type->is_intrinsic) {
+                context->diagnostics.add_diagnostic_error(
+                    function_type->name.position, "Can't take address of an intrinsic function");
+                throw "Stop";
+            }
+        }
         node->set_type_node(pointer_type);
         return pointer_type;
     }

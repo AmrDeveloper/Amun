@@ -17,6 +17,7 @@ enum TokenKind {
     FunKeyword,
     ReturnKeyword,
     ExternKeyword,
+    IntrinsicKeyword,
     IfKeyword,
     ElseKeyword,
     ForKeyword,
@@ -122,6 +123,7 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::EnumKeyword, "Enum"},
     {TokenKind::StructKeyword, "Struct"},
     {TokenKind::ReturnKeyword, "Return"},
+    {TokenKind::IntrinsicKeyword, "intrinsic"},
     {TokenKind::ExternKeyword, "Extern"},
     {TokenKind::IfKeyword, "If"},
     {TokenKind::ElseKeyword, "Else"},
@@ -350,6 +352,9 @@ static auto resolve_keyword_kind(const char* keyword) -> TokenKind
     case 9: {
         if (str9Equals("type_size", keyword)) {
             return TokenKind::TypeSizeKeyword;
+        }
+        if (str9Equals("intrinsic", keyword)) {
+            return TokenKind::IntrinsicKeyword;
         }
         return TokenKind::Symbol;
     }

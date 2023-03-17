@@ -47,6 +47,8 @@ class JotParser {
 
     auto parse_field_declaration(bool is_global) -> Shared<FieldDeclaration>;
 
+    auto parse_intrinsic_prototype() -> Shared<IntrinsicPrototype>;
+
     auto parse_function_prototype(FunctionDeclarationKind kind, bool is_external)
         -> Shared<FunctionPrototype>;
 
@@ -159,6 +161,8 @@ class JotParser {
     auto get_number_kind(TokenKind token) -> NumberKind;
 
     auto is_function_declaration_kind(std::string& fun_name, FunctionDeclarationKind kind) -> bool;
+
+    auto is_valid_intrinsic_name(std::string& name) -> bool;
 
     auto advanced_token() -> void;
 
