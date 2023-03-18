@@ -476,6 +476,14 @@ auto JotParser::parse_structure_declaration(bool is_packed) -> Shared<StructDecl
     auto struct_token = consume_kind(TokenKind::StructKeyword, "Expect struct keyword");
     auto struct_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
     auto struct_name_str = struct_name.literal;
+
+    // Make sure this name is unique
+    if (context->structures.contains(struct_name_str)) {
+        context->diagnostics.add_diagnostic_error(
+            struct_name.position, "There is already struct with name " + struct_name_str);
+        throw "Stop";
+    }
+
     current_struct_name = struct_name.literal;
 
     std::vector<std::string> generics_parameters;
@@ -537,12 +545,6 @@ auto JotParser::parse_structure_declaration(bool is_packed) -> Shared<StructDecl
     auto structure_type =
         std::make_shared<JotStructType>(struct_name_str, fields_names, fields_types,
                                         generics_parameters, is_packed, is_generic_struct);
-
-    if (context->structures.contains(struct_name_str)) {
-        context->diagnostics.add_diagnostic_error(
-            struct_name.position, "There is already struct with name " + struct_name_str);
-        throw "Stop";
-    }
 
     // Resolve un solved types
     // This code will executed only if there are field with type of pointer to the current struct
