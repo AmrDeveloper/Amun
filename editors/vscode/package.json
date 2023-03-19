@@ -1,0 +1,57 @@
+{
+  "name": "jot",
+  "displayName": "Jot",
+  "description": "Jot Programming Language support",
+  "version": "0.0.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+		"url": "https://github.com/amrdeveloper/jot/tree/main/editors/vscode"
+  },
+  "publisher": "AmrDeveloper",
+  "engines": {
+    "vscode": "^1.63.0"
+  },
+  "activationEvents": [],
+  "categories": [],
+  "main": "client/out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "jot",
+        "aliases": [ 
+          "jot" 
+        ],
+        "extensions": [
+          ".jot"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jot",
+        "scopeName": "source.jot",
+        "path": "./syntaxes/jot.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "jot",
+        "path": "./snippets/snippets.code-snippets"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+		"compile": "tsc -b",
+		"watch": "tsc -b -w",
+    "install": "cd server && npm install && cd ../client && npm install && cd .. && npm install"
+  },
+  "devDependencies": {
+    "@types/mocha": "^9.1.0",
+    "@types/node": "^16.11.7",
+    "typescript": "^4.9.4",
+    "mocha": "^9.2.1"
+  }
+}

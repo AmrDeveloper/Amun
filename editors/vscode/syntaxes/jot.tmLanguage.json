@@ -1,0 +1,57 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Jot",
+	"fileTypes": [
+		"jot"
+	],
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#comment"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [
+				{
+					"name": "keyword.control.jot",
+					"match": "\\b(packed|var|load|import|if|else|fun|extern|intrinsic|cast|defer|switch|prefix|infix|postfix|break|continue|varargs|void|true|false|null|for|while|struct|enum|return|value_size|type_size)\\b"
+				},
+				{
+					"name": "keyword.types.jot",
+					"match": "\\b(int1|int8|int16|int32|int64|uint8|uint16|uint32|uint64|float32|float64|bool|char)\\b"
+				}
+			]
+		},
+		"strings": {
+			"name": "string.quoted.double.jot",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.jot",
+					"match": "\\\\."
+				}
+			]
+		},
+		"comment": {
+			"patterns": [
+				{
+					"captures": {
+						"1": {
+							"name": "punctuation.definition.comment.jot"
+						}
+					},
+					"match": "(//).*$\\n?",
+					"name": "comment.line.double-slash.jot"
+				}
+			]
+		}
+	},
+	"scopeName": "source.jot"
+}
