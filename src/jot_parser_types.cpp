@@ -220,6 +220,11 @@ auto JotParser::parse_identifier_type() -> Shared<JotType>
         return std::make_shared<JotGenericParameterType>(type_literal);
     }
 
+    // Check if this identifier is a type alias key
+    if (context->type_alias_table.contains(type_literal)) {
+        return context->type_alias_table.resolve_alias(type_literal);
+    }
+
     // This type is not permitive, structure or enumerations
     context->diagnostics.add_diagnostic_error(peek_current().position,
                                               "Unexpected identifier type");

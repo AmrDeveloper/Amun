@@ -185,7 +185,11 @@ auto is_number_type(Shared<JotType> type) -> bool;
 
 auto is_integer_type(Shared<JotType> type) -> bool;
 
+auto is_enum_type(Shared<JotType> type) -> bool;
+
 auto is_enum_element_type(Shared<JotType> type) -> bool;
+
+auto is_struct_type(Shared<JotType> type) -> bool;
 
 auto is_generic_struct_type(Shared<JotType> type) -> bool;
 

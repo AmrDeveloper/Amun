@@ -39,6 +39,8 @@ class JotParser {
 
     auto parse_load_declaration() -> std::vector<Shared<Statement>>;
 
+    auto parse_type_alias_declaration() -> void;
+
     auto parse_single_source_file(std::string& path) -> std::vector<Shared<Statement>>;
 
     auto parse_declaration_statement() -> Shared<Statement>;

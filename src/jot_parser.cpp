@@ -16,15 +16,23 @@ auto JotParser::parse_compilation_unit() -> Shared<CompilationUnit>
     std::vector<Shared<Statement>> tree_nodes;
     try {
         while (is_source_available()) {
+            // Handle importing std file
             if (is_current_kind(TokenKind::ImportKeyword)) {
                 auto module_tree_node = parse_import_declaration();
                 append_vectors(tree_nodes, module_tree_node);
                 continue;
             }
 
+            // Handle loading user file
             if (is_current_kind(TokenKind::LoadKeyword)) {
                 auto module_tree_node = parse_load_declaration();
                 append_vectors(tree_nodes, module_tree_node);
+                continue;
+            }
+
+            // Handle type alias declarations
+            if (is_current_kind(TokenKind::TypeKeyword)) {
+                parse_type_alias_declaration();
                 continue;
             }
 
@@ -128,6 +136,37 @@ auto JotParser::parse_load_declaration() -> std::vector<Shared<Statement>>
     }
 
     return parse_single_source_file(library_path);
+}
+
+auto JotParser::parse_type_alias_declaration() -> void
+{
+    auto type_token = consume_kind(TokenKind::TypeKeyword, "Expect type keyword");
+    auto alias_token = consume_kind(TokenKind::Symbol, "Expect identifier for type alias");
+
+    // Make sure alias name is unique
+    if (context->type_alias_table.contains(alias_token.literal)) {
+        context->diagnostics.add_diagnostic_error(
+            alias_token.position, "There already a type with name " + alias_token.literal);
+        throw "Stop";
+    }
+
+    assert_kind(TokenKind::Equal, "Expect = after alias name");
+    auto actual_type = parse_type();
+
+    if (is_enum_type(actual_type)) {
+        context->diagnostics.add_diagnostic_error(alias_token.position,
+                                                  "You can't use type alias for enum name");
+        throw "Stop";
+    }
+
+    if (is_enum_element_type(actual_type)) {
+        context->diagnostics.add_diagnostic_error(alias_token.position,
+                                                  "You can't use type alias for enum element");
+        throw "Stop";
+    }
+
+    assert_kind(TokenKind::Semicolon, "Expect ; after actual type");
+    context->type_alias_table.define_alias(alias_token.literal, actual_type);
 }
 
 auto JotParser::parse_single_source_file(std::string& path) -> std::vector<Shared<Statement>>
@@ -484,6 +523,13 @@ auto JotParser::parse_structure_declaration(bool is_packed) -> Shared<StructDecl
         throw "Stop";
     }
 
+    // Make sure this name is unique and no alias use it
+    if (context->type_alias_table.contains(struct_name_str)) {
+        context->diagnostics.add_diagnostic_error(
+            struct_name.position, "There is already a type with name " + struct_name_str);
+        throw "Stop";
+    }
+
     current_struct_name = struct_name.literal;
 
     std::vector<std::string> generics_parameters;
@@ -581,6 +627,7 @@ auto JotParser::parse_structure_declaration(bool is_packed) -> Shared<StructDecl
     assert(current_struct_unknown_fields == 0);
 
     context->structures[struct_name_str] = structure_type;
+    context->type_alias_table.define_alias(struct_name_str, structure_type);
     current_struct_name = "";
     generic_parameters_names.clear();
     return std::make_shared<StructDeclaration>(structure_type);
@@ -1326,22 +1373,26 @@ auto JotParser::parse_postfix_call_expression() -> Shared<Expression>
 auto JotParser::parse_initializer_expression() -> Shared<Expression>
 {
     if (is_current_kind(TokenKind::Symbol) &&
-        context->structures.contains(current_token->literal)) {
-        if (is_next_kind(TokenKind::OpenBrace) || is_next_kind(TokenKind::Smaller)) {
-            auto type = parse_type();
-            auto token = consume_kind(TokenKind::OpenBrace, "Expect { at the start of initializer");
-            std::vector<std::shared_ptr<Expression>> arguments;
-            while (not is_current_kind(TokenKind::CloseBrace)) {
-                arguments.push_back(parse_expression());
-                if (is_current_kind(TokenKind::Comma)) {
-                    advanced_token();
+        context->type_alias_table.contains(current_token->literal)) {
+        auto resolved_type = context->type_alias_table.resolve_alias(current_token->literal);
+        if (is_struct_type(resolved_type) || is_generic_struct_type(resolved_type)) {
+            if (is_next_kind(TokenKind::OpenBrace) || is_next_kind(TokenKind::Smaller)) {
+                auto type = parse_type();
+                auto token =
+                    consume_kind(TokenKind::OpenBrace, "Expect { at the start of initializer");
+                std::vector<std::shared_ptr<Expression>> arguments;
+                while (not is_current_kind(TokenKind::CloseBrace)) {
+                    arguments.push_back(parse_expression());
+                    if (is_current_kind(TokenKind::Comma)) {
+                        advanced_token();
+                    }
+                    else {
+                        break;
+                    }
                 }
-                else {
-                    break;
-                }
+                assert_kind(TokenKind::CloseBrace, "Expect } at the end of initializer");
+                return std::make_shared<InitializeExpression>(token, type, arguments);
             }
-            assert_kind(TokenKind::CloseBrace, "Expect } at the end of initializer");
-            return std::make_shared<InitializeExpression>(token, type, arguments);
         }
     }
 

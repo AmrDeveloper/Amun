@@ -1,5 +1,6 @@
 #pragma once
 
+#include "jot_alias_table.hpp"
 #include "jot_diagnostics.hpp"
 #include "jot_options.hpp"
 #include "jot_source_manager.hpp"
@@ -21,6 +22,7 @@ struct JotContext {
     JotOptions          options;
     JotDiagnosticEngine diagnostics;
     JotSourceManager    source_manager;
+    JotAliasTable       type_alias_table;
 
     // Declarations Informations
     std::unordered_map<std::string, FunctionDeclarationKind>        functions;

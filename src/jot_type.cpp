@@ -244,10 +244,14 @@ auto is_integer_type(Shared<JotType> type) -> bool
     return false;
 }
 
+auto is_enum_type(Shared<JotType> type) -> bool { return type->type_kind == TypeKind::ENUM; }
+
 auto is_enum_element_type(Shared<JotType> type) -> bool
 {
     return type->type_kind == TypeKind::ENUM_ELEMENT;
 }
+
+auto is_struct_type(Shared<JotType> type) -> bool { return type->type_kind == TypeKind::STRUCT; }
 
 auto is_generic_struct_type(Shared<JotType> type) -> bool
 {
