@@ -20,7 +20,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.jot",
-					"match": "\\b(packed|var|load|import|if|else|fun|extern|intrinsic|cast|defer|switch|prefix|infix|postfix|break|continue|varargs|void|true|false|null|for|while|struct|enum|return|value_size|type_size)\\b"
+					"match": "\\b(packed|var|load|import|type|if|else|fun|extern|intrinsic|cast|defer|switch|prefix|infix|postfix|break|continue|varargs|void|true|false|null|for|while|struct|enum|return|value_size|type_size)\\b"
 				},
 				{
 					"name": "keyword.types.jot",
