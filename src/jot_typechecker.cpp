@@ -67,6 +67,11 @@ auto JotTypeChecker::visit(FieldDeclaration* node) -> std::any
             }
         }
 
+        // Resolve left hand side if it generic struct
+        if (is_generic_struct_type(left_type)) {
+            left_type = resolve_generic_struct(left_type);
+        }
+
         if (node->is_global() and !right_value->is_constant()) {
             context->diagnostics.add_diagnostic_error(
                 node->get_name().position, "Initializer element is not a compile-time constant");
