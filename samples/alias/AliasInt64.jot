@@ -1,0 +1,9 @@
+extern fun printf(format *char, varargs Any) int64;
+
+type Integer = int64;
+
+fun main() int64 {
+    var x : Integer = 10;
+    printf("%d\n", x);
+    return 0;
+}

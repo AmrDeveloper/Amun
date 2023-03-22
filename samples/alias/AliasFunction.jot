@@ -1,0 +1,14 @@
+extern fun printf(format *char, varargs Any) int64;
+
+type Function = *() void;
+
+fun eval(f Function) void {
+    f();
+}
+
+fun main() int64 {
+    eval {
+        printf("Hello, World\n");
+    };
+    return 0;
+}

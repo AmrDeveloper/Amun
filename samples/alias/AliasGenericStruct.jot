@@ -1,0 +1,14 @@
+extern fun printf(format *char, varargs Any) int64;
+
+struct Pair <T> {
+    x T;
+    y T;
+}
+
+type IPair = Pair<int64>;
+
+fun main() int64 {
+    var pair = IPair { 10, 20 };
+    printf("%d, %d\n", pair.x, pair.y);
+    return 0;
+}

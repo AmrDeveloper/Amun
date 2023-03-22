@@ -1,0 +1,14 @@
+extern fun printf(format *char, varargs Any) int64;
+
+struct Point {
+    x int64;
+    y int64;
+}
+
+type Position = Point;
+
+fun main() int64 {
+    var pos = Position { 10, 20 };
+    printf("%d, %d\n", pos.x, pos.y);
+    return 0;
+}
