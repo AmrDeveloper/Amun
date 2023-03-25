@@ -33,6 +33,7 @@ auto JotCompiler::compile_source_code(const char* source_file) -> int
     std::error_code      error_code;
     llvm::raw_fd_ostream output_stream(jot_context->options.executable_name, error_code);
     if (error_code.message() != "Success") {
+        std::cout << "Can't create output file " << error_code.message() << '\n';
         return EXIT_FAILURE;
     }
 
