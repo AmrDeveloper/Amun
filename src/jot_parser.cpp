@@ -1664,7 +1664,7 @@ auto JotParser::parse_group_expression() -> Shared<GroupExpression>
 {
     Token position = peek_and_advance_token();
     auto  expression = parse_expression();
-    assert_kind(TokenKind::CloseParen, "Expect ) after in the end of call expression");
+    assert_kind(TokenKind::CloseParen, "Expect ) at the end of group expression");
     return std::make_shared<GroupExpression>(position, expression);
 }
 
