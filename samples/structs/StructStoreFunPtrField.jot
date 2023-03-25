@@ -9,7 +9,7 @@ fun say_hello() void {
 }
 
 fun main() int64 {
-    var functional = Functional { &say_hello };
+    var functional = Functional(&say_hello);
     var call = functional.action;
     call();
     return 0;

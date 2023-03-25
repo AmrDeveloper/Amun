@@ -10,8 +10,8 @@ struct Container <T> {
 }
 
 fun main() int64 {
-    var scon = Container<*char> { "Hello World" };
-    var icon = Container<int64> { 2023 };
+    var scon = Container<*char> ("Hello World");
+    var icon = Container<int64> (2023);
     printf("%s on %d", scon.value, icon.value);
     return 0;
 }

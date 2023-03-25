@@ -9,8 +9,8 @@ struct ParentContainer <T> {
 }
 
 fun main() int64 {
-   var icon = Container<int64> { 20 };
-   var parent  = ParentContainer<int64> { icon };
+   var icon = Container<int64>(20);
+   var parent  = ParentContainer<int64>(icon);
    printf("%d\n", parent.value.value);
    return 0;
 }

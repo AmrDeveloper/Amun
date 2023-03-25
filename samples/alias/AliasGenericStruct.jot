@@ -8,7 +8,7 @@ struct Pair <T> {
 type IPair = Pair<int64>;
 
 fun main() int64 {
-    var pair = IPair { 10, 20 };
+    var pair = IPair(10, 20);
     printf("%d, %d\n", pair.x, pair.y);
     return 0;
 }

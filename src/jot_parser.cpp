@@ -1376,21 +1376,35 @@ auto JotParser::parse_initializer_expression() -> Shared<Expression>
         context->type_alias_table.contains(current_token->literal)) {
         auto resolved_type = context->type_alias_table.resolve_alias(current_token->literal);
         if (is_struct_type(resolved_type) || is_generic_struct_type(resolved_type)) {
-            if (is_next_kind(TokenKind::OpenBrace) || is_next_kind(TokenKind::Smaller)) {
+            if (is_next_kind(TokenKind::OpenParen) || is_next_kind(TokenKind::OpenBrace) ||
+                is_next_kind(TokenKind::Smaller)) {
                 auto type = parse_type();
-                auto token =
-                    consume_kind(TokenKind::OpenBrace, "Expect { at the start of initializer");
+                auto token = peek_current();
+
                 std::vector<std::shared_ptr<Expression>> arguments;
-                while (not is_current_kind(TokenKind::CloseBrace)) {
-                    arguments.push_back(parse_expression());
-                    if (is_current_kind(TokenKind::Comma)) {
-                        advanced_token();
+
+                // Check if this constructor has arguments
+                if (is_current_kind(TokenKind::OpenParen)) {
+                    advanced_token();
+                    while (not is_current_kind(TokenKind::CloseParen)) {
+                        arguments.push_back(parse_expression());
+                        if (is_current_kind(TokenKind::Comma)) {
+                            advanced_token();
+                        }
+                        else {
+                            break;
+                        }
                     }
-                    else {
-                        break;
-                    }
+
+                    assert_kind(TokenKind::CloseParen, "Expect ) at the end of initializer");
                 }
-                assert_kind(TokenKind::CloseBrace, "Expect } at the end of initializer");
+
+                // Check if this constructor has outside lambda argument
+                if (is_current_kind(TokenKind::OpenBrace)) {
+                    auto lambda_argument = parse_lambda_expression();
+                    arguments.push_back(lambda_argument);
+                }
+
                 return std::make_shared<InitializeExpression>(token, type, arguments);
             }
         }
@@ -1622,8 +1636,8 @@ auto JotParser::parse_switch_expression() -> Shared<SwitchExpression>
         } while (is_current_kind(TokenKind::Comma));
 
         size_t case_values_count = cases.size() - values.size();
-        auto   rightArrow = consume_kind(TokenKind::RightArrow, "Expect -> after branch value");
-        auto   right_value_expression = parse_expression();
+        assert_kind(TokenKind::RightArrow, "Expect -> after branch value");
+        auto right_value_expression = parse_expression();
         for (size_t i = 0; i < case_values_count; i++) {
             values.push_back(right_value_expression);
         }

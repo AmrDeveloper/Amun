@@ -8,7 +8,7 @@ struct Point {
 type Position = Point;
 
 fun main() int64 {
-    var pos = Position { 10, 20 };
+    var pos = Position(10, 20);
     printf("%d, %d\n", pos.x, pos.y);
     return 0;
 }

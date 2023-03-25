@@ -10,7 +10,7 @@ fun main() int64 {
     var x = 10;
     var y = 20;
     var z = 30;
-    var local_vec3 = Vector3 { x, y, z };
+    var local_vec3 = Vector3(x, y, z);
 
     printf("%d\n", local_vec3.x);
     printf("%d\n", local_vec3.y);

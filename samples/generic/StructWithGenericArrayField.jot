@@ -5,14 +5,14 @@ struct ArrayContainer <T> {
 }
 
 fun main() int64 {
-   var arr_con = ArrayContainer<[3]int64> { [1, 2, 3] };
+   var arr_con = ArrayContainer<[3]int64> ([1, 2, 3]);
    for arr_con.values {
        printf("Values[%d] = %d\n", it_index, it);
    }
 
    printf("\n");
 
-   var multi_arr_con = ArrayContainer<[2][2]int64> { [[1, 2,], [3, 4]] };
+   var multi_arr_con = ArrayContainer<[2][2]int64> ([[1, 2,], [3, 4]]);
    for multi_arr_con.values {
       var i = it_index;
       for it {

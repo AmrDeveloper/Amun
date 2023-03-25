@@ -15,7 +15,7 @@ fun eval(f Function) void {
 
 fun main() Integer {
     eval {
-        var pair = IPair { 10, 20 };
+        var pair = IPair(10, 20);
         printf("x = %d, y = %d\n", pair.x, pair.y);
     };
     return 0;

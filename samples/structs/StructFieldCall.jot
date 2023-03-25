@@ -9,7 +9,7 @@ fun main() int64 {
         printf("Hello, World\n");
     };
 
-    var functional = Functional { lambda };
+    var functional = Functional (lambda);
     functional.action();
     
     return 0;

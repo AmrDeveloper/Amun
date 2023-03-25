@@ -7,7 +7,7 @@ struct Vector3 {
 }
 
 fun main() int64 {
-    var local_vec3 = Vector3 { 10, 20, 30 };
+    var local_vec3 = Vector3(10, 20, 30);
 
     printf("%d\n", local_vec3.x);
     printf("%d\n", local_vec3.y);

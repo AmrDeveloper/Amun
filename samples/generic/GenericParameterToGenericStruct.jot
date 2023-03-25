@@ -5,16 +5,16 @@ struct Container <T> {
 }
 
 fun main() int64 {
-    var con = Container<int64> { 10 };
-    var scon = Container<Container<int64>> { con };
+    var con = Container<int64>(10);
+    var scon = Container<Container<int64>>(con);
     printf("Value is %d\n", scon.value.value);
 
-    var arr_con = Container<[3]int64> { [1, 2, 3] };
+    var arr_con = Container<[3]int64>([1, 2, 3]);
     for arr_con.value {
        printf("value[%d] = %d\n", it_index, it);
     }
 
-    var multi_arr_con = Container<[2][2]int64> { [[1, 2,], [3, 4]] };
+    var multi_arr_con = Container<[2][2]int64>([[1, 2,], [3, 4]]);
     printf("Count is [%d][%d]\n", multi_arr_con.value.count, multi_arr_con.value[0].count);
     return 0;
 }

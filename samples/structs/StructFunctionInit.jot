@@ -7,7 +7,7 @@ struct Vector3 {
 }
 
 fun build_vec3(x int64, y int64, z int64) Vector3 {
-    return Vector3 { x, y, z };
+    return Vector3(x, y, z);
 }
 
 fun main() int64 {

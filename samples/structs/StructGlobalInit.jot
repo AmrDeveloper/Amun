@@ -6,7 +6,7 @@ struct Vector3 {
     z int64;
 }
 
-var global_vec3 = Vector3 { 10, 20, 30 };
+var global_vec3 = Vector3(10, 20, 30);
 
 fun main() int64 {
     printf("%d\n", global_vec3.x);

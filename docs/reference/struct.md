@@ -47,7 +47,7 @@ struct Vector3 {
     z int64;
 }
 
-var vector3 = Vector3 { 1, 2, 3 };
+var vector3 = Vector3(1, 2, 3);
 ```
 
 ## Destructor
