@@ -38,7 +38,7 @@ auto mangle_type(Shared<JotType> type) -> std::string
         return enum_element_type->name;
     }
 
-    if (kind == TypeKind::ENUM_ELEMENT) {
+    if (kind == TypeKind::STRUCT) {
         auto struct_type = std::static_pointer_cast<JotStructType>(type);
         return struct_type->name;
     }
