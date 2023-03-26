@@ -6,29 +6,21 @@
 #include <unordered_map>
 #include <vector>
 
-enum class DiagnosticLevel { Warning, Error };
+enum class DiagnosticLevel { WARNING, ERROR };
 
 static std::unordered_map<DiagnosticLevel, const char*> diagnostic_level_literal = {
-    {DiagnosticLevel::Warning, "Warning"},
-    {DiagnosticLevel::Error, "Error"},
+    {DiagnosticLevel::WARNING, "WARNING"},
+    {DiagnosticLevel::ERROR, "ERROR"},
 };
 
-class JotDiagnostic {
-  public:
+constexpr const auto DIAGNOSTIC_LEVEL_COUNT = 2;
+
+struct JotDiagnostic {
     JotDiagnostic(TokenSpan location, std::string message, DiagnosticLevel level)
-        : location(std::move(location)), message(std::move(message)), level(level)
+        : location(location), message(std::move(message)), level(level)
     {
     }
 
-    TokenSpan get_location() { return location; }
-
-    std::string get_message() { return message; }
-
-    DiagnosticLevel get_level() { return level; }
-
-    const char* get_level_literal() { return diagnostic_level_literal[level]; }
-
-  private:
     TokenSpan       location;
     std::string     message;
     DiagnosticLevel level;
@@ -36,23 +28,20 @@ class JotDiagnostic {
 
 class JotDiagnosticEngine {
   public:
-    JotDiagnosticEngine(JotSourceManager& source_manager);
+    explicit JotDiagnosticEngine(JotSourceManager& source_manager);
 
-    void report_diagnostics(DiagnosticLevel level);
+    auto report_diagnostics(DiagnosticLevel level) -> void;
 
-    void add_diagnostic_error(TokenSpan location, std::string message);
+    auto report_error(TokenSpan location, std::string message) -> void;
 
-    void add_diagnostic_warn(TokenSpan location, std::string message);
+    auto report_warning(TokenSpan location, std::string message) -> void;
 
-    int get_warns_number();
-
-    int get_errors_number();
+    auto level_count(DiagnosticLevel level) -> int64;
 
   private:
-    void report_diagnostic(JotDiagnostic& diagnostic);
+    auto report_diagnostic(JotDiagnostic& diagnostic) -> void;
 
-    JotSourceManager&          source_manager;
-    std::vector<JotDiagnostic> diagnostics;
-    int                        errors_number = 0;
-    int                        warns_number = 0;
+    JotSourceManager& source_manager;
+
+    std::unordered_map<DiagnosticLevel, std::vector<JotDiagnostic>> diagnostics;
 };

@@ -7,28 +7,29 @@
 JotDiagnosticEngine::JotDiagnosticEngine(JotSourceManager& source_manager)
     : source_manager(source_manager)
 {
+    diagnostics.reserve(DIAGNOSTIC_LEVEL_COUNT);
 }
 
-void JotDiagnosticEngine::report_diagnostics(DiagnosticLevel level)
+auto JotDiagnosticEngine::report_diagnostics(DiagnosticLevel level) -> void
 {
-    for (auto& diagnostic : diagnostics) {
-        if (diagnostic.get_level() == level) {
-            report_diagnostic(diagnostic);
-        }
+    auto kind_diagnostics = diagnostics[level];
+    for (auto& diagnostic : kind_diagnostics) {
+        report_diagnostic(diagnostic);
     }
 }
 
-void JotDiagnosticEngine::report_diagnostic(JotDiagnostic& diagnostic)
+auto JotDiagnosticEngine::report_diagnostic(JotDiagnostic& diagnostic) -> void
 {
-    auto location = diagnostic.get_location();
-    auto message = diagnostic.get_message();
+    auto location = diagnostic.location;
+    auto message = diagnostic.message;
     auto file_name = source_manager.resolve_source_path(location.file_id);
     auto line_number = location.line_number;
     auto source_line = read_file_line(file_name.c_str(), line_number);
 
-    std::cout << diagnostic.get_level_literal() << " in " << file_name << ':'
-              << std::to_string(line_number) << ':' << std::to_string(location.column_start)
-              << std::endl;
+    const auto* kind_literal = diagnostic_level_literal[diagnostic.level];
+
+    std::cout << kind_literal << " in " << file_name << ':' << std::to_string(line_number) << ':'
+              << std::to_string(location.column_start) << std::endl;
 
     auto line_number_header = std::to_string(line_number) + " | ";
     std::cout << line_number_header << source_line << std::endl;
@@ -42,18 +43,20 @@ void JotDiagnosticEngine::report_diagnostic(JotDiagnostic& diagnostic)
     std::cout << std::endl;
 }
 
-void JotDiagnosticEngine::add_diagnostic_error(TokenSpan location, std::string message)
+auto JotDiagnosticEngine::report_error(TokenSpan location, std::string message) -> void
 {
-    errors_number++;
-    diagnostics.push_back({location, message, DiagnosticLevel::Error});
+    diagnostics[DiagnosticLevel::ERROR].push_back({location, message, DiagnosticLevel::ERROR});
 }
 
-void JotDiagnosticEngine::add_diagnostic_warn(TokenSpan location, std::string message)
+auto JotDiagnosticEngine::report_warning(TokenSpan location, std::string message) -> void
 {
-    warns_number++;
-    diagnostics.push_back({location, message, DiagnosticLevel::Warning});
+    diagnostics[DiagnosticLevel::WARNING].push_back({location, message, DiagnosticLevel::WARNING});
 }
 
-int JotDiagnosticEngine::get_warns_number() { return warns_number; }
-
-int JotDiagnosticEngine::get_errors_number() { return errors_number; }
+auto JotDiagnosticEngine::level_count(DiagnosticLevel level) -> int64
+{
+    if (diagnostics.find(level) == diagnostics.end()) {
+        return 0;
+    }
+    return diagnostics[level].size();
+}

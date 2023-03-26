@@ -61,7 +61,7 @@ auto JotParser::parse_import_declaration() -> std::vector<Shared<Statement>>
             }
 
             if (not is_file_exists(library_path)) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     library_name.position, "No standard library with name " + library_name.literal);
                 throw "Stop";
             }
@@ -82,8 +82,8 @@ auto JotParser::parse_import_declaration() -> std::vector<Shared<Statement>>
     }
 
     if (not is_file_exists(library_path)) {
-        context->diagnostics.add_diagnostic_error(
-            library_name.position, "No standard library with name " + library_name.literal);
+        context->diagnostics.report_error(library_name.position,
+                                          "No standard library with name " + library_name.literal);
         throw "Stop";
     }
 
@@ -108,8 +108,8 @@ auto JotParser::parse_load_declaration() -> std::vector<Shared<Statement>>
             }
 
             if (not is_file_exists(library_path)) {
-                context->diagnostics.add_diagnostic_error(library_name.position,
-                                                          "Path not exists " + library_path);
+                context->diagnostics.report_error(library_name.position,
+                                                  "Path not exists " + library_path);
                 throw "Stop";
             }
 
@@ -130,8 +130,7 @@ auto JotParser::parse_load_declaration() -> std::vector<Shared<Statement>>
     }
 
     if (not is_file_exists(library_path)) {
-        context->diagnostics.add_diagnostic_error(library_name.position,
-                                                  "Path not exists " + library_path);
+        context->diagnostics.report_error(library_name.position, "Path not exists " + library_path);
         throw "Stop";
     }
 
@@ -145,8 +144,8 @@ auto JotParser::parse_type_alias_declaration() -> void
 
     // Make sure alias name is unique
     if (context->type_alias_table.contains(alias_token.literal)) {
-        context->diagnostics.add_diagnostic_error(
-            alias_token.position, "There already a type with name " + alias_token.literal);
+        context->diagnostics.report_error(alias_token.position,
+                                          "There already a type with name " + alias_token.literal);
         throw "Stop";
     }
 
@@ -154,14 +153,14 @@ auto JotParser::parse_type_alias_declaration() -> void
     auto actual_type = parse_type();
 
     if (is_enum_type(actual_type)) {
-        context->diagnostics.add_diagnostic_error(alias_token.position,
-                                                  "You can't use type alias for enum name");
+        context->diagnostics.report_error(alias_token.position,
+                                          "You can't use type alias for enum name");
         throw "Stop";
     }
 
     if (is_enum_element_type(actual_type)) {
-        context->diagnostics.add_diagnostic_error(alias_token.position,
-                                                  "You can't use type alias for enum element");
+        context->diagnostics.report_error(alias_token.position,
+                                          "You can't use type alias for enum element");
         throw "Stop";
     }
 
@@ -177,7 +176,7 @@ auto JotParser::parse_single_source_file(std::string& path) -> std::vector<Share
     JotTokenizer tokenizer(file_id, source_content);
     JotParser    parser(context, tokenizer);
     auto         compilation_unit = parser.parse_compilation_unit();
-    if (context->diagnostics.get_errors_number() > 0) {
+    if (context->diagnostics.level_count(DiagnosticLevel::ERROR) > 0) {
         throw "Stop";
     }
     return compilation_unit->get_tree_nodes();
@@ -205,7 +204,7 @@ auto JotParser::parse_declaration_statement() -> Shared<Statement>
             return parse_function_declaration(call_kind);
         }
 
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             peek_current().position, "Prefix, Infix, postfix keyword used only with functions");
         throw "Stop";
     }
@@ -232,8 +231,8 @@ auto JotParser::parse_declaration_statement() -> Shared<Statement>
         return parse_enum_declaration();
     }
     default: {
-        context->diagnostics.add_diagnostic_error(peek_current().position,
-                                                  "Invalid top level declaration statement");
+        context->diagnostics.report_error(peek_current().position,
+                                          "Invalid top level declaration statement");
         throw "Stop";
     }
     }
@@ -309,8 +308,8 @@ auto JotParser::parse_intrinsic_prototype() -> Shared<IntrinsicPrototype>
         auto intrinsic_token = consume_kind(TokenKind::String, "Expect intrinsic native name.");
         intrinsic_name = intrinsic_token.literal;
         if (!is_valid_intrinsic_name(intrinsic_name)) {
-            context->diagnostics.add_diagnostic_error(
-                intrinsic_token.position, "Intrinsic name can't have space or be empty");
+            context->diagnostics.report_error(intrinsic_token.position,
+                                              "Intrinsic name can't have space or be empty");
             throw "Stop";
         }
         assert_kind(TokenKind::CloseParen, "Expect ) after native intrinsic name.");
@@ -329,7 +328,7 @@ auto JotParser::parse_intrinsic_prototype() -> Shared<IntrinsicPrototype>
         advanced_token();
         while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
             if (has_varargs) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     previous_token->position, "Varargs must be the last parameter in the function");
                 throw "Stop";
             }
@@ -369,8 +368,8 @@ auto JotParser::parse_intrinsic_prototype() -> Shared<IntrinsicPrototype>
 
     // Function can't return fixed size array, you can use pointer format to return allocated array
     if (return_type->type_kind == TypeKind::ARRAY) {
-        context->diagnostics.add_diagnostic_error(
-            name.position, "Function cannot return array type " + jot_type_literal(return_type));
+        context->diagnostics.report_error(name.position, "Function cannot return array type " +
+                                                             jot_type_literal(return_type));
         throw "Stop";
     }
 
@@ -397,7 +396,7 @@ auto JotParser::parse_function_prototype(FunctionDeclarationKind kind, bool is_e
         advanced_token();
         while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
             if (has_varargs) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     previous_token->position, "Varargs must be the last parameter in the function");
                 throw "Stop";
             }
@@ -425,20 +424,20 @@ auto JotParser::parse_function_prototype(FunctionDeclarationKind kind, bool is_e
     auto parameters_size = parameters.size();
 
     if (kind == PREFIX_FUNCTION && parameters_size != 1) {
-        context->diagnostics.add_diagnostic_error(
-            name.position, "Prefix function must have exactly one parameter");
+        context->diagnostics.report_error(name.position,
+                                          "Prefix function must have exactly one parameter");
         throw "Stop";
     }
 
     if (kind == INFIX_FUNCTION && parameters_size != 2) {
-        context->diagnostics.add_diagnostic_error(name.position,
-                                                  "Infix function must have exactly Two parameter");
+        context->diagnostics.report_error(name.position,
+                                          "Infix function must have exactly Two parameter");
         throw "Stop";
     }
 
     if (kind == POSTFIX_FUNCTION && parameters_size != 1) {
-        context->diagnostics.add_diagnostic_error(
-            name.position, "Postfix function must have exactly one parameter");
+        context->diagnostics.report_error(name.position,
+                                          "Postfix function must have exactly one parameter");
         throw "Stop";
     }
 
@@ -457,8 +456,8 @@ auto JotParser::parse_function_prototype(FunctionDeclarationKind kind, bool is_e
 
     // Function can't return fixed size array, you can use pointer format to return allocated array
     if (return_type->type_kind == TypeKind::ARRAY) {
-        context->diagnostics.add_diagnostic_error(
-            name.position, "Function cannot return array type " + jot_type_literal(return_type));
+        context->diagnostics.report_error(name.position, "Function cannot return array type " +
+                                                             jot_type_literal(return_type));
         throw "Stop";
     }
 
@@ -505,8 +504,7 @@ auto JotParser::parse_function_declaration(FunctionDeclarationKind kind)
         return std::make_shared<FunctionDeclaration>(prototype, block);
     }
 
-    context->diagnostics.add_diagnostic_error(peek_current().position,
-                                              "Invalid function declaration body");
+    context->diagnostics.report_error(peek_current().position, "Invalid function declaration body");
     throw "Stop";
 }
 
@@ -518,15 +516,15 @@ auto JotParser::parse_structure_declaration(bool is_packed) -> Shared<StructDecl
 
     // Make sure this name is unique
     if (context->structures.contains(struct_name_str)) {
-        context->diagnostics.add_diagnostic_error(
-            struct_name.position, "There is already struct with name " + struct_name_str);
+        context->diagnostics.report_error(struct_name.position,
+                                          "There is already struct with name " + struct_name_str);
         throw "Stop";
     }
 
     // Make sure this name is unique and no alias use it
     if (context->type_alias_table.contains(struct_name_str)) {
-        context->diagnostics.add_diagnostic_error(
-            struct_name.position, "There is already a type with name " + struct_name_str);
+        context->diagnostics.report_error(struct_name.position,
+                                          "There is already a type with name " + struct_name_str);
         throw "Stop";
     }
 
@@ -542,7 +540,7 @@ auto JotParser::parse_structure_declaration(bool is_packed) -> Shared<StructDecl
             auto parameter = consume_kind(TokenKind::Symbol, "Expect parameter name");
 
             if (!generic_parameters_names.insert(parameter.literal).second) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     parameter.position,
                     "You already declared generic parameter with name " + parameter.literal);
                 throw "Stop";
@@ -564,9 +562,9 @@ auto JotParser::parse_structure_declaration(bool is_packed) -> Shared<StructDecl
         auto field_name = consume_kind(TokenKind::Symbol, "Expect Symbol as struct name");
 
         if (is_contains(fields_names, field_name.literal)) {
-            context->diagnostics.add_diagnostic_error(field_name.position,
-                                                      "There is already struct member with name " +
-                                                          field_name.literal);
+            context->diagnostics.report_error(field_name.position,
+                                              "There is already struct member with name " +
+                                                  field_name.literal);
             throw "Stop";
         }
 
@@ -575,7 +573,7 @@ auto JotParser::parse_structure_declaration(bool is_packed) -> Shared<StructDecl
 
         // Handle Incomplete field type case
         if (field_type->type_kind == TypeKind::NONE) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 field_name.position, "Field type isn't fully defined yet, you can't use it "
                                      "until it defined but you can use *" +
                                          struct_name_str);
@@ -662,8 +660,8 @@ auto JotParser::parse_enum_declaration() -> Shared<EnumDeclaration>
         auto enum_field_literal = enum_value.literal;
 
         if (enum_values_indexes.contains(enum_field_literal)) {
-            context->diagnostics.add_diagnostic_error(
-                enum_value.position, "Can't declare 2 elements with the same name");
+            context->diagnostics.report_error(enum_value.position,
+                                              "Can't declare 2 elements with the same name");
             throw "Stop";
         }
 
@@ -671,7 +669,7 @@ auto JotParser::parse_enum_declaration() -> Shared<EnumDeclaration>
             advanced_token();
             auto field_value = parse_expression();
             if (field_value->get_ast_node_type() != AstNodeType::NumberExpr) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     enum_value.position, "Enum field explicit value must be integer expression");
                 throw "Stop";
             }
@@ -679,7 +677,7 @@ auto JotParser::parse_enum_declaration() -> Shared<EnumDeclaration>
             auto number_expr = std::dynamic_pointer_cast<NumberExpression>(field_value);
             auto number_value_token = number_expr->get_value();
             if (is_float_number_token(number_value_token)) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     enum_value.position,
                     "Enum field explicit value must be integer value not float");
                 throw "Stop";
@@ -687,7 +685,7 @@ auto JotParser::parse_enum_declaration() -> Shared<EnumDeclaration>
 
             auto explicit_value = std::stoi(number_value_token.literal);
             if (explicit_values.contains(explicit_value)) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     enum_value.position, "There is also one enum field with explicit value " +
                                              std::to_string(explicit_value));
                 throw "Stop";
@@ -699,7 +697,7 @@ auto JotParser::parse_enum_declaration() -> Shared<EnumDeclaration>
         }
         else {
             if (has_explicit_values) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     enum_value.position,
                     "You must add explicit value to all enum fields or to no one");
                 throw "Stop";
@@ -757,8 +755,7 @@ auto JotParser::parse_defer_statement() -> Shared<DeferStatement>
         return std::make_shared<DeferStatement>(defer_token, call_expression);
     }
 
-    context->diagnostics.add_diagnostic_error(defer_token.position,
-                                              "defer keyword expect call expression");
+    context->diagnostics.report_error(defer_token.position, "defer keyword expect call expression");
     throw "Stop";
 }
 
@@ -767,7 +764,7 @@ auto JotParser::parse_break_statement() -> Shared<BreakStatement>
     auto break_token = consume_kind(TokenKind::BreakKeyword, "Expect break keyword.");
 
     if (current_ast_scope != AstNodeScope::CONDITION_SCOPE or loop_levels_stack.top() == 0) {
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             break_token.position, "break keyword can only be used inside at last one while loop");
         throw "Stop";
     }
@@ -781,7 +778,7 @@ auto JotParser::parse_break_statement() -> Shared<BreakStatement>
     if (auto number_expr = std::dynamic_pointer_cast<NumberExpression>(break_times)) {
         auto number_value = number_expr->get_value();
         if (is_float_number_token(number_value)) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 break_token.position,
                 "expect break keyword times to be integer but found floating pointer value");
             throw "Stop";
@@ -789,13 +786,13 @@ auto JotParser::parse_break_statement() -> Shared<BreakStatement>
 
         int times_int = std::stoi(number_value.literal);
         if (times_int < 1) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 break_token.position, "expect break times must be positive value and at last 1");
             throw "Stop";
         }
 
         if (times_int > loop_levels_stack.top()) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 break_token.position, "break times can't be bigger than the number of loops you "
                                       "have, expect less than or equals " +
                                           std::to_string(loop_levels_stack.top()));
@@ -806,8 +803,7 @@ auto JotParser::parse_break_statement() -> Shared<BreakStatement>
         return std::make_shared<BreakStatement>(break_token, true, times_int);
     }
 
-    context->diagnostics.add_diagnostic_error(break_token.position,
-                                              "break keyword times must be a number");
+    context->diagnostics.report_error(break_token.position, "break keyword times must be a number");
     throw "Stop";
 }
 
@@ -816,7 +812,7 @@ auto JotParser::parse_continue_statement() -> Shared<ContinueStatement>
     auto continue_token = consume_kind(TokenKind::ContinueKeyword, "Expect continue keyword.");
 
     if (current_ast_scope != AstNodeScope::CONDITION_SCOPE or loop_levels_stack.top() == 0) {
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             continue_token.position,
             "continue keyword can only be used inside at last one while loop");
         throw "Stop";
@@ -834,7 +830,7 @@ auto JotParser::parse_continue_statement() -> Shared<ContinueStatement>
         if (number_kind == TokenKind::Float or number_kind == TokenKind::Float32Type or
             number_kind == TokenKind::Float64Type) {
 
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 continue_token.position,
                 "expect continue times to be integer but found floating pointer value");
             throw "Stop";
@@ -842,14 +838,14 @@ auto JotParser::parse_continue_statement() -> Shared<ContinueStatement>
 
         int times_int = std::stoi(number_value.literal);
         if (times_int < 1) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 continue_token.position,
                 "expect continue times must be positive value and at last 1");
             throw "Stop";
         }
 
         if (times_int > loop_levels_stack.top()) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 continue_token.position,
                 "continue times can't be bigger than the number of loops you "
                 "have, expect less than or equals " +
@@ -861,8 +857,8 @@ auto JotParser::parse_continue_statement() -> Shared<ContinueStatement>
         return std::make_shared<ContinueStatement>(continue_token, true, times_int);
     }
 
-    context->diagnostics.add_diagnostic_error(continue_token.position,
-                                              "continue keyword times must be a number");
+    context->diagnostics.report_error(continue_token.position,
+                                      "continue keyword times must be a number");
     throw "Stop";
 }
 
@@ -892,8 +888,8 @@ auto JotParser::parse_if_statement() -> Shared<IfStatement>
         }
 
         if (has_else_branch) {
-            context->diagnostics.add_diagnostic_error(else_token.position,
-                                                      "You already declared else branch");
+            context->diagnostics.report_error(else_token.position,
+                                              "You already declared else branch");
             throw "Stop";
         }
 
@@ -931,8 +927,8 @@ auto JotParser::parse_for_statement() -> Shared<Statement>
     auto        expr = parse_expression();
     if (is_current_kind(TokenKind::Colon)) {
         if (expr->get_ast_node_type() != AstNodeType::LiteralExpr) {
-            context->diagnostics.add_diagnostic_error(keyword.position,
-                                                      "Optional named variable must be identifier");
+            context->diagnostics.report_error(keyword.position,
+                                              "Optional named variable must be identifier");
             throw "Stop";
         }
 
@@ -1004,7 +1000,7 @@ auto JotParser::parse_switch_statement() -> Shared<SwitchStatement>
         std::vector<Shared<Expression>> values;
         if (is_current_kind(TokenKind::ElseKeyword)) {
             if (has_default_branch) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     keyword.position, "Switch statementscan't has more than one default branch");
                 throw "Stop";
             }
@@ -1173,7 +1169,7 @@ auto JotParser::parse_enum_access_expression() -> Shared<Expression>
 
                 auto enum_values = enum_type->values;
                 if (not enum_values.contains(element.literal)) {
-                    context->diagnostics.add_diagnostic_error(
+                    context->diagnostics.report_error(
                         element.position, "Can't find element with name " + element.literal +
                                               " in enum " + enum_name.literal);
                     throw "Stop";
@@ -1186,15 +1182,15 @@ auto JotParser::parse_enum_access_expression() -> Shared<Expression>
                                                               enum_element_type);
             }
             else {
-                context->diagnostics.add_diagnostic_error(enum_name.position,
-                                                          "Can't find enum declaration with name " +
-                                                              enum_name.literal);
+                context->diagnostics.report_error(enum_name.position,
+                                                  "Can't find enum declaration with name " +
+                                                      enum_name.literal);
                 throw "Stop";
             }
         }
         else {
-            context->diagnostics.add_diagnostic_error(colons_token.position,
-                                                      "Expect identifier as Enum name");
+            context->diagnostics.report_error(colons_token.position,
+                                              "Expect identifier as Enum name");
             throw "Stop";
         }
     }
@@ -1237,7 +1233,7 @@ auto JotParser::parse_prefix_expression() -> Shared<Expression>
             return std::make_shared<PrefixUnaryExpression>(token, right);
         }
 
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             token.position,
             "Unary ++ or -- expect right expression to be variable or index expression");
         throw "Stop";
@@ -1271,7 +1267,7 @@ auto JotParser::parse_postfix_increment_or_decrement() -> Shared<Expression>
             (ast_node_type == AstNodeType::IndexExpr) or (ast_node_type == AstNodeType::DotExpr)) {
             return std::make_shared<PostfixUnaryExpression>(token, expression);
         }
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             token.position,
             "Unary ++ or -- expect left expression to be variable or index expression");
         throw "Stop";
@@ -1347,8 +1343,8 @@ auto JotParser::parse_enumeration_attribute_expression() -> Shared<Expression>
                 return std::make_shared<NumberExpression>(number_token, number_type);
             }
 
-            context->diagnostics.add_diagnostic_error(
-                attribute.position, "Un supported attribute for enumeration type");
+            context->diagnostics.report_error(attribute.position,
+                                              "Un supported attribute for enumeration type");
             throw "Stop";
         }
     }
@@ -1491,8 +1487,8 @@ auto JotParser::parse_primary_expression() -> Shared<Expression>
         return parse_value_size_expression();
     }
     default: {
-        context->diagnostics.add_diagnostic_error(peek_current().position,
-                                                  "Unexpected or unsupported expression");
+        context->diagnostics.report_error(peek_current().position,
+                                          "Unexpected or unsupported expression");
         throw "Stop";
     }
     }
@@ -1595,7 +1591,7 @@ auto JotParser::parse_switch_expression() -> Shared<SwitchExpression>
     while (is_source_available() and !is_current_kind(TokenKind::CloseBrace)) {
         if (is_current_kind(TokenKind::ElseKeyword)) {
             if (has_default_branch) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     keyword.position, "Switch expression can't has more than one default branch");
                 throw "Stop";
             }
@@ -1614,7 +1610,7 @@ auto JotParser::parse_switch_expression() -> Shared<SwitchExpression>
                     advanced_token();
                 }
                 else {
-                    context->diagnostics.add_diagnostic_error(
+                    context->diagnostics.report_error(
                         current_token->position,
                         "In Switch expression can't use `,` with no value before it");
                     throw "Stop";
@@ -1630,7 +1626,7 @@ auto JotParser::parse_switch_expression() -> Shared<SwitchExpression>
             }
 
             // Assert that case node type must be valid type
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 keyword.position, "Switch expression case must be integer or enum element");
             throw "Stop";
         } while (is_current_kind(TokenKind::Comma));
@@ -1645,13 +1641,13 @@ auto JotParser::parse_switch_expression() -> Shared<SwitchExpression>
     }
 
     if (not has_default_branch) {
-        context->diagnostics.add_diagnostic_error(keyword.position,
-                                                  "Switch expression must has a default case");
+        context->diagnostics.report_error(keyword.position,
+                                          "Switch expression must has a default case");
         throw "Stop";
     }
 
     if (cases.empty()) {
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             keyword.position, "Switch expression must has at last one case and default case");
         throw "Stop";
     }
@@ -1727,8 +1723,7 @@ auto JotParser::get_number_kind(TokenKind token) -> NumberKind
     case TokenKind::Float32Type: return NumberKind::FLOAT_32;
     case TokenKind::Float64Type: return NumberKind::FLOAT_64;
     default: {
-        context->diagnostics.add_diagnostic_error(peek_current().position,
-                                                  "Token kind is not a number");
+        context->diagnostics.report_error(peek_current().position, "Token kind is not a number");
         throw "Stop";
     }
     }
@@ -1788,7 +1783,7 @@ auto JotParser::consume_kind(TokenKind kind, const char* message) -> Token
         advanced_token();
         return previous_token.value();
     }
-    context->diagnostics.add_diagnostic_error(peek_current().position, message);
+    context->diagnostics.report_error(peek_current().position, message);
     throw "Stop";
 }
 
@@ -1803,7 +1798,7 @@ void JotParser::assert_kind(TokenKind kind, const char* message)
     if (kind == TokenKind::Semicolon) {
         location = peek_previous().position;
     }
-    context->diagnostics.add_diagnostic_error(location, message);
+    context->diagnostics.report_error(location, message);
     throw "Stop";
 }
 

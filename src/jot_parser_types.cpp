@@ -67,15 +67,15 @@ auto JotParser::parse_fixed_size_array_type() -> Shared<JotType>
     auto bracket = consume_kind(TokenKind::OpenBracket, "Expect [ for fixed size array type");
 
     if (is_current_kind(TokenKind::CloseBracket)) {
-        context->diagnostics.add_diagnostic_error(peek_current().position,
-                                                  "Fixed array type must have implicit size [n]");
+        context->diagnostics.report_error(peek_current().position,
+                                          "Fixed array type must have implicit size [n]");
         throw "Stop";
     }
 
     const auto size = parse_number_expression();
     if (!is_integer_type(size->get_type_node())) {
-        context->diagnostics.add_diagnostic_error(bracket.position,
-                                                  "Array size must be an integer constants");
+        context->diagnostics.report_error(bracket.position,
+                                          "Array size must be an integer constants");
         throw "Stop";
     }
 
@@ -86,16 +86,16 @@ auto JotParser::parse_fixed_size_array_type() -> Shared<JotType>
     // Check if array element type is not void
     if (is_void_type(element_type)) {
         auto void_token = peek_previous();
-        context->diagnostics.add_diagnostic_error(
-            void_token.position, "Can't declare array with incomplete type 'void'");
+        context->diagnostics.report_error(void_token.position,
+                                          "Can't declare array with incomplete type 'void'");
         throw "Stop";
     }
 
     // Check if array element type is none (incomplete)
     if (is_jot_types_equals(element_type, jot_none_ty)) {
         auto type_token = peek_previous();
-        context->diagnostics.add_diagnostic_error(type_token.position,
-                                                  "Can't declare array with incomplete type");
+        context->diagnostics.report_error(type_token.position,
+                                          "Can't declare array with incomplete type");
         throw "Stop";
     }
 
@@ -116,7 +116,7 @@ auto JotParser::parse_generic_struct_type() -> Shared<JotType>
 
             // Prevent use non generic struct type with any type parameters
             if (!struct_type->is_generic) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     smaller_token.position,
                     "Non generic struct type don't accept any types parameters");
                 throw "Stop";
@@ -136,7 +136,7 @@ auto JotParser::parse_generic_struct_type() -> Shared<JotType>
 
             // Make sure generic struct types is used with correct number of parameters
             if (struct_type->generic_parameters.size() != generic_parameters.size()) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     smaller_token.position,
                     "Invalid number of generic parameters expect " +
                         std::to_string(struct_type->generic_parameters.size()) + " but got " +
@@ -147,8 +147,8 @@ auto JotParser::parse_generic_struct_type() -> Shared<JotType>
             return std::make_shared<JotGenericStructType>(struct_type, generic_parameters);
         }
 
-        context->diagnostics.add_diagnostic_error(peek_previous().position,
-                                                  "Only structures can accept generic parameters");
+        context->diagnostics.report_error(peek_previous().position,
+                                          "Only structures can accept generic parameters");
         throw "Stop";
     }
 
@@ -157,7 +157,7 @@ auto JotParser::parse_generic_struct_type() -> Shared<JotType>
         auto struct_type = std::static_pointer_cast<JotStructType>(primary_type);
         if (struct_type->is_generic) {
             auto struct_name = peek_previous();
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 struct_name.position, "Generic struct type must be used with parameters types " +
                                           struct_name.literal + "<..>");
             throw "Stop";
@@ -176,12 +176,12 @@ auto JotParser::parse_primary_type() -> Shared<JotType>
 
     // Show helpful diagnostic error message for varargs case
     if (is_current_kind(TokenKind::VarargsKeyword)) {
-        context->diagnostics.add_diagnostic_error(
-            peek_current().position, "Varargs not supported as function pointer parameter");
+        context->diagnostics.report_error(peek_current().position,
+                                          "Varargs not supported as function pointer parameter");
         throw "Stop";
     }
 
-    context->diagnostics.add_diagnostic_error(peek_current().position, "Expected symbol as type ");
+    context->diagnostics.report_error(peek_current().position, "Expected symbol as type ");
     throw "Stop";
 }
 
@@ -226,7 +226,6 @@ auto JotParser::parse_identifier_type() -> Shared<JotType>
     }
 
     // This type is not permitive, structure or enumerations
-    context->diagnostics.add_diagnostic_error(peek_current().position,
-                                              "Unexpected identifier type");
+    context->diagnostics.report_error(peek_current().position, "Unexpected identifier type");
     throw "Stop";
 }

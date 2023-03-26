@@ -13,17 +13,17 @@ auto JotCompiler::compile_source_code(const char* source_file) -> int
     type_checker.check_compilation_unit(compilation_unit);
 
     if (jot_context->options.should_report_warns and
-        jot_context->diagnostics.get_warns_number() > 0) {
-        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Warning);
+        jot_context->diagnostics.level_count(DiagnosticLevel::WARNING) > 0) {
+        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::WARNING);
     }
 
-    if (jot_context->diagnostics.get_errors_number() > 0) {
-        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Error);
+    if (jot_context->diagnostics.level_count(DiagnosticLevel::ERROR) > 0) {
+        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::ERROR);
         exit(EXIT_FAILURE);
     }
 
     if (jot_context->options.convert_warns_to_errors and
-        jot_context->diagnostics.get_warns_number() > 0) {
+        jot_context->diagnostics.level_count(DiagnosticLevel::WARNING) > 0) {
         exit(EXIT_FAILURE);
     }
 
@@ -51,17 +51,17 @@ auto JotCompiler::check_source_code(const char* source_file) -> int
     type_checker.check_compilation_unit(compilation_unit);
 
     if (jot_context->options.should_report_warns and
-        jot_context->diagnostics.get_warns_number() > 0) {
-        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Warning);
+        jot_context->diagnostics.level_count(DiagnosticLevel::WARNING) > 0) {
+        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::WARNING);
     }
 
-    if (jot_context->diagnostics.get_errors_number() > 0) {
-        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Error);
+    if (jot_context->diagnostics.level_count(DiagnosticLevel::ERROR) > 0) {
+        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::ERROR);
         exit(EXIT_FAILURE);
     }
 
     if (jot_context->options.convert_warns_to_errors and
-        jot_context->diagnostics.get_warns_number() > 0) {
+        jot_context->diagnostics.level_count(DiagnosticLevel::WARNING) > 0) {
         exit(EXIT_FAILURE);
     }
 
@@ -84,17 +84,17 @@ auto JotCompiler::parse_source_code(const char* source_file) -> std::shared_ptr<
     auto compilation_unit = parser.parse_compilation_unit();
 
     if (jot_context->options.should_report_warns and
-        jot_context->diagnostics.get_warns_number() > 0) {
-        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Warning);
+        jot_context->diagnostics.level_count(DiagnosticLevel::WARNING) > 0) {
+        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::WARNING);
     }
 
-    if (jot_context->diagnostics.get_errors_number() > 0) {
-        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::Error);
+    if (jot_context->diagnostics.level_count(DiagnosticLevel::ERROR) > 0) {
+        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::ERROR);
         exit(EXIT_FAILURE);
     }
 
     if (jot_context->options.convert_warns_to_errors and
-        jot_context->diagnostics.get_warns_number() > 0) {
+        jot_context->diagnostics.level_count(DiagnosticLevel::WARNING) > 0) {
         exit(EXIT_FAILURE);
     }
 

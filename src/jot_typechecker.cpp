@@ -59,9 +59,9 @@ auto JotTypeChecker::visit(FieldDeclaration* node) -> std::any
                 should_update_node_type = false;
                 bool is_first_defined = types_table.define(name, right_type);
                 if (!is_first_defined) {
-                    context->diagnostics.add_diagnostic_error(
-                        node->get_name().position,
-                        "Field " + name + " is defined twice in the same scope");
+                    context->diagnostics.report_error(node->get_name().position,
+                                                      "Field " + name +
+                                                          " is defined twice in the same scope");
                     throw "Stop";
                 }
             }
@@ -73,8 +73,8 @@ auto JotTypeChecker::visit(FieldDeclaration* node) -> std::any
         }
 
         if (node->is_global() and !right_value->is_constant()) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_name().position, "Initializer element is not a compile-time constant");
+            context->diagnostics.report_error(node->get_name().position,
+                                              "Initializer element is not a compile-time constant");
             throw "Stop";
         }
 
@@ -84,22 +84,22 @@ auto JotTypeChecker::visit(FieldDeclaration* node) -> std::any
         bool is_right_null_type = is_null_type(right_type);
 
         if (is_left_none_type and is_right_none_type) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 node->get_name().position,
                 "Can't resolve field type when both rvalue and lvalue are unkown");
             throw "Stop";
         }
 
         if (is_left_none_type and is_right_null_type) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 node->get_name().position,
                 "Can't resolve field type rvalue is null, please add type to the varaible");
             throw "Stop";
         }
 
         if (!is_left_ptr_type and is_right_null_type) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_name().position, "Can't declare non pointer variable with null value");
+            context->diagnostics.report_error(node->get_name().position,
+                                              "Can't declare non pointer variable with null value");
             throw "Stop";
         }
 
@@ -122,7 +122,7 @@ auto JotTypeChecker::visit(FieldDeclaration* node) -> std::any
         }
 
         if (!is_type_updated && !is_jot_types_equals(left_type, right_type)) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 node->get_name().position, "Type missmatch expect " + jot_type_literal(left_type) +
                                                " but got " + jot_type_literal(right_type));
             throw "Stop";
@@ -140,7 +140,7 @@ auto JotTypeChecker::visit(FieldDeclaration* node) -> std::any
         }
 
         if (!is_first_defined) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 node->get_name().position, "Field " + name + " is defined twice in the same scope");
             throw "Stop";
         }
@@ -161,9 +161,9 @@ auto JotTypeChecker::visit(FunctionPrototype* node) -> std::any
         name, parameters, return_type, node->has_varargs(), node->get_varargs_type());
     bool is_first_defined = types_table.define(name.literal, function_type);
     if (not is_first_defined) {
-        context->diagnostics.add_diagnostic_error(node->get_name().position,
-                                                  "function " + name.literal +
-                                                      " is defined twice in the same scope");
+        context->diagnostics.report_error(node->get_name().position,
+                                          "function " + name.literal +
+                                              " is defined twice in the same scope");
         throw "Stop";
     }
 
@@ -185,8 +185,8 @@ auto JotTypeChecker::visit(IntrinsicPrototype* node) -> std::any
                                                            node->varargs, node->varargs_type, true);
     bool is_first_defined = types_table.define(name.literal, function_type);
     if (not is_first_defined) {
-        context->diagnostics.add_diagnostic_error(
-            name.position, "function " + name.literal + " is defined twice in the same scope");
+        context->diagnostics.report_error(name.position, "function " + name.literal +
+                                                             " is defined twice in the same scope");
         throw "Stop";
     }
     return function_type;
@@ -213,7 +213,7 @@ auto JotTypeChecker::visit(FunctionDeclaration* node) -> std::any
     // If Function return type is not void, should check for missing return statement
     if (!is_void_type(function->return_type) && !check_missing_return_statement(function_body)) {
         const auto& span = node->get_prototype()->get_name().position;
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             span, "A 'return' statement required in a function with a block body ('{...}')");
         throw "Stop";
     }
@@ -238,23 +238,23 @@ auto JotTypeChecker::visit(EnumDeclaration* node) -> std::any
     auto enum_type = std::static_pointer_cast<JotEnumType>(node->get_enum_type());
     auto enum_element_type = enum_type->element_type;
     if (not is_integer_type(enum_element_type)) {
-        context->diagnostics.add_diagnostic_error(node->get_name().position,
-                                                  "Enum element type must be aa integer type");
+        context->diagnostics.report_error(node->get_name().position,
+                                          "Enum element type must be aa integer type");
         throw "Stop";
     }
 
     auto element_size = enum_type->values.size();
     if (element_size > 2 && is_boolean_type(enum_element_type)) {
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             node->get_name().position, "Enum with bool (int1) type can't has more than 2 elements");
         throw "Stop";
     }
 
     bool is_first_defined = types_table.define(name, enum_type);
     if (not is_first_defined) {
-        context->diagnostics.add_diagnostic_error(node->get_name().position,
-                                                  "enumeration " + name +
-                                                      " is defined twice in the same scope");
+        context->diagnostics.report_error(node->get_name().position,
+                                          "enumeration " + name +
+                                              " is defined twice in the same scope");
         throw "Stop";
     }
     return is_first_defined;
@@ -265,9 +265,9 @@ auto JotTypeChecker::visit(IfStatement* node) -> std::any
     for (auto& conditional_block : node->get_conditional_blocks()) {
         auto condition = node_jot_type(conditional_block->get_condition()->accept(this));
         if (not is_number_type(condition)) {
-            context->diagnostics.add_diagnostic_error(conditional_block->get_position().position,
-                                                      "if condition mush be a number but got " +
-                                                          jot_type_literal(condition));
+            context->diagnostics.report_error(conditional_block->get_position().position,
+                                              "if condition mush be a number but got " +
+                                                  jot_type_literal(condition));
             throw "Stop";
         }
         push_new_scope();
@@ -288,7 +288,7 @@ auto JotTypeChecker::visit(ForRangeStatement* node) -> std::any
         if (node->step) {
             const auto step_type = node_jot_type(node->step->accept(this));
             if (!is_jot_types_equals(step_type, start_type)) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     node->position.position,
                     "For range declared step must be the same type as range start and end");
                 throw "Stop";
@@ -307,8 +307,8 @@ auto JotTypeChecker::visit(ForRangeStatement* node) -> std::any
         return 0;
     }
 
-    context->diagnostics.add_diagnostic_error(node->position.position,
-                                              "For range start and end must be integers");
+    context->diagnostics.report_error(node->position.position,
+                                      "For range start and end must be integers");
     throw "Stop";
 }
 
@@ -317,8 +317,8 @@ auto JotTypeChecker::visit(ForEachStatement* node) -> std::any
     auto collection_type = node_jot_type(node->collection->accept(this));
 
     if (collection_type->type_kind != TypeKind::ARRAY) {
-        context->diagnostics.add_diagnostic_error(node->position.position,
-                                                  "For each expect array as paramter");
+        context->diagnostics.report_error(node->position.position,
+                                          "For each expect array as paramter");
         throw "Stop";
     }
 
@@ -348,9 +348,9 @@ auto JotTypeChecker::visit(WhileStatement* node) -> std::any
 {
     auto left_type = node_jot_type(node->get_condition()->accept(this));
     if (not is_number_type(left_type)) {
-        context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                                  "While condition mush be a number but got " +
-                                                      jot_type_literal(left_type));
+        context->diagnostics.report_error(node->get_position().position,
+                                          "While condition mush be a number but got " +
+                                              jot_type_literal(left_type));
         throw "Stop";
     }
     push_new_scope();
@@ -364,7 +364,7 @@ auto JotTypeChecker::visit(SwitchStatement* node) -> std::any
     // Check that switch argument is integer type
     auto argument = node_jot_type(node->get_argument()->accept(this));
     if ((not is_integer_type(argument)) and (not is_enum_element_type(argument))) {
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             node->get_position().position,
             "Switch argument type must be integer or enum element but found " +
                 jot_type_literal(argument));
@@ -387,7 +387,7 @@ auto JotTypeChecker::visit(SwitchStatement* node) -> std::any
                 if (value_node_type == AstNodeType::NumberExpr) {
                     auto value_type = node_jot_type(value->accept(this));
                     if (!is_number_type(value_type)) {
-                        context->diagnostics.add_diagnostic_error(
+                        context->diagnostics.report_error(
                             branch->get_position().position,
                             "Switch case value must be an integer but found " +
                                 jot_type_literal(value_type));
@@ -398,7 +398,7 @@ auto JotTypeChecker::visit(SwitchStatement* node) -> std::any
                 // Check that all cases values are uniques
                 if (auto number = std::dynamic_pointer_cast<NumberExpression>(value)) {
                     if (!cases_values.insert(number->get_value().literal).second) {
-                        context->diagnostics.add_diagnostic_error(
+                        context->diagnostics.report_error(
                             branch->get_position().position,
                             "Switch can't has more than case with the same constants value");
                         throw "Stop";
@@ -408,7 +408,7 @@ auto JotTypeChecker::visit(SwitchStatement* node) -> std::any
                              std::dynamic_pointer_cast<EnumAccessExpression>(value)) {
                     auto enum_index_string = std::to_string(enum_element->get_enum_element_index());
                     if (not cases_values.insert(enum_index_string).second) {
-                        context->diagnostics.add_diagnostic_error(
+                        context->diagnostics.report_error(
                             branch->get_position().position,
                             "Switch can't has more than case with the same constants value");
                         throw "Stop";
@@ -420,7 +420,7 @@ auto JotTypeChecker::visit(SwitchStatement* node) -> std::any
             }
 
             // Report Error if value is not number or enum element
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 branch->get_position().position,
                 "Switch case value must be an integer but found non constants integer type");
             throw "Stop";
@@ -447,10 +447,10 @@ auto JotTypeChecker::visit(ReturnStatement* node) -> std::any
 {
     if (not node->has_value()) {
         if (return_types_stack.top()->type_kind != TypeKind::VOID) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_position().position, "Expect return value to be " +
-                                                   jot_type_literal(return_types_stack.top()) +
-                                                   " but got void");
+            context->diagnostics.report_error(node->get_position().position,
+                                              "Expect return value to be " +
+                                                  jot_type_literal(return_types_stack.top()) +
+                                                  " but got void");
             throw "Stop";
         }
         return 0;
@@ -470,7 +470,7 @@ auto JotTypeChecker::visit(ReturnStatement* node) -> std::any
 
         // If function return type is not pointer, you can't return null
         if (!is_pointer_type(function_return_type) and is_null_type(return_type)) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 node->get_position().position,
                 "Can't return null from function that return non pointer type");
             throw "Stop";
@@ -489,17 +489,17 @@ auto JotTypeChecker::visit(ReturnStatement* node) -> std::any
 
             if (expected_fun_type->implicit_parameters_count !=
                 return_fun->implicit_parameters_count) {
-                context->diagnostics.add_diagnostic_error(
+                context->diagnostics.report_error(
                     node->get_position().position,
                     "Can't return lambda that implicit capture values from function");
                 throw "Stop";
             }
         }
 
-        context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                                  "Expect return value to be " +
-                                                      jot_type_literal(function_return_type) +
-                                                      " but got " + jot_type_literal(return_type));
+        context->diagnostics.report_error(node->get_position().position,
+                                          "Expect return value to be " +
+                                              jot_type_literal(function_return_type) + " but got " +
+                                              jot_type_literal(return_type));
         throw "Stop";
     }
 
@@ -515,8 +515,8 @@ auto JotTypeChecker::visit(DeferStatement* node) -> std::any
 auto JotTypeChecker::visit(BreakStatement* node) -> std::any
 {
     if (node->is_has_times() and node->get_times() == 1) {
-        context->diagnostics.add_diagnostic_warn(node->get_position().position,
-                                                 "`break 1;` can implicity written as `break;`");
+        context->diagnostics.report_warning(node->get_position().position,
+                                            "`break 1;` can implicity written as `break;`");
     }
     return 0;
 }
@@ -524,8 +524,8 @@ auto JotTypeChecker::visit(BreakStatement* node) -> std::any
 auto JotTypeChecker::visit(ContinueStatement* node) -> std::any
 {
     if (node->is_has_times() and node->get_times() == 1) {
-        context->diagnostics.add_diagnostic_warn(
-            node->get_position().position, "`continue 1;` can implicity written as `continue;`");
+        context->diagnostics.report_warning(node->get_position().position,
+                                            "`continue 1;` can implicity written as `continue;`");
     }
     return 0;
 }
@@ -539,19 +539,19 @@ auto JotTypeChecker::visit(IfExpression* node) -> std::any
 {
     auto condition = node_jot_type(node->get_condition()->accept(this));
     if (not is_number_type(condition)) {
-        context->diagnostics.add_diagnostic_error(
-            node->get_if_position().position,
-            "If Expression condition mush be a number but got " + jot_type_literal(condition));
+        context->diagnostics.report_error(node->get_if_position().position,
+                                          "If Expression condition mush be a number but got " +
+                                              jot_type_literal(condition));
         throw "Stop";
     }
 
     auto if_value = node_jot_type(node->get_if_value()->accept(this));
     auto else_value = node_jot_type(node->get_else_value()->accept(this));
     if (!is_jot_types_equals(if_value, else_value)) {
-        context->diagnostics.add_diagnostic_error(node->get_if_position().position,
-                                                  "If Expression Type missmatch expect " +
-                                                      jot_type_literal(if_value) + " but got " +
-                                                      jot_type_literal(else_value));
+        context->diagnostics.report_error(node->get_if_position().position,
+                                          "If Expression Type missmatch expect " +
+                                              jot_type_literal(if_value) + " but got " +
+                                              jot_type_literal(else_value));
         throw "Stop";
     }
     node->set_type_node(if_value);
@@ -567,7 +567,7 @@ auto JotTypeChecker::visit(SwitchExpression* node) -> std::any
         auto case_expression = cases[i];
         auto case_type = node_jot_type(case_expression->accept(this));
         if (!is_jot_types_equals(argument, case_type)) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 node->get_position().position,
                 "Switch case type must be the same type of argument type " +
                     jot_type_literal(argument) + " but got " + jot_type_literal(case_type) +
@@ -581,17 +581,17 @@ auto JotTypeChecker::visit(SwitchExpression* node) -> std::any
     for (size_t i = 1; i < cases_size; i++) {
         auto case_value = node_jot_type(values[i]->accept(this));
         if (!is_jot_types_equals(expected_type, case_value)) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_position().position, "Switch cases must be the same time but got " +
-                                                   jot_type_literal(expected_type) + " and " +
-                                                   jot_type_literal(case_value));
+            context->diagnostics.report_error(node->get_position().position,
+                                              "Switch cases must be the same time but got " +
+                                                  jot_type_literal(expected_type) + " and " +
+                                                  jot_type_literal(case_value));
             throw "Stop";
         }
     }
 
     auto default_value_type = node_jot_type(node->get_default_case_value()->accept(this));
     if (!is_jot_types_equals(expected_type, default_value_type)) {
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             node->get_position().position,
             "Switch case default values must be the same type of other cases expect " +
                 jot_type_literal(expected_type) + " but got " +
@@ -618,7 +618,7 @@ auto JotTypeChecker::visit(AssignExpression* node) -> std::any
         auto index_expression = std::dynamic_pointer_cast<IndexExpression>(left_node);
         auto value_type = index_expression->get_value()->get_type_node();
         if (jot_type_literal(value_type) == "*Int8") {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 index_expression->get_position().position,
                 "String literal are readonly can't modify it using [i]");
             throw "Stop";
@@ -627,7 +627,7 @@ auto JotTypeChecker::visit(AssignExpression* node) -> std::any
 
     // Prevent Assign expression with lhs with type Enum Element
     if (left_node->get_ast_node_type() == AstNodeType::EnumElementExpr) {
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             node->get_operator_token().position,
             "Enum field is un mutable constants and can't be changed at runtime");
         throw "Stop";
@@ -644,10 +644,9 @@ auto JotTypeChecker::visit(AssignExpression* node) -> std::any
 
     // RValue type and LValue Type don't matchs
     if (!is_jot_types_equals(left_type, right_type)) {
-        context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
-                                                  "Type missmatch expect " +
-                                                      jot_type_literal(left_type) + " but got " +
-                                                      jot_type_literal(right_type));
+        context->diagnostics.report_error(node->get_operator_token().position,
+                                          "Type missmatch expect " + jot_type_literal(left_type) +
+                                              " but got " + jot_type_literal(right_type));
         throw "Stop";
     }
 
@@ -666,22 +665,22 @@ auto JotTypeChecker::visit(BinaryExpression* node) -> std::any
     if (not is_left_number || not is_right_number) {
 
         if (not is_left_number) {
-            context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
-                                                      "Expected binary left to be number but got " +
-                                                          jot_type_literal(left_type));
+            context->diagnostics.report_error(node->get_operator_token().position,
+                                              "Expected binary left to be number but got " +
+                                                  jot_type_literal(left_type));
         }
 
         if (not is_right_number) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_operator_token().position,
-                "Expected binary right to be number but got " + jot_type_literal(left_type));
+            context->diagnostics.report_error(node->get_operator_token().position,
+                                              "Expected binary right to be number but got " +
+                                                  jot_type_literal(left_type));
         }
 
         if (not is_the_same) {
-            context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
-                                                      "Binary Expression type missmatch " +
-                                                          jot_type_literal(left_type) + " and " +
-                                                          jot_type_literal(right_type));
+            context->diagnostics.report_error(node->get_operator_token().position,
+                                              "Binary Expression type missmatch " +
+                                                  jot_type_literal(left_type) + " and " +
+                                                  jot_type_literal(right_type));
         }
 
         throw "Stop";
@@ -705,24 +704,24 @@ auto JotTypeChecker::visit(ShiftExpression* node) -> std::any
     // Check that they are both the integers and with the same size
     if (not is_left_number || not is_right_number || not is_the_same) {
         if (not is_left_number) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 node->get_operator_token().position,
                 "Shift Expressions Expected left to be integers but got " +
                     jot_type_literal(left_type));
         }
 
         if (not is_right_number) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 node->get_operator_token().position,
                 "Shift Expressions Expected right to be integers but got " +
                     jot_type_literal(left_type));
         }
 
         if (not is_the_same) {
-            context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
-                                                      "Shift Expression type missmatch " +
-                                                          jot_type_literal(left_type) + " and " +
-                                                          jot_type_literal(right_type));
+            context->diagnostics.report_error(node->get_operator_token().position,
+                                              "Shift Expression type missmatch " +
+                                                  jot_type_literal(left_type) + " and " +
+                                                  jot_type_literal(right_type));
         }
 
         throw "Stop";
@@ -736,7 +735,7 @@ auto JotTypeChecker::visit(ShiftExpression* node) -> std::any
         auto number_kind = std::static_pointer_cast<JotNumberType>(left_type)->number_kind;
         auto first_operand_width = number_kind_width[number_kind];
         if (num >= first_operand_width) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 node->get_operator_token().position,
                 "Shift Expressions second operand can't be bigger than or equal first operand bit "
                 "width (" +
@@ -750,7 +749,7 @@ auto JotTypeChecker::visit(ShiftExpression* node) -> std::any
         auto unary = std::dynamic_pointer_cast<PrefixUnaryExpression>(rhs);
         if (unary->get_operator_token().kind == TokenKind::Minus &&
             unary->get_right()->get_ast_node_type() == AstNodeType::NumberExpr) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 node->get_operator_token().position,
                 "Shift Expressions second operand can't be a negative number");
             throw "Stop";
@@ -772,7 +771,7 @@ auto JotTypeChecker::visit(ComparisonExpression* node) -> std::any
             return node_jot_type(node->get_type_node());
         }
 
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             node->get_operator_token().position,
             "You can't compare numbers with different size or types " +
                 jot_type_literal(left_type) + " and " + jot_type_literal(right_type));
@@ -785,10 +784,10 @@ auto JotTypeChecker::visit(ComparisonExpression* node) -> std::any
             return node_jot_type(node->get_type_node());
         }
 
-        context->diagnostics.add_diagnostic_error(
-            node->get_operator_token().position,
-            "You can't compare elements from different enums " + jot_type_literal(left_type) +
-                " and " + jot_type_literal(right_type));
+        context->diagnostics.report_error(node->get_operator_token().position,
+                                          "You can't compare elements from different enums " +
+                                              jot_type_literal(left_type) + " and " +
+                                              jot_type_literal(right_type));
         throw "Stop";
     }
 
@@ -798,10 +797,10 @@ auto JotTypeChecker::visit(ComparisonExpression* node) -> std::any
             return node_jot_type(node->get_type_node());
         }
 
-        context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
-                                                  "You can't compare pointers to different types " +
-                                                      jot_type_literal(left_type) + " and " +
-                                                      jot_type_literal(right_type));
+        context->diagnostics.report_error(node->get_operator_token().position,
+                                          "You can't compare pointers to different types " +
+                                              jot_type_literal(left_type) + " and " +
+                                              jot_type_literal(right_type));
         throw "Stop";
     }
 
@@ -825,10 +824,10 @@ auto JotTypeChecker::visit(ComparisonExpression* node) -> std::any
     }
 
     // Comparing different types together is invalid
-    context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
-                                              "Can't compare thoese types together " +
-                                                  jot_type_literal(left_type) + " and " +
-                                                  jot_type_literal(right_type));
+    context->diagnostics.report_error(node->get_operator_token().position,
+                                      "Can't compare thoese types together " +
+                                          jot_type_literal(left_type) + " and " +
+                                          jot_type_literal(right_type));
     throw "Stop";
 }
 
@@ -842,14 +841,14 @@ auto JotTypeChecker::visit(LogicalExpression* node) -> std::any
     bool is_right_number = is_number_type(right_type);
     if (not is_left_number || not is_right_number) {
         if (not is_left_number) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_operator_token().position,
-                "Expected Logical left to be number but got " + jot_type_literal(left_type));
+            context->diagnostics.report_error(node->get_operator_token().position,
+                                              "Expected Logical left to be number but got " +
+                                                  jot_type_literal(left_type));
         }
         if (not is_right_number) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_operator_token().position,
-                "Expected Logical right to be number but got " + jot_type_literal(left_type));
+            context->diagnostics.report_error(node->get_operator_token().position,
+                                              "Expected Logical right to be number but got " +
+                                                  jot_type_literal(left_type));
         }
         throw "Stop";
     }
@@ -867,7 +866,7 @@ auto JotTypeChecker::visit(PrefixUnaryExpression* node) -> std::any
             node->set_type_node(operand_type);
             return operand_type;
         }
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             node->get_operator_token().position,
             "Unary - operator require number as an right operand but got " +
                 jot_type_literal(operand_type));
@@ -879,7 +878,7 @@ auto JotTypeChecker::visit(PrefixUnaryExpression* node) -> std::any
             node->set_type_node(operand_type);
             return operand_type;
         }
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             node->get_operator_token().position,
             "Unary - operator require boolean as an right operand but got " +
                 jot_type_literal(operand_type));
@@ -891,7 +890,7 @@ auto JotTypeChecker::visit(PrefixUnaryExpression* node) -> std::any
             node->set_type_node(operand_type);
             return operand_type;
         }
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             node->get_operator_token().position,
             "Unary ~ operator require number as an right operand but got " +
                 jot_type_literal(operand_type));
@@ -906,7 +905,7 @@ auto JotTypeChecker::visit(PrefixUnaryExpression* node) -> std::any
             return type;
         }
 
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             node->get_operator_token().position,
             "Derefernse operator require pointer as an right operand but got " +
                 jot_type_literal(operand_type));
@@ -918,8 +917,8 @@ auto JotTypeChecker::visit(PrefixUnaryExpression* node) -> std::any
         if (is_function_pointer_type(pointer_type)) {
             auto function_type = std::static_pointer_cast<JotFunctionType>(pointer_type->base_type);
             if (function_type->is_intrinsic) {
-                context->diagnostics.add_diagnostic_error(
-                    function_type->name.position, "Can't take address of an intrinsic function");
+                context->diagnostics.report_error(function_type->name.position,
+                                                  "Can't take address of an intrinsic function");
                 throw "Stop";
             }
         }
@@ -929,7 +928,7 @@ auto JotTypeChecker::visit(PrefixUnaryExpression* node) -> std::any
 
     if (unary_operator == TokenKind::PlusPlus || unary_operator == TokenKind::MinusMinus) {
         if (operand_type->type_kind != TypeKind::NUMBER) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 node->get_operator_token().position,
                 "Unary ++ or -- expression expect variable to be number ttype but got " +
                     jot_type_literal(operand_type));
@@ -939,9 +938,9 @@ auto JotTypeChecker::visit(PrefixUnaryExpression* node) -> std::any
         return operand_type;
     }
 
-    context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
-                                              "Unsupported unary expression " +
-                                                  jot_type_literal(operand_type));
+    context->diagnostics.report_error(node->get_operator_token().position,
+                                      "Unsupported unary expression " +
+                                          jot_type_literal(operand_type));
     throw "Stop";
 }
 
@@ -952,7 +951,7 @@ auto JotTypeChecker::visit(PostfixUnaryExpression* node) -> std::any
 
     if (unary_operator == TokenKind::PlusPlus or unary_operator == TokenKind::MinusMinus) {
         if (operand_type->type_kind != TypeKind::NUMBER) {
-            context->diagnostics.add_diagnostic_error(
+            context->diagnostics.report_error(
                 node->get_operator_token().position,
                 "Unary ++ or -- expression expect variable to be number ttype but got " +
                     jot_type_literal(operand_type));
@@ -962,9 +961,9 @@ auto JotTypeChecker::visit(PostfixUnaryExpression* node) -> std::any
         return operand_type;
     }
 
-    context->diagnostics.add_diagnostic_error(node->get_operator_token().position,
-                                              "Unsupported unary expression " +
-                                                  jot_type_literal(operand_type));
+    context->diagnostics.report_error(node->get_operator_token().position,
+                                      "Unsupported unary expression " +
+                                          jot_type_literal(operand_type));
     throw "Stop";
 }
 
@@ -1002,14 +1001,14 @@ auto JotTypeChecker::visit(CallExpression* node) -> std::any
                 return type->return_type;
             }
             else {
-                context->diagnostics.add_diagnostic_error(
-                    node->get_position().position, "Call expression work only with function");
+                context->diagnostics.report_error(node->get_position().position,
+                                                  "Call expression work only with function");
                 throw "Stop";
             }
         }
         else {
-            context->diagnostics.add_diagnostic_error(
-                node->get_position().position, "Can't resolve function call with name " + name);
+            context->diagnostics.report_error(node->get_position().position,
+                                              "Can't resolve function call with name " + name);
             throw "Stop";
         }
     }
@@ -1076,8 +1075,8 @@ auto JotTypeChecker::visit(CallExpression* node) -> std::any
         return function_type->return_type;
     }
 
-    context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                              "Unexpected callee type for Call Expression");
+    context->diagnostics.report_error(node->get_position().position,
+                                      "Unexpected callee type for Call Expression");
     throw "Stop";
 }
 
@@ -1095,8 +1094,8 @@ auto JotTypeChecker::visit(InitializeExpression* node) -> std::any
         return struct_type;
     }
 
-    context->diagnostics.add_diagnostic_error(node->position.position,
-                                              "InitializeExpression work only with structures");
+    context->diagnostics.report_error(node->position.position,
+                                      "InitializeExpression work only with structures");
     throw "Stop";
 }
 
@@ -1162,9 +1161,9 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
             return field_type;
         }
 
-        context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                                  "Can't find a field with name " + field_name +
-                                                      " in struct " + struct_type->name);
+        context->diagnostics.report_error(node->get_position().position,
+                                          "Can't find a field with name " + field_name +
+                                              " in struct " + struct_type->name);
         throw "Stop";
     }
 
@@ -1182,13 +1181,13 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
                 node->field_index = member_index;
                 return field_type;
             }
-            context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                                      "Can't find a field with name " + field_name +
-                                                          " in struct " + struct_type->name);
+            context->diagnostics.report_error(node->get_position().position,
+                                              "Can't find a field with name " + field_name +
+                                                  " in struct " + struct_type->name);
             throw "Stop";
         }
 
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             node->get_position().position,
             "Dot expression expect calling member from struct or pointer to struct");
         throw "Stop";
@@ -1204,8 +1203,8 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
             return jot_int64_ty;
         }
 
-        context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                                  "Unkown Array attribute with name " + literal);
+        context->diagnostics.report_error(node->get_position().position,
+                                          "Unkown Array attribute with name " + literal);
         throw "Stop";
     }
 
@@ -1222,14 +1221,14 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
             node->field_index = member_index;
             return field_type;
         }
-        context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                                  "Can't find a field with name " + field_name +
-                                                      " in struct " + struct_type->name);
+        context->diagnostics.report_error(node->get_position().position,
+                                          "Can't find a field with name " + field_name +
+                                              " in struct " + struct_type->name);
         throw "Stop";
     }
 
-    context->diagnostics.add_diagnostic_error(
-        node->get_position().position, "Dot expression expect struct or enum type as lvalue");
+    context->diagnostics.report_error(node->get_position().position,
+                                      "Dot expression expect struct or enum type as lvalue");
     throw "Stop";
 }
 
@@ -1246,9 +1245,9 @@ auto JotTypeChecker::visit(CastExpression* node) -> std::any
     }
 
     if (!can_jot_types_casted(value_type, cast_result_type)) {
-        context->diagnostics.add_diagnostic_error(
-            node->get_position().position, "Can't cast from " + jot_type_literal(value_type) +
-                                               " to " + jot_type_literal(cast_result_type));
+        context->diagnostics.report_error(node->get_position().position,
+                                          "Can't cast from " + jot_type_literal(value_type) +
+                                              " to " + jot_type_literal(cast_result_type));
         throw "Stop";
     }
     return cast_result_type;
@@ -1265,9 +1264,9 @@ auto JotTypeChecker::visit(IndexExpression* node) -> std::any
 
     // Make sure index is integer type with any size
     if (!is_integer_type(index_type)) {
-        context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                                  "Index must be an integer but got " +
-                                                      jot_type_literal(index_type));
+        context->diagnostics.report_error(node->get_position().position,
+                                          "Index must be an integer but got " +
+                                              jot_type_literal(index_type));
         throw "Stop";
     }
 
@@ -1282,8 +1281,8 @@ auto JotTypeChecker::visit(IndexExpression* node) -> std::any
 
         // Check that index is not negative
         if (constant_index < 0) {
-            context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                                      "Index can't be negative number");
+            context->diagnostics.report_error(node->get_position().position,
+                                              "Index can't be negative number");
             throw "Stop";
         }
     }
@@ -1297,8 +1296,8 @@ auto JotTypeChecker::visit(IndexExpression* node) -> std::any
 
         // Check that index is not larger or equal array size
         if (has_constant_index && constant_index >= array_type->size) {
-            context->diagnostics.add_diagnostic_error(
-                node->get_position().position, "Index can't be bigger than or equal array size");
+            context->diagnostics.report_error(node->get_position().position,
+                                              "Index can't be bigger than or equal array size");
             throw "Stop";
         }
 
@@ -1311,9 +1310,9 @@ auto JotTypeChecker::visit(IndexExpression* node) -> std::any
         return pointer_type->base_type;
     }
 
-    context->diagnostics.add_diagnostic_error(node->get_position().position,
-                                              "Index expression require array but got " +
-                                                  jot_type_literal(callee_type));
+    context->diagnostics.report_error(node->get_position().position,
+                                      "Index expression require array but got " +
+                                          jot_type_literal(callee_type));
     throw "Stop";
 }
 
@@ -1323,9 +1322,9 @@ auto JotTypeChecker::visit(LiteralExpression* node) -> std::any
 {
     const auto name = node->get_name().literal;
     if (!types_table.is_defined(name)) {
-        context->diagnostics.add_diagnostic_error(node->get_name().position,
-                                                  "Can't resolve variable with name " +
-                                                      node->get_name().literal);
+        context->diagnostics.report_error(node->get_name().position,
+                                          "Can't resolve variable with name " +
+                                              node->get_name().literal);
         throw "Stop";
     }
 
@@ -1378,10 +1377,10 @@ auto JotTypeChecker::visit(NumberExpression* node) -> std::any
     if (not is_valid_range) {
         // TODO: Diagnostic message can be improved and provide more information
         // for example `value x must be in range s .. e or you should change the type to y`
-        context->diagnostics.add_diagnostic_error(node->get_value().position,
-                                                  "Number Value " + number_literal +
-                                                      " Can't be represented using type " +
-                                                      jot_type_literal(number_type));
+        context->diagnostics.report_error(node->get_value().position,
+                                          "Number Value " + number_literal +
+                                              " Can't be represented using type " +
+                                              jot_type_literal(number_type));
         throw "Stop";
     }
 
@@ -1404,10 +1403,10 @@ auto JotTypeChecker::visit(ArrayExpression* node) -> std::any
             continue;
         }
 
-        context->diagnostics.add_diagnostic_error(
-            node->get_position().position, "Array elements with index " + std::to_string(i - 1) +
-                                               " and " + std::to_string(i) +
-                                               " are not the same types");
+        context->diagnostics.report_error(node->get_position().position,
+                                          "Array elements with index " + std::to_string(i - 1) +
+                                              " and " + std::to_string(i) +
+                                              " are not the same types");
         throw "Stop";
     }
 
@@ -1475,7 +1474,7 @@ auto JotTypeChecker::check_parameters_types(TokenSpan                        loc
 
     // If hasent varargs, parameters and arguments must be the same size
     if (not has_varargs && all_arguments_size != parameters_size) {
-        context->diagnostics.add_diagnostic_error(
+        context->diagnostics.report_error(
             location, "Invalid number of arguments, expect " + std::to_string(parameters_size) +
                           " but got " + std::to_string(all_arguments_size));
         throw "Stop";
@@ -1483,10 +1482,10 @@ auto JotTypeChecker::check_parameters_types(TokenSpan                        loc
 
     // If it has varargs, number of parameters must be bigger than arguments
     if (has_varargs && parameters_size > all_arguments_size) {
-        context->diagnostics.add_diagnostic_error(
-            location, "Invalid number of arguments, expect at last" +
-                          std::to_string(parameters_size) + " but got " +
-                          std::to_string(all_arguments_size));
+        context->diagnostics.report_error(location, "Invalid number of arguments, expect at last" +
+                                                        std::to_string(parameters_size) +
+                                                        " but got " +
+                                                        std::to_string(all_arguments_size));
         throw "Stop";
     }
 
@@ -1528,10 +1527,10 @@ auto JotTypeChecker::check_parameters_types(TokenSpan                        loc
                 continue;
             }
 
-            context->diagnostics.add_diagnostic_error(
-                location, "Argument type didn't match parameter type expect " +
-                              jot_type_literal(parameters[p]) + " got " +
-                              jot_type_literal(arguments_types[i]));
+            context->diagnostics.report_error(location,
+                                              "Argument type didn't match parameter type expect " +
+                                                  jot_type_literal(parameters[p]) + " got " +
+                                                  jot_type_literal(arguments_types[i]));
             throw "Stop";
         }
     }
@@ -1544,10 +1543,10 @@ auto JotTypeChecker::check_parameters_types(TokenSpan                        loc
     // Check extra varargs types
     for (size_t i = parameters_size; i < arguments_size; i++) {
         if (!is_jot_types_equals(arguments_types[i], varargs_type)) {
-            context->diagnostics.add_diagnostic_error(
-                location, "Argument type didn't match varargs type expect " +
-                              jot_type_literal(varargs_type) + " got " +
-                              jot_type_literal(arguments_types[i]));
+            context->diagnostics.report_error(location,
+                                              "Argument type didn't match varargs type expect " +
+                                                  jot_type_literal(varargs_type) + " got " +
+                                                  jot_type_literal(arguments_types[i]));
             throw "Stop";
         }
     }
