@@ -1695,11 +1695,44 @@ auto JotTypeChecker::resolve_generic_struct(Shared<JotType> type) -> Shared<JotT
             if (type->type_kind == TypeKind::POINTER) {
                 auto pointer_type = std::static_pointer_cast<JotPointerType>(type);
                 auto element_type = pointer_type->base_type;
-                if (element_type->type_kind == TypeKind::GENERIC_PARAMETER) {
+                auto base_element_kind = element_type->type_kind;
+
+                if (base_element_kind == TypeKind::GENERIC_PARAMETER) {
                     auto generic_type =
                         std::static_pointer_cast<JotGenericParameterType>(element_type);
                     auto position = index_of(structure->generic_parameters, generic_type->name);
                     pointer_type->base_type = generic_struct->parameters[position];
+                    types.push_back(pointer_type);
+                    continue;
+                }
+
+                // Resolve function pointer with generic parameter
+                if (base_element_kind == TypeKind::FUNCTION) {
+                    auto function_type = std::static_pointer_cast<JotFunctionType>(element_type);
+                    auto return_type = function_type->return_type;
+
+                    // Resolve return type if it generic parameter
+                    if (return_type->type_kind == TypeKind::GENERIC_PARAMETER) {
+                        auto generic_return_type =
+                            std::static_pointer_cast<JotGenericParameterType>(return_type);
+                        auto position =
+                            index_of(structure->generic_parameters, generic_return_type->name);
+                        function_type->return_type = generic_struct->parameters[position];
+                    }
+
+                    // Resolve generic parameters if exists
+                    auto parameters = function_type->parameters;
+                    auto parameters_count = parameters.size();
+                    for (uint64 i = 0; i < parameters_count; i++) {
+                        if (parameters[i]->type_kind == TypeKind::GENERIC_PARAMETER) {
+                            auto generic_type =
+                                std::static_pointer_cast<JotGenericParameterType>(parameters[i]);
+                            auto position =
+                                index_of(structure->generic_parameters, generic_type->name);
+                            function_type->parameters[i] = generic_struct->parameters[position];
+                        }
+                    }
+
                     types.push_back(pointer_type);
                     continue;
                 }
