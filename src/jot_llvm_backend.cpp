@@ -208,13 +208,8 @@ auto JotLLVMBackend::visit(FunctionPrototype* node) -> std::any
 
 auto JotLLVMBackend::visit(IntrinsicPrototype* node) -> std::any
 {
-    auto prototype = std::make_shared<FunctionPrototype>(
-        node->name, node->parameters, node->return_type, true, node->varargs, node->varargs_type);
-
     auto name = node->name.literal;
-    functions_table[name] = prototype;
-
-    auto prototype_parameters = prototype->get_parameters();
+    auto prototype_parameters = node->parameters;
 
     std::vector<llvm::Type*> parameters_types;
     parameters_types.reserve(prototype_parameters.size());
@@ -232,6 +227,8 @@ auto JotLLVMBackend::visit(IntrinsicPrototype* node) -> std::any
 
     auto* function =
         llvm::Intrinsic::getDeclaration(llvm_module.get(), intrinsic_id, parameters_types);
+
+    llvm_functions[name] = function;
 
     return function;
 }
@@ -2574,7 +2571,7 @@ void JotLLVMBackend::create_switch_case_branch(llvm::SwitchInst*           switc
 
 auto JotLLVMBackend::lookup_function(std::string& name) -> llvm::Function*
 {
-    if (auto function = llvm_module->getFunction(name)) {
+    if (auto* function = llvm_module->getFunction(name)) {
         return function;
     }
 

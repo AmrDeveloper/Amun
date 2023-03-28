@@ -3,7 +3,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/Intrinsics.h>
 
 // A list of supported LLVM infrastructure intrinsic function

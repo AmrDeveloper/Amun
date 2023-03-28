@@ -1,0 +1,7 @@
+intrinsic("llvm.cos")
+fun cos_f64(f float64) float64;
+
+fun main() int64 {
+    var result = cos_f64(1f64);
+    return 0;
+}
