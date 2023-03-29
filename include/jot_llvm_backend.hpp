@@ -121,6 +121,9 @@ class JotLLVMBackend : public TreeVisitor {
 
     auto llvm_type_from_jot_type(std::shared_ptr<JotType> type) -> llvm::Type*;
 
+    auto create_global_field_declaration(std::string name, Shared<Expression> value,
+                                         Shared<JotType> type) -> void;
+
     auto create_llvm_numbers_bianry(TokenKind op, llvm::Value* left, llvm::Value* right)
         -> llvm::Value*;
 

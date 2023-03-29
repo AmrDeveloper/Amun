@@ -73,7 +73,16 @@ auto JotLLVMBackend::visit(FieldDeclaration* node) -> std::any
 {
     auto var_name = node->get_name().literal;
     auto field_type = node->get_type();
+    auto right_value = node->get_value();
 
+    // Globals code generation block can be moved into other function to be clear and handle more
+    // cases and to handle also soem compile time evaluations
+    if (node->is_global()) {
+        create_global_field_declaration(var_name, right_value, field_type);
+        return 0;
+    }
+
+    // Resolve type if it generic struct
     llvm::Type* llvm_type;
     if (field_type->type_kind == TypeKind::GENERIC_STRUCT) {
         auto generic_type = std::static_pointer_cast<JotGenericStructType>(field_type);
@@ -81,25 +90,6 @@ auto JotLLVMBackend::visit(FieldDeclaration* node) -> std::any
     }
     else {
         llvm_type = llvm_type_from_jot_type(field_type);
-    }
-
-    // Globals code generation block can be moved into other function to be clear and handle more
-    // cases and to handle also soem compile time evaluations
-    if (node->is_global()) {
-        // if field has initalizer evaluate it, else initalize it with default value
-        llvm::Constant* constants_value;
-        if (node->get_value() == nullptr) {
-            constants_value = create_llvm_null(llvm_type_from_jot_type(field_type));
-        }
-        else {
-            constants_value = resolve_constant_expression(node->get_value());
-        }
-
-        auto global_variable =
-            new llvm::GlobalVariable(*llvm_module, llvm_type, false,
-                                     llvm::GlobalValue::ExternalLinkage, constants_value, var_name);
-        global_variable->setAlignment(llvm::MaybeAlign(0));
-        return 0;
     }
 
     // if field has initalizer evaluate it, else initalize it with default value
@@ -1907,6 +1897,56 @@ auto JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> type) -> l
     }
 
     internal_compiler_error("Can't find LLVM Type for this Jot Type");
+}
+
+auto JotLLVMBackend::create_global_field_declaration(std::string name, Shared<Expression> value,
+                                                     Shared<JotType> type) -> void
+{
+    llvm::Type* llvm_type;
+    if (type->type_kind == TypeKind::GENERIC_STRUCT) {
+        auto generic_type = std::static_pointer_cast<JotGenericStructType>(type);
+        llvm_type = resolve_generic_struct(generic_type);
+    }
+    else {
+        llvm_type = llvm_type_from_jot_type(type);
+    }
+
+    llvm::Constant* llvm_value;
+
+    if (value == nullptr) {
+        llvm_value = create_llvm_null(llvm_type);
+    }
+    else if (is_function_pointer_type(type)) {
+        const auto value_ast_type = value->get_ast_node_type();
+
+        if (value_ast_type == AstNodeType::PrefixUnaryExpr) {
+            auto unary = std::dynamic_pointer_cast<PrefixUnaryExpression>(value);
+            auto function_ptr = unary->get_right();
+            auto function_ptr_type = function_ptr->get_type_node();
+            auto function_type = std::static_pointer_cast<JotFunctionType>(function_ptr_type);
+            llvm_type = llvm_type_from_jot_type(function_type);
+            auto llvm_function = lookup_function(function_type->name.literal);
+            llvm_value = llvm_function;
+            llvm_functions[name] = llvm_function;
+        }
+
+        if (value_ast_type == AstNodeType::LambdaExpr) {
+            auto lambda = std::dynamic_pointer_cast<LambdaExpression>(value);
+            auto llvm_function = std::any_cast<llvm::Function*>(lambda->accept(this));
+            llvm_value = llvm_function;
+            llvm_type = llvm_value->getType();
+            llvm_functions[name] = llvm_function;
+        }
+    }
+    else {
+        llvm_value = resolve_constant_expression(value);
+    }
+
+    const auto linkage = llvm::GlobalValue::ExternalLinkage;
+
+    auto global =
+        new llvm::GlobalVariable(*llvm_module, llvm_type, false, linkage, llvm_value, name);
+    global->setAlignment(llvm::MaybeAlign(0));
 }
 
 inline auto JotLLVMBackend::create_llvm_numbers_bianry(TokenKind op, llvm::Value* left,
