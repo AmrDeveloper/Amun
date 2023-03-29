@@ -951,6 +951,7 @@ class LambdaExpression : public Expression {
           return_type(return_type), body(std::move(body))
     {
         std::vector<std::shared_ptr<JotType>> parameters_types;
+        parameters_types.reserve(explicit_parameters.size());
         for (auto& parameter : explicit_parameters) {
             parameters_types.push_back(parameter->get_type());
         }
@@ -965,7 +966,7 @@ class LambdaExpression : public Expression {
 
     std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
 
-    bool is_constant() override { return false; }
+    bool is_constant() override { return true; }
 
     AstNodeType get_ast_node_type() override { return AstNodeType::LambdaExpr; }
 
