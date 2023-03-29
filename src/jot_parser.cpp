@@ -15,6 +15,11 @@ auto JotParser::parse_compilation_unit() -> Shared<CompilationUnit>
 {
     std::vector<Shared<Statement>> tree_nodes;
     try {
+        // Init current and next token inside try catch
+        // to handle case if first two token are invalid
+        advanced_token();
+        advanced_token();
+
         while (is_source_available()) {
             // Handle importing std file
             if (is_current_kind(TokenKind::ImportKeyword)) {
@@ -40,6 +45,7 @@ auto JotParser::parse_compilation_unit() -> Shared<CompilationUnit>
         }
     }
     catch (const char* message) {
+        // Stop parsing at this position and return to the compiler class to report errors and stop
     }
     return std::make_shared<CompilationUnit>(tree_nodes);
 }
@@ -1753,9 +1759,17 @@ auto JotParser::is_valid_intrinsic_name(std::string& name) -> bool
 
 auto JotParser::advanced_token() -> void
 {
+    auto scanned_token = tokenizer.scan_next_token();
+
+    // Check if this token is an error from tokenizer
+    if (scanned_token.kind == TokenKind::Invalid) {
+        context->diagnostics.report_error(scanned_token.position, scanned_token.literal);
+        throw "Stop";
+    }
+
     previous_token = current_token;
     current_token = next_token;
-    next_token = tokenizer.scan_next_token();
+    next_token = scanned_token;
 }
 
 auto JotParser::peek_and_advance_token() -> Token

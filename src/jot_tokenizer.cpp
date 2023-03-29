@@ -181,7 +181,7 @@ auto JotTokenizer::scan_next_token() -> Token
     case '9': return consume_number();
 
     case '\0': return build_token(TokenKind::EndOfFile);
-    default: return build_token(TokenKind::Invalid, "Unexpected character");
+    default: return build_token(TokenKind::Invalid, "unexpected character");
     }
 }
 
@@ -228,7 +228,8 @@ auto JotTokenizer::consume_number() -> Token
             kind = Integer64Type;
         }
         else {
-            return build_token(TokenKind::Invalid, "Invalid integer type");
+            return build_token(TokenKind::Invalid,
+                               "invalid width for singed integer literal, expect 8, 16, 32 or 64");
         }
     }
     // Un Signed Integers types
@@ -246,7 +247,9 @@ auto JotTokenizer::consume_number() -> Token
             kind = UInteger64Type;
         }
         else {
-            return build_token(TokenKind::Invalid, "Invalid integer type");
+            return build_token(
+                TokenKind::Invalid,
+                "invalid width for unsinged integer literal, expect 8, 16, 32 or 64");
         }
     }
     // Floating Pointers types
@@ -258,8 +261,13 @@ auto JotTokenizer::consume_number() -> Token
             kind = Float64Type;
         }
         else {
-            return build_token(TokenKind::Invalid, "Invalid Float type");
+            return build_token(TokenKind::Invalid,
+                               "invalid width for floating point literal, expect 32 or 64");
         }
+    }
+    else if (is_alpha(peek())) {
+        return build_token(TokenKind::Invalid,
+                           "invalid suffix for number literal, expect i, u or f");
     }
 
     size_t len = number_end_position - start_position + 1;
@@ -280,7 +288,7 @@ auto JotTokenizer::consume_hex_number() -> Token
     auto decimal_value = hex_to_decimal(literal);
 
     if (decimal_value == -1) {
-        return build_token(TokenKind::Invalid, "Out of range hex value");
+        return build_token(TokenKind::Invalid, "hex integer literal is too large");
     }
 
     return build_token(TokenKind::Integer, std::to_string(decimal_value));
@@ -298,7 +306,7 @@ auto JotTokenizer::consume_binary_number() -> Token
     auto decimal_value = binary_to_decimal(literal);
 
     if (decimal_value == -1) {
-        return build_token(TokenKind::Invalid, "Out of range binary value");
+        return build_token(TokenKind::Invalid, "binary integer literal is too large");
     }
 
     return build_token(TokenKind::Integer, std::to_string(decimal_value));
@@ -308,11 +316,16 @@ auto JotTokenizer::consume_string() -> Token
 {
     std::stringstream stream;
     while (is_source_available() && peek() != '"') {
-        stream << consume_one_character();
+        char c = consume_one_character();
+        if (c == -1) {
+            return build_token(TokenKind::Invalid, "invalid character");
+        }
+
+        stream << c;
     }
 
     if (not is_source_available()) {
-        return build_token(TokenKind::Invalid, "Unterminated string");
+        return build_token(TokenKind::Invalid, "unterminated double quote string");
     }
 
     advance();
@@ -322,9 +335,12 @@ auto JotTokenizer::consume_string() -> Token
 auto JotTokenizer::consume_character() -> Token
 {
     char c = consume_one_character();
+    if (c == -1) {
+        return build_token(TokenKind::Invalid, "invalid character");
+    }
 
     if (peek() != '\'') {
-        return build_token(TokenKind::Invalid, "Unterminated character");
+        return build_token(TokenKind::Invalid, "unterminated single quote character");
     }
 
     advance();
@@ -401,13 +417,11 @@ auto JotTokenizer::consume_one_character() -> char
                 c = (hex_to_int(first_digit) << 4) + hex_to_int(second_digit);
             }
             else {
-                jot::loge << "escaped hex 2 character must be integers\n";
                 return -1;
             }
             break;
         }
         default: {
-            jot::loge << "Not escaped character\n";
             return -1;
         }
         }
