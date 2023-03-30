@@ -1,0 +1,14 @@
+extern fun printf(format *char, varargs Any) int64;
+
+struct Callable {
+    callback *() void;
+}
+
+fun main() int64 {
+    var callable = Callable { 
+        printf("Hello, world\n"); 
+    };
+    
+    callable.callback();
+    return 0;
+}
