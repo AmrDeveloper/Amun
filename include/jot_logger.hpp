@@ -29,7 +29,8 @@ class JotLogger {
         return *this;
     }
 
-    template <class T> JotLogger& operator<<([[maybe_unused]] T content)
+    template <class T>
+    JotLogger& operator<<([[maybe_unused]] T content)
     {
 #ifdef JOT_LOGGER
         material_print(content, text_color, background_color);

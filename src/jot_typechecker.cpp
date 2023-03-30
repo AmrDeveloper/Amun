@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 auto JotTypeChecker::check_compilation_unit(Shared<CompilationUnit> compilation_unit) -> void
 {
@@ -39,6 +40,11 @@ auto JotTypeChecker::visit(BlockStatement* node) -> std::any
 auto JotTypeChecker::visit(FieldDeclaration* node) -> std::any
 {
     auto left_type = node->get_type();
+    if (left_type->type_kind == TypeKind::GENERIC_PARAMETER) {
+        auto generic = std::static_pointer_cast<JotGenericParameterType>(left_type);
+        left_type = generic_types[generic->name];
+    }
+
     auto right_value = node->get_value();
     auto name = node->get_name().literal;
 
@@ -151,10 +157,10 @@ auto JotTypeChecker::visit(FieldDeclaration* node) -> std::any
 
 auto JotTypeChecker::visit(FunctionPrototype* node) -> std::any
 {
-    auto                         name = node->get_name();
+    auto name = node->get_name();
     std::vector<Shared<JotType>> parameters;
     for (auto& parameter : node->get_parameters()) {
-        parameters.push_back(parameter->get_type());
+        parameters.push_back(parameter->type);
     }
     auto return_type = node->get_return_type();
     auto function_type = std::make_shared<JotFunctionType>(
@@ -177,7 +183,7 @@ auto JotTypeChecker::visit(IntrinsicPrototype* node) -> std::any
     std::vector<Shared<JotType>> parameters;
     parameters.reserve(node->parameters.size());
     for (auto& parameter : node->parameters) {
-        parameters.push_back(parameter->get_type());
+        parameters.push_back(parameter->type);
     }
 
     auto return_type = node->return_type;
@@ -195,13 +201,18 @@ auto JotTypeChecker::visit(IntrinsicPrototype* node) -> std::any
 auto JotTypeChecker::visit(FunctionDeclaration* node) -> std::any
 {
     auto prototype = node->get_prototype();
+    if (prototype->is_generic) {
+        generic_functions_declaraions[prototype->name.literal] = node;
+        return 0;
+    }
+
     auto function_type = node_jot_type(node->get_prototype()->accept(this));
     auto function = std::static_pointer_cast<JotFunctionType>(function_type);
     return_types_stack.push(function->return_type);
 
     push_new_scope();
     for (auto& parameter : prototype->get_parameters()) {
-        types_table.define(parameter->get_name().literal, parameter->get_type());
+        types_table.define(parameter->name.literal, parameter->type);
     }
 
     auto function_body = node->get_body();
@@ -1006,6 +1017,93 @@ auto JotTypeChecker::visit(CallExpression* node) -> std::any
                 throw "Stop";
             }
         }
+
+        else if (generic_functions_declaraions.contains(name)) {
+            auto declaraions = generic_functions_declaraions[name];
+            auto generic_parameters = node->generic_arguments;
+
+            if (generic_parameters.empty()) {
+                context->diagnostics.report_error(
+                    node->get_position().position,
+                    name + " is a generic function and must be called with generic paramters <..>");
+                throw "Stop";
+            }
+
+            auto prototype = declaraions->get_prototype();
+            auto generic_parameter_names = prototype->generic_parameters;
+            auto generic_arguments_count = generic_parameter_names.size();
+            auto generic_parameters_count = generic_parameters.size();
+
+            if (generic_parameters_count != generic_arguments_count) {
+                context->diagnostics.report_error(node->get_position().position,
+                                                  "Invalid number of generic paramters expect " +
+                                                      std::to_string(generic_arguments_count) +
+                                                      " but got " +
+                                                      std::to_string(generic_parameters_count));
+                throw "Stop";
+            }
+
+            // Register generic paramters types with names
+            for (size_t i = 0; i < generic_parameters_count; i++) {
+                generic_types[generic_parameter_names[i]] = generic_parameters[i];
+            }
+
+            auto return_type = prototype->return_type;
+            if (return_type->type_kind == TypeKind::GENERIC_PARAMETER) {
+                auto generic = std::static_pointer_cast<JotGenericParameterType>(return_type);
+                auto position = index_of(prototype->generic_parameters, generic->name);
+                return_type = generic_parameters[position];
+                generic_types[generic->name] = return_type;
+            }
+
+            return_types_stack.push(return_type);
+
+            std::vector<Shared<JotType>> resolved_parameters;
+            for (const auto& parameter : prototype->parameters) {
+                auto parameter_type = parameter->type;
+                if (parameter_type->type_kind == TypeKind::GENERIC_PARAMETER) {
+                    auto generic =
+                        std::static_pointer_cast<JotGenericParameterType>(parameter_type);
+                    auto position = index_of(prototype->generic_parameters, generic->name);
+                    generic_types[generic->name] = generic_parameters[position];
+                    resolved_parameters.push_back(generic_parameters[position]);
+                }
+                else if (parameter_type->type_kind == TypeKind::GENERIC_STRUCT) {
+                    auto generic = std::static_pointer_cast<JotGenericStructType>(parameter_type);
+                    resolved_parameters.push_back(resolve_generic_struct(generic));
+                }
+                else {
+                    resolved_parameters.push_back(parameter_type);
+                }
+            }
+
+            push_new_scope();
+
+            int index = 0;
+            for (auto& parameter : prototype->get_parameters()) {
+                types_table.define(parameter->name.literal, resolved_parameters[index]);
+                index++;
+            }
+
+            auto function_body = declaraions->get_body();
+            function_body->accept(this);
+            pop_current_scope();
+
+            return_types_stack.pop();
+
+            auto arguments = node->get_arguments();
+            for (auto& argument : arguments) {
+                auto argument_type = node_jot_type(argument->accept(this));
+                argument_type = resolve_generic_struct(argument_type);
+                argument->set_type_node(argument_type);
+            }
+
+            check_parameters_types(node->get_position().position, arguments, resolved_parameters,
+                                   prototype->has_varargs(), prototype->varargs_type, 0);
+
+            generic_types.clear();
+            return return_type;
+        }
         else {
             context->diagnostics.report_error(node->get_position().position,
                                               "Can't resolve function call with name " + name);
@@ -1112,7 +1210,7 @@ auto JotTypeChecker::visit(LambdaExpression* node) -> std::any
 
     // Define Explicit parameter inside lambda body scope
     for (auto& parameter : node->explicit_parameters) {
-        types_table.define(parameter->get_name().literal, parameter->get_type());
+        types_table.define(parameter->name.literal, parameter->type);
     }
 
     node->body->accept(this);
@@ -1154,7 +1252,7 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
         auto field_name = node->get_field_name().literal;
         auto fields_names = struct_type->fields_names;
         if (is_contains(fields_names, field_name)) {
-            int  member_index = index_of(fields_names, field_name);
+            int member_index = index_of(fields_names, field_name);
             auto field_type = struct_type->fields_types[member_index];
             node->set_type_node(field_type);
             node->field_index = member_index;
@@ -1175,7 +1273,7 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
             auto field_name = node->get_field_name().literal;
             auto fields_names = struct_type->fields_names;
             if (is_contains(fields_names, field_name)) {
-                int  member_index = index_of(fields_names, field_name);
+                int member_index = index_of(fields_names, field_name);
                 auto field_type = struct_type->fields_types[member_index];
                 node->set_type_node(field_type);
                 node->field_index = member_index;
@@ -1215,7 +1313,7 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
         auto fields_names = struct_type->fields_names;
         auto field_name = node->get_field_name().literal;
         if (is_contains(fields_names, field_name)) {
-            int  member_index = index_of(fields_names, field_name);
+            int member_index = index_of(fields_names, field_name);
             auto field_type = struct_type->fields_types[member_index];
             node->set_type_node(field_type);
             node->field_index = member_index;
@@ -1271,7 +1369,7 @@ auto JotTypeChecker::visit(IndexExpression* node) -> std::any
     }
 
     // Check if index is number expression to perform compile time checks
-    bool   has_constant_index = index_expression->get_ast_node_type() == AstNodeType::NumberExpr;
+    bool has_constant_index = index_expression->get_ast_node_type() == AstNodeType::NumberExpr;
     size_t constant_index = -1;
 
     if (has_constant_index) {
@@ -1461,9 +1559,9 @@ auto JotTypeChecker::node_jot_type(std::any any_type) -> Shared<JotType>
     return std::any_cast<Shared<JotType>>(any_type);
 }
 
-auto JotTypeChecker::check_parameters_types(TokenSpan                        location,
+auto JotTypeChecker::check_parameters_types(TokenSpan location,
                                             std::vector<Shared<Expression>>& arguments,
-                                            std::vector<Shared<JotType>>&    parameters,
+                                            std::vector<Shared<JotType>>& parameters,
                                             bool has_varargs, Shared<JotType> varargs_type,
                                             int implicit_parameters_count) -> void
 {
@@ -1630,7 +1728,22 @@ auto JotTypeChecker::resolve_generic_struct(Shared<JotType> type) -> Shared<JotT
     if (type->type_kind == TypeKind::GENERIC_STRUCT) {
         auto generic_struct = std::static_pointer_cast<JotGenericStructType>(type);
         auto structure = generic_struct->struct_type;
+
+        auto generic_struct_param = generic_struct->parameters;
+
+        int i = 0;
+        for (auto& param : generic_struct_param) {
+            if (param->type_kind == TypeKind::GENERIC_PARAMETER) {
+                auto generic_type = std::static_pointer_cast<JotGenericParameterType>(param);
+                if (generic_types.contains(generic_type->name)) {
+                    generic_struct->parameters[i] = generic_types[generic_type->name];
+                }
+            }
+            i++;
+        }
+
         auto mangled_name = structure->name + mangle_types(generic_struct->parameters);
+
         if (types_table.is_defined(mangled_name)) {
             return std::any_cast<Shared<JotStructType>>(types_table.lookup(mangled_name));
         }
@@ -1646,12 +1759,23 @@ auto JotTypeChecker::resolve_generic_struct(Shared<JotType> type) -> Shared<JotT
             if (type->type_kind == TypeKind::GENERIC_PARAMETER) {
                 auto generic_type = std::static_pointer_cast<JotGenericParameterType>(type);
                 auto position = index_of(structure->generic_parameters, generic_type->name);
-                types.push_back(generic_struct->parameters[position]);
+                auto parameter = generic_struct->parameters[position];
+                if (parameter->type_kind == TypeKind::GENERIC_PARAMETER) {
+                    auto generic_param =
+                        std::static_pointer_cast<JotGenericParameterType>(parameter);
+                    if (generic_types.contains(generic_param->name)) {
+                        types.push_back(generic_types[generic_param->name]);
+                    }
+                }
+                else {
+                    types.push_back(generic_struct->parameters[position]);
+                }
                 continue;
             }
 
             if (type->type_kind == TypeKind::GENERIC_STRUCT) {
                 auto generic_type = std::static_pointer_cast<JotGenericStructType>(type);
+
                 auto struct_type = generic_type->struct_type;
 
                 // Resolve Generic parameters from parent structure

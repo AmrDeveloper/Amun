@@ -75,10 +75,10 @@ class JotTokenizer {
     auto is_source_available() -> bool;
 
     std::string source_code;
-    size_t      source_code_length;
-    size_t      start_position;
-    size_t      current_position;
-    int         line_number;
-    int         column_start;
-    int         column_current;
+    size_t source_code_length;
+    size_t start_position;
+    size_t current_position;
+    int line_number;
+    int column_start;
+    int column_current;
 };

@@ -153,6 +153,10 @@ class JotLLVMBackend : public TreeVisitor {
     auto access_array_element(std::shared_ptr<Expression> array, llvm::Value* index)
         -> llvm::Value*;
 
+    auto resolve_generic_function(FunctionDeclaration* node,
+                                  std::vector<Shared<JotType>> generic_parameters)
+        -> llvm::Function*;
+
     auto resolve_constant_expression(std::shared_ptr<Expression> value) -> llvm::Constant*;
 
     auto resolve_constant_index_expression(std::shared_ptr<IndexExpression> expression)
@@ -172,7 +176,7 @@ class JotLLVMBackend : public TreeVisitor {
         -> llvm::AllocaInst*;
 
     auto create_switch_case_branch(llvm::SwitchInst* switch_inst, llvm::Function* current_function,
-                                   llvm::BasicBlock*           basic_block,
+                                   llvm::BasicBlock* basic_block,
                                    std::shared_ptr<SwitchCase> switch_case) -> void;
 
     auto lookup_function(std::string& name) -> llvm::Function*;
@@ -196,15 +200,20 @@ class JotLLVMBackend : public TreeVisitor {
     std::unique_ptr<llvm::Module> llvm_module;
 
     std::unordered_map<std::string, std::shared_ptr<FunctionPrototype>> functions_table;
-    std::unordered_map<std::string, llvm::Function*>                    llvm_functions;
-    std::unordered_map<std::string, llvm::Constant*>                    constants_string_pool;
-    std::unordered_map<std::string, llvm::Type*>                        structures_types_map;
+    std::unordered_map<std::string, llvm::Function*> llvm_functions;
+    std::unordered_map<std::string, llvm::Constant*> constants_string_pool;
+    std::unordered_map<std::string, llvm::Type*> structures_types_map;
+
+    // TODO: think of sharing them with Type Checker
+    // Generic function declaraions and parameters
+    std::unordered_map<std::string, FunctionDeclaration*> functions_declaraions;
+    std::unordered_map<std::string, Shared<JotType>> generic_types;
 
     std::stack<JotScopedList<std::shared_ptr<DeferCall>>> defer_calls_stack;
 
     JotScopedMap<std::string, std::any> alloca_inst_table;
-    std::stack<llvm::BasicBlock*>       break_blocks_stack;
-    std::stack<llvm::BasicBlock*>       continue_blocks_stack;
+    std::stack<llvm::BasicBlock*> break_blocks_stack;
+    std::stack<llvm::BasicBlock*> continue_blocks_stack;
 
     bool has_return_statement = false;
     bool has_break_or_continue_statement = false;

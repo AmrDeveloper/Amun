@@ -23,7 +23,7 @@
 #include <string>
 #include <vector>
 
-auto JotLLVMBackend::compile(std::string                      module_name,
+auto JotLLVMBackend::compile(std::string module_name,
                              std::shared_ptr<CompilationUnit> compilation_unit)
     -> std::unique_ptr<llvm::Module>
 {
@@ -73,16 +73,11 @@ auto JotLLVMBackend::visit(FieldDeclaration* node) -> std::any
 {
     auto var_name = node->get_name().literal;
     auto field_type = node->get_type();
-    auto right_value = node->get_value();
-
-    // Globals code generation block can be moved into other function to be clear and handle more
-    // cases and to handle also soem compile time evaluations
-    if (node->is_global()) {
-        create_global_field_declaration(var_name, right_value, field_type);
-        return 0;
+    if (field_type->type_kind == TypeKind::GENERIC_PARAMETER) {
+        auto generic = std::static_pointer_cast<JotGenericParameterType>(field_type);
+        field_type = generic_types[generic->name];
     }
 
-    // Resolve type if it generic struct
     llvm::Type* llvm_type;
     if (field_type->type_kind == TypeKind::GENERIC_STRUCT) {
         auto generic_type = std::static_pointer_cast<JotGenericStructType>(field_type);
@@ -90,6 +85,25 @@ auto JotLLVMBackend::visit(FieldDeclaration* node) -> std::any
     }
     else {
         llvm_type = llvm_type_from_jot_type(field_type);
+    }
+
+    // Globals code generation block can be moved into other function to be clear and handle more
+    // cases and to handle also soem compile time evaluations
+    if (node->is_global()) {
+        // if field has initalizer evaluate it, else initalize it with default value
+        llvm::Constant* constants_value;
+        if (node->get_value() == nullptr) {
+            constants_value = create_llvm_null(llvm_type_from_jot_type(field_type));
+        }
+        else {
+            constants_value = resolve_constant_expression(node->get_value());
+        }
+
+        auto global_variable =
+            new llvm::GlobalVariable(*llvm_module, llvm_type, false,
+                                     llvm::GlobalValue::ExternalLinkage, constants_value, var_name);
+        global_variable->setAlignment(llvm::MaybeAlign(0));
+        return 0;
     }
 
     // if field has initalizer evaluate it, else initalize it with default value
@@ -169,11 +183,11 @@ auto JotLLVMBackend::visit(FieldDeclaration* node) -> std::any
 
 auto JotLLVMBackend::visit(FunctionPrototype* node) -> std::any
 {
-    auto                     parameters = node->get_parameters();
-    size_t                   parameters_size = parameters.size();
+    auto parameters = node->get_parameters();
+    size_t parameters_size = parameters.size();
     std::vector<llvm::Type*> arguments(parameters_size);
     for (size_t i = 0; i < parameters_size; i++) {
-        arguments[i] = llvm_type_from_jot_type(parameters[i]->get_type());
+        arguments[i] = llvm_type_from_jot_type(parameters[i]->type);
     }
 
     auto return_type = llvm_type_from_jot_type(node->get_return_type());
@@ -181,8 +195,9 @@ auto JotLLVMBackend::visit(FunctionPrototype* node) -> std::any
     auto function_name = node->get_name().literal;
     auto linkage = node->is_external() || function_name == "main" ? llvm::Function::ExternalLinkage
                                                                   : llvm::Function::InternalLinkage;
-    auto function =
-        llvm::Function::Create(function_type, linkage, function_name, llvm_module.get());
+
+    auto function = llvm::Function::Create(function_type, linkage, function_name, nullptr);
+    llvm_module->getFunctionList().push_back(function);
 
     unsigned index = 0;
     for (auto& argument : function->args()) {
@@ -190,7 +205,7 @@ auto JotLLVMBackend::visit(FunctionPrototype* node) -> std::any
             // Varargs case
             break;
         }
-        argument.setName(parameters[index++]->get_name().literal);
+        argument.setName(parameters[index++]->name.literal);
     }
 
     return function;
@@ -204,7 +219,7 @@ auto JotLLVMBackend::visit(IntrinsicPrototype* node) -> std::any
     std::vector<llvm::Type*> parameters_types;
     parameters_types.reserve(prototype_parameters.size());
     for (const auto& parameters : prototype_parameters) {
-        parameters_types.push_back(llvm_type_from_jot_type(parameters->get_type()));
+        parameters_types.push_back(llvm_type_from_jot_type(parameters->type));
     }
 
     auto native_name = node->native_name;
@@ -223,11 +238,113 @@ auto JotLLVMBackend::visit(IntrinsicPrototype* node) -> std::any
     return function;
 }
 
+auto JotLLVMBackend::resolve_generic_function(FunctionDeclaration* node,
+                                              std::vector<Shared<JotType>> generic_parameters)
+    -> llvm::Function*
+{
+
+    is_on_global_scope = false;
+    auto prototype = node->get_prototype();
+    auto name = prototype->get_name().literal;
+    auto mangled_name = name + mangle_types(generic_parameters);
+
+    if (alloca_inst_table.is_defined(mangled_name)) {
+        auto value = alloca_inst_table.lookup(mangled_name);
+        return std::any_cast<llvm::Function*>(value);
+    }
+
+    auto return_type = prototype->return_type;
+    if (prototype->return_type->type_kind == TypeKind::GENERIC_PARAMETER) {
+        auto generic_type = std::static_pointer_cast<JotGenericParameterType>(return_type);
+        auto position = index_of(prototype->generic_parameters, generic_type->name);
+        generic_types[generic_type->name] = generic_parameters[position];
+        return_type = generic_parameters[position];
+    }
+
+    std::vector<llvm::Type*> arguments;
+    for (const auto& parameter : prototype->parameters) {
+        if (parameter->type->type_kind == TypeKind::GENERIC_PARAMETER) {
+            auto generic_type = std::static_pointer_cast<JotGenericParameterType>(parameter->type);
+            auto position = index_of(prototype->generic_parameters, generic_type->name);
+            generic_types[generic_type->name] = generic_parameters[position];
+            arguments.push_back(llvm_type_from_jot_type(generic_parameters[position]));
+        }
+        else {
+            arguments.push_back(llvm_type_from_jot_type(parameter->type));
+        }
+    }
+
+    functions_table[mangled_name] = prototype;
+
+    auto linkage =
+        name == "main" ? llvm::Function::ExternalLinkage : llvm::Function::InternalLinkage;
+
+    auto function_type =
+        llvm::FunctionType::get(llvm_type_from_jot_type(return_type), arguments, false);
+
+    auto previous_insert_block = Builder.GetInsertBlock();
+
+    auto function = llvm::Function::Create(function_type, linkage, mangled_name, nullptr);
+    llvm_module->getFunctionList().push_back(function);
+
+    unsigned index = 0;
+    for (auto& argument : function->args()) {
+        if (index >= prototype->parameters.size()) {
+            // Varargs case
+            break;
+        }
+        argument.setName(prototype->parameters[index++]->name.literal);
+    }
+
+    auto entry_block = llvm::BasicBlock::Create(llvm_context, "entry", function);
+    Builder.SetInsertPoint(entry_block);
+
+    defer_calls_stack.push({});
+    push_alloca_inst_scope();
+
+    for (auto& arg : function->args()) {
+        const std::string arg_name_str = std::string(arg.getName());
+        auto* alloca_inst = create_entry_block_alloca(function, arg_name_str, arg.getType());
+        alloca_inst_table.define(arg_name_str, alloca_inst);
+        Builder.CreateStore(&arg, alloca_inst);
+    }
+
+    const auto& body = node->get_body();
+    body->accept(this);
+
+    pop_alloca_inst_scope();
+    defer_calls_stack.pop();
+
+    alloca_inst_table.define(mangled_name, function);
+
+    // Assert that this block end with return statement or unreachable
+    if (body->get_ast_node_type() == AstNodeType::Block) {
+        const auto& body_statement = std::dynamic_pointer_cast<BlockStatement>(body);
+        const auto& statements = body_statement->statements;
+        if (statements.empty() || statements.back()->get_ast_node_type() != AstNodeType::Return) {
+            Builder.CreateUnreachable();
+        }
+    }
+    verifyFunction(*function);
+
+    has_return_statement = false;
+    is_on_global_scope = true;
+
+    Builder.SetInsertPoint(previous_insert_block);
+
+    return function;
+}
+
 auto JotLLVMBackend::visit(FunctionDeclaration* node) -> std::any
 {
     is_on_global_scope = false;
     auto prototype = node->get_prototype();
     auto name = prototype->get_name().literal;
+    if (prototype->is_generic) {
+        functions_declaraions[name] = node;
+        return 0;
+    }
+
     functions_table[name] = prototype;
 
     auto function = std::any_cast<llvm::Function*>(prototype->accept(this));
@@ -280,7 +397,7 @@ auto JotLLVMBackend::visit(StructDeclaration* node) -> std::any
     const auto struct_llvm_type = llvm::StructType::create(llvm_context);
     struct_llvm_type->setName(struct_name);
 
-    const auto               fields = struct_type->fields_types;
+    const auto fields = struct_type->fields_types;
     std::vector<llvm::Type*> struct_fields;
     struct_fields.reserve(fields.size());
 
@@ -483,7 +600,7 @@ auto JotLLVMBackend::visit(ForEachStatement* node) -> std::any
 
     // Resolve it to be collection[it_index]
     const auto element_name = node->element_name;
-    auto       element_type = collection_type->getArrayElementType();
+    auto element_type = collection_type->getArrayElementType();
     const auto element_alloca =
         create_entry_block_alloca(current_function, element_name, element_type);
 
@@ -715,8 +832,8 @@ auto JotLLVMBackend::visit(DeferStatement* node) -> std::any
             auto loaded = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
             auto function_type = llvm_type_from_jot_type(call_expression->get_type_node());
             if (auto function_pointer = llvm::dyn_cast<llvm::FunctionType>(function_type)) {
-                auto                      arguments = call_expression->get_arguments();
-                size_t                    arguments_size = arguments.size();
+                auto arguments = call_expression->get_arguments();
+                size_t arguments_size = arguments.size();
                 std::vector<llvm::Value*> arguments_values;
                 arguments_values.reserve(arguments_size);
                 for (size_t i = 0; i < arguments_size; i++) {
@@ -738,9 +855,9 @@ auto JotLLVMBackend::visit(DeferStatement* node) -> std::any
         return 0;
     }
 
-    auto                      arguments = call_expression->get_arguments();
-    auto                      arguments_size = arguments.size();
-    auto                      parameter_size = function->arg_size();
+    auto arguments = call_expression->get_arguments();
+    auto arguments_size = arguments.size();
+    auto parameter_size = function->arg_size();
     std::vector<llvm::Value*> arguments_values;
     arguments_values.reserve(arguments_size);
     for (size_t i = 0; i < arguments_size; i++) {
@@ -1223,8 +1340,8 @@ auto JotLLVMBackend::visit(CallExpression* node) -> std::any
         auto return_ptr_type = callee_function_type->getReturnType()->getPointerElementType();
         auto function_pointer_type = llvm::dyn_cast<llvm::FunctionType>(return_ptr_type);
 
-        auto                      arguments = node->get_arguments();
-        size_t                    arguments_size = arguments.size();
+        auto arguments = node->get_arguments();
+        size_t arguments_size = arguments.size();
         std::vector<llvm::Value*> arguments_values;
         arguments_values.reserve(arguments_size);
         for (size_t i = 0; i < arguments_size; i++) {
@@ -1246,14 +1363,20 @@ auto JotLLVMBackend::visit(CallExpression* node) -> std::any
         auto callee = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee());
         auto callee_literal = callee->get_name().literal;
         auto function = lookup_function(callee_literal);
+        if (not function && functions_declaraions.contains(callee_literal)) {
+            auto declaraion = functions_declaraions[callee_literal];
+            function = resolve_generic_function(declaraion, node->generic_arguments);
+            callee_literal += mangle_types(node->generic_arguments);
+        }
+
         if (not function) {
             auto value = llvm_node_value(alloca_inst_table.lookup(callee_literal));
             if (auto alloca = llvm::dyn_cast<llvm::AllocaInst>(value)) {
                 auto loaded = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
                 auto function_type = llvm_type_from_jot_type(node->get_type_node());
                 if (auto function_pointer = llvm::dyn_cast<llvm::FunctionType>(function_type)) {
-                    auto                      arguments = node->get_arguments();
-                    size_t                    arguments_size = arguments.size();
+                    auto arguments = node->get_arguments();
+                    size_t arguments_size = arguments.size();
                     std::vector<llvm::Value*> arguments_values;
                     arguments_values.reserve(arguments_size);
                     for (size_t i = 0; i < arguments_size; i++) {
@@ -1273,11 +1396,11 @@ auto JotLLVMBackend::visit(CallExpression* node) -> std::any
             }
         }
 
-        auto                      arguments = node->get_arguments();
-        auto                      arguments_size = arguments.size();
-        auto                      parameter_size = function->arg_size();
+        auto arguments = node->get_arguments();
+        auto arguments_size = arguments.size();
+        auto parameter_size = function->arg_size();
         std::vector<llvm::Value*> arguments_values;
-        size_t                    implicit_arguments_count = 0;
+        size_t implicit_arguments_count = 0;
 
         if (is_lambda_function_name(function->getName().str())) {
             auto extra_literal_parameters = lambda_extra_parameters[function->getName().str()];
@@ -1336,9 +1459,9 @@ auto JotLLVMBackend::visit(CallExpression* node) -> std::any
         auto lambda_value = llvm_node_value(lambda->accept(this));
         auto function = llvm::dyn_cast<llvm::Function>(lambda_value);
 
-        auto                      arguments = node->get_arguments();
-        auto                      arguments_size = arguments.size();
-        auto                      parameter_size = function->arg_size();
+        auto arguments = node->get_arguments();
+        auto arguments_size = arguments.size();
+        auto parameter_size = function->arg_size();
         std::vector<llvm::Value*> arguments_values;
         arguments_values.reserve(arguments_size);
         for (size_t i = 0; i < arguments_size; i++) {
@@ -1383,9 +1506,9 @@ auto JotLLVMBackend::visit(CallExpression* node) -> std::any
         auto llvm_type = llvm_type_from_jot_type(function_ptr_type->base_type);
         auto llvm_fun_type = llvm::dyn_cast<llvm::FunctionType>(llvm_type);
 
-        auto                      arguments = node->get_arguments();
-        auto                      arguments_size = arguments.size();
-        auto                      parameter_size = llvm_fun_type->getNumParams();
+        auto arguments = node->get_arguments();
+        auto arguments_size = arguments.size();
+        auto parameter_size = llvm_fun_type->getNumParams();
         std::vector<llvm::Value*> arguments_values;
         arguments_values.reserve(arguments_size);
         for (size_t i = 0; i < arguments_size; i++) {
@@ -1501,7 +1624,7 @@ auto JotLLVMBackend::visit(LambdaExpression* node) -> std::any
             arg.setName(implicit_parameters[i++]);
         }
         else {
-            arg.setName(node->explicit_parameters[explicit_parameter_index++]->get_name().literal);
+            arg.setName(node->explicit_parameters[explicit_parameter_index++]->name.literal);
         }
         const std::string arg_name_str = std::string(arg.getName());
         auto* alloca_inst = create_entry_block_alloca(function, arg_name_str, arg.getType());
@@ -1829,7 +1952,7 @@ auto JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> type) -> l
 {
     TypeKind type_kind = type->type_kind;
     if (type_kind == TypeKind::NUMBER) {
-        auto       jot_number_type = std::static_pointer_cast<JotNumberType>(type);
+        auto jot_number_type = std::static_pointer_cast<JotNumberType>(type);
         NumberKind number_kind = jot_number_type->number_kind;
         switch (number_kind) {
         case NumberKind::INTEGER_1: return llvm_int1_type;
@@ -1866,7 +1989,7 @@ auto JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> type) -> l
     if (type_kind == TypeKind::FUNCTION) {
         auto jot_function_type = std::static_pointer_cast<JotFunctionType>(type);
         auto parameters = jot_function_type->parameters;
-        int  parameters_size = parameters.size();
+        int parameters_size = parameters.size();
         std::vector<llvm::Type*> arguments(parameters_size);
         for (int i = 0; i < parameters_size; i++) {
             arguments[i] = llvm_type_from_jot_type(parameters[i]);
@@ -1897,56 +2020,6 @@ auto JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> type) -> l
     }
 
     internal_compiler_error("Can't find LLVM Type for this Jot Type");
-}
-
-auto JotLLVMBackend::create_global_field_declaration(std::string name, Shared<Expression> value,
-                                                     Shared<JotType> type) -> void
-{
-    llvm::Type* llvm_type;
-    if (type->type_kind == TypeKind::GENERIC_STRUCT) {
-        auto generic_type = std::static_pointer_cast<JotGenericStructType>(type);
-        llvm_type = resolve_generic_struct(generic_type);
-    }
-    else {
-        llvm_type = llvm_type_from_jot_type(type);
-    }
-
-    llvm::Constant* llvm_value;
-
-    if (value == nullptr) {
-        llvm_value = create_llvm_null(llvm_type);
-    }
-    else if (is_function_pointer_type(type)) {
-        const auto value_ast_type = value->get_ast_node_type();
-
-        if (value_ast_type == AstNodeType::PrefixUnaryExpr) {
-            auto unary = std::dynamic_pointer_cast<PrefixUnaryExpression>(value);
-            auto function_ptr = unary->get_right();
-            auto function_ptr_type = function_ptr->get_type_node();
-            auto function_type = std::static_pointer_cast<JotFunctionType>(function_ptr_type);
-            llvm_type = llvm_type_from_jot_type(function_type);
-            auto llvm_function = lookup_function(function_type->name.literal);
-            llvm_value = llvm_function;
-            llvm_functions[name] = llvm_function;
-        }
-
-        if (value_ast_type == AstNodeType::LambdaExpr) {
-            auto lambda = std::dynamic_pointer_cast<LambdaExpression>(value);
-            auto llvm_function = std::any_cast<llvm::Function*>(lambda->accept(this));
-            llvm_value = llvm_function;
-            llvm_type = llvm_value->getType();
-            llvm_functions[name] = llvm_function;
-        }
-    }
-    else {
-        llvm_value = resolve_constant_expression(value);
-    }
-
-    const auto linkage = llvm::GlobalValue::ExternalLinkage;
-
-    auto global =
-        new llvm::GlobalVariable(*llvm_module, llvm_type, false, linkage, llvm_value, name);
-    global->setAlignment(llvm::MaybeAlign(0));
 }
 
 inline auto JotLLVMBackend::create_llvm_numbers_bianry(TokenKind op, llvm::Value* left,
@@ -2253,7 +2326,7 @@ auto JotLLVMBackend::access_struct_member_pointer(DotExpression* expression) -> 
     internal_compiler_error("Invalid callee type in access_struct_member_pointer");
 }
 auto JotLLVMBackend::access_array_element(std::shared_ptr<Expression> node_value,
-                                          llvm::Value*                index) -> llvm::Value*
+                                          llvm::Value* index) -> llvm::Value*
 {
     auto values = node_value->get_type_node();
 
@@ -2469,8 +2542,8 @@ auto JotLLVMBackend::resolve_constant_string_expression(const std::string& liter
         return constants_string_pool[literal];
     }
 
-    auto                         size = literal.size();
-    auto                         length = size + 1;
+    auto size = literal.size();
+    auto length = size + 1;
     std::vector<llvm::Constant*> characters(length);
     for (unsigned int i = 0; i < size; i++) {
         characters[i] = llvm::ConstantInt::get(llvm_int8_type, literal[i]);
@@ -2500,7 +2573,7 @@ auto JotLLVMBackend::resolve_generic_struct(Shared<JotGenericStructType> generic
     auto* struct_llvm_type = llvm::StructType::create(llvm_context);
     struct_llvm_type->setName(mangled_name);
 
-    const auto               fields = struct_type->fields_types;
+    const auto fields = struct_type->fields_types;
     std::vector<llvm::Type*> struct_fields;
     struct_fields.reserve(fields.size());
 
@@ -2550,7 +2623,7 @@ auto JotLLVMBackend::resolve_generic_struct(Shared<JotGenericStructType> generic
     return struct_llvm_type;
 }
 
-inline auto JotLLVMBackend::create_entry_block_alloca(llvm::Function*   function,
+inline auto JotLLVMBackend::create_entry_block_alloca(llvm::Function* function,
                                                       const std::string var_name, llvm::Type* type)
     -> llvm::AllocaInst*
 {
@@ -2558,9 +2631,9 @@ inline auto JotLLVMBackend::create_entry_block_alloca(llvm::Function*   function
     return builder_object.CreateAlloca(type, nullptr, var_name);
 }
 
-void JotLLVMBackend::create_switch_case_branch(llvm::SwitchInst*           switch_inst,
-                                               llvm::Function*             current_function,
-                                               llvm::BasicBlock*           basic_block,
+void JotLLVMBackend::create_switch_case_branch(llvm::SwitchInst* switch_inst,
+                                               llvm::Function* current_function,
+                                               llvm::BasicBlock* basic_block,
                                                std::shared_ptr<SwitchCase> switch_case)
 {
     auto branch_block = llvm::BasicBlock::Create(llvm_context, "", current_function);

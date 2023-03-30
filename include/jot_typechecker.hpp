@@ -129,13 +129,17 @@ class JotTypeChecker : public TreeVisitor {
     auto pop_current_scope() -> void;
 
   private:
-    Shared<JotContext>                  context;
+    Shared<JotContext> context;
     JotScopedMap<std::string, std::any> types_table;
+
+    // Generic function declaraions and parameters
+    std::unordered_map<std::string, FunctionDeclaration*> generic_functions_declaraions;
+    std::unordered_map<std::string, Shared<JotType>> generic_types;
 
     // Used to track the return types of functions and inner lambda expression
     std::stack<Shared<JotType>> return_types_stack;
 
     // Flag that tell us when we are inside lambda expression body
-    bool                                                             is_inside_lambda_body;
+    bool is_inside_lambda_body;
     std::stack<std::vector<std::pair<std::string, Shared<JotType>>>> lambda_implicit_parameters;
 };

@@ -181,8 +181,8 @@ auto jot_type_literal(const Shared<JotType>& type) -> std::string
         std::stringstream string_stream;
         string_stream << jot_type_literal(generic_struct->struct_type);
         string_stream << "<";
-        auto   parameters = generic_struct->parameters;
-        auto   count = parameters.size();
+        auto parameters = generic_struct->parameters;
+        auto count = parameters.size();
         size_t parameter_index = 0;
         for (const auto& parameter : generic_struct->parameters) {
             string_stream << jot_type_literal(parameter);

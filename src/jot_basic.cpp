@@ -3,7 +3,7 @@
 auto str_to_int(const char* p) -> int64
 {
     int64 value = 0;
-    bool  neg = false;
+    bool neg = false;
 
     if (*p == '-') {
         neg = true;

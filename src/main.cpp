@@ -86,7 +86,7 @@ auto execute_check_command(unused int argc, char** argv) -> int
         return EXIT_FAILURE;
     }
 
-    auto        jot_context = std::make_shared<JotContext>();
+    auto jot_context = std::make_shared<JotContext>();
     JotCompiler jot_compiler(jot_context);
     return jot_compiler.check_source_code(source_file);
 }

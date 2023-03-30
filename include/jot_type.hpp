@@ -74,27 +74,34 @@ struct JotArrayType : public JotType {
     }
 
     Shared<JotType> element_type;
-    size_t          size;
+    size_t size;
 };
 
 struct JotFunctionType : public JotType {
     JotFunctionType(Token name, std::vector<Shared<JotType>> parameters,
                     Shared<JotType> return_type, bool varargs = false,
-                    Shared<JotType> varargs_type = nullptr, bool is_intrinsic = false)
+                    Shared<JotType> varargs_type = nullptr, bool is_intrinsic = false,
+                    bool is_generic = false, std::vector<std::string> generic_names = {})
         : name(std::move(name)), parameters(std::move(parameters)),
           return_type(std::move(return_type)), has_varargs(varargs),
-          varargs_type(std::move(varargs_type)), is_intrinsic(is_intrinsic)
+          varargs_type(std::move(varargs_type)), is_intrinsic(is_intrinsic), is_generic(is_generic),
+          generic_names(generic_names)
     {
         type_kind = TypeKind::FUNCTION;
     }
 
-    Token                        name;
+    Token name;
     std::vector<Shared<JotType>> parameters;
-    Shared<JotType>              return_type;
-    int                          implicit_parameters_count = 0;
-    bool                         has_varargs;
-    Shared<JotType>              varargs_type;
-    bool                         is_intrinsic;
+    Shared<JotType> return_type;
+    int implicit_parameters_count = 0;
+
+    bool has_varargs;
+    Shared<JotType> varargs_type;
+
+    bool is_intrinsic;
+
+    bool is_generic;
+    std::vector<std::string> generic_names;
 };
 
 struct JotStructType : public JotType {
@@ -108,12 +115,12 @@ struct JotStructType : public JotType {
         type_kind = TypeKind::STRUCT;
     }
 
-    std::string                  name;
-    std::vector<std::string>     fields_names;
+    std::string name;
+    std::vector<std::string> fields_names;
     std::vector<Shared<JotType>> fields_types;
-    std::vector<std::string>     generic_parameters;
-    bool                         is_packed;
-    bool                         is_generic;
+    std::vector<std::string> generic_parameters;
+    bool is_packed;
+    bool is_generic;
 };
 
 struct JotEnumType : public JotType {
@@ -124,9 +131,9 @@ struct JotEnumType : public JotType {
         type_kind = TypeKind::ENUM;
     }
 
-    Token                                name;
+    Token name;
     std::unordered_map<std::string, int> values;
-    Shared<JotType>                      element_type;
+    Shared<JotType> element_type;
 };
 
 struct JotEnumElementType : public JotType {
@@ -136,7 +143,7 @@ struct JotEnumElementType : public JotType {
         type_kind = TypeKind::ENUM_ELEMENT;
     }
 
-    std::string     name;
+    std::string name;
     Shared<JotType> element_type;
 };
 
@@ -154,7 +161,7 @@ struct JotGenericStructType : public JotType {
     {
         type_kind = TypeKind::GENERIC_STRUCT;
     }
-    Shared<JotStructType>        struct_type;
+    Shared<JotStructType> struct_type;
     std::vector<Shared<JotType>> parameters;
 };
 

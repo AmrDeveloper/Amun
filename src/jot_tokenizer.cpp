@@ -191,8 +191,8 @@ auto JotTokenizer::consume_symbol() -> Token
         advance();
     }
     size_t len = current_position - start_position + 1;
-    auto   literal = source_code.substr(start_position - 1, len);
-    auto   kind = resolve_keyword_kind(literal.c_str());
+    auto literal = source_code.substr(start_position - 1, len);
+    auto kind = resolve_keyword_kind(literal.c_str());
     return build_token(kind, literal);
 }
 
@@ -271,7 +271,7 @@ auto JotTokenizer::consume_number() -> Token
     }
 
     size_t len = number_end_position - start_position + 1;
-    auto   literal = source_code.substr(start_position - 1, len);
+    auto literal = source_code.substr(start_position - 1, len);
     literal.erase(std::remove(literal.begin(), literal.end(), '_'), literal.end());
     return build_token(kind, literal);
 }
@@ -283,7 +283,7 @@ auto JotTokenizer::consume_hex_number() -> Token
     }
 
     size_t len = current_position - start_position - 1;
-    auto   literal = source_code.substr(start_position + 1, len);
+    auto literal = source_code.substr(start_position + 1, len);
     literal.erase(std::remove(literal.begin(), literal.end(), '_'), literal.end());
     auto decimal_value = hex_to_decimal(literal);
 
@@ -301,7 +301,7 @@ auto JotTokenizer::consume_binary_number() -> Token
     }
 
     size_t len = current_position - start_position - 1;
-    auto   literal = source_code.substr(start_position + 1, len);
+    auto literal = source_code.substr(start_position + 1, len);
     literal.erase(std::remove(literal.begin(), literal.end(), '_'), literal.end());
     auto decimal_value = binary_to_decimal(literal);
 

@@ -247,8 +247,8 @@ struct TokenSpan {
 };
 
 struct Token {
-    TokenKind   kind;
-    TokenSpan   position;
+    TokenKind kind;
+    TokenSpan position;
     std::string literal;
 };
 

@@ -28,9 +28,9 @@ auto JotCompiler::compile_source_code(const char* source_file) -> int
     }
 
     JotLLVMBackend llvm_backend;
-    auto           llvm_ir_module = llvm_backend.compile(source_file, compilation_unit);
+    auto llvm_ir_module = llvm_backend.compile(source_file, compilation_unit);
 
-    std::error_code      error_code;
+    std::error_code error_code;
     llvm::raw_fd_ostream output_stream(jot_context->options.executable_name, error_code);
     if (error_code.message() != "Success") {
         std::cout << "Can't create output file " << error_code.message() << '\n';
@@ -76,10 +76,10 @@ auto JotCompiler::parse_source_code(const char* source_file) -> std::shared_ptr<
         exit(EXIT_FAILURE);
     }
 
-    auto         file_id = jot_context->source_manager.register_source_path(source_file);
-    auto         source_content = read_file_content(source_file);
+    auto file_id = jot_context->source_manager.register_source_path(source_file);
+    auto source_content = read_file_content(source_file);
     JotTokenizer tokenizer(file_id, source_content);
-    JotParser    parser(jot_context, tokenizer);
+    JotParser parser(jot_context, tokenizer);
 
     auto compilation_unit = parser.parse_compilation_unit();
 

@@ -14,6 +14,6 @@ class JotSourceManager {
 
   private:
     std::unordered_map<int, std::string> files_map;
-    std::unordered_set<std::string>      files_set;
-    int                                  last_source_file_id = -1;
+    std::unordered_set<std::string> files_set;
+    int last_source_file_id = -1;
 };

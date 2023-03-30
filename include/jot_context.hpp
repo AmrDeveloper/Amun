@@ -19,13 +19,13 @@ enum FunctionDeclarationKind {
 struct JotContext {
     JotContext() : diagnostics(JotDiagnosticEngine(source_manager)) {}
 
-    JotOptions          options;
+    JotOptions options;
     JotDiagnosticEngine diagnostics;
-    JotSourceManager    source_manager;
-    JotAliasTable       type_alias_table;
+    JotSourceManager source_manager;
+    JotAliasTable type_alias_table;
 
     // Declarations Informations
-    std::unordered_map<std::string, FunctionDeclarationKind>        functions;
+    std::unordered_map<std::string, FunctionDeclarationKind> functions;
     std::unordered_map<std::string, std::shared_ptr<JotStructType>> structures;
-    std::unordered_map<std::string, std::shared_ptr<JotEnumType>>   enumerations;
+    std::unordered_map<std::string, std::shared_ptr<JotEnumType>> enumerations;
 };

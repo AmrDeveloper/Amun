@@ -187,7 +187,7 @@ auto JotParser::parse_primary_type() -> Shared<JotType>
 
 auto JotParser::parse_identifier_type() -> Shared<JotType>
 {
-    Token       symbol_token = consume_kind(TokenKind::Symbol, "Expect identifier as type");
+    Token symbol_token = consume_kind(TokenKind::Symbol, "Expect identifier as type");
     std::string type_literal = symbol_token.literal;
 
     // Check if this time is primitive

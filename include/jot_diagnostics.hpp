@@ -21,8 +21,8 @@ struct JotDiagnostic {
     {
     }
 
-    TokenSpan       location;
-    std::string     message;
+    TokenSpan location;
+    std::string message;
     DiagnosticLevel level;
 };
 

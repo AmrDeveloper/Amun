@@ -186,19 +186,19 @@ class JotParser {
 
     auto is_source_available() -> bool;
 
-    std::string        file_parent_path;
+    std::string file_parent_path;
     Shared<JotContext> context;
 
-    JotTokenizer&        tokenizer;
+    JotTokenizer& tokenizer;
     std::optional<Token> previous_token;
     std::optional<Token> current_token;
     std::optional<Token> next_token;
 
     std::unordered_set<std::string> generic_parameters_names;
 
-    AstNodeScope    current_ast_scope = AstNodeScope::GLOBAL_SCOPE;
+    AstNodeScope current_ast_scope = AstNodeScope::GLOBAL_SCOPE;
     std::stack<int> loop_levels_stack;
 
     std::string_view current_struct_name;
-    int              current_struct_unknown_fields = 0;
+    int current_struct_unknown_fields = 0;
 };
