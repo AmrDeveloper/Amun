@@ -1,6 +1,6 @@
 Generics Programming
 
-Jot has supporting for generic programming and give you the ability to create generic data structures
+Jot has supporting for generic programming and give you the ability to create generic functions and structures
 
 Here is an example on how to To create declare generic parameter for struct
 
@@ -30,4 +30,19 @@ You can also create a pair of array of any type for example
 
 ```
 var pair_of_array : Pair<[10]int64>;
+```
+
+Declaring a generic function is not very different from generic struct for example
+
+```
+fun sum<T> (x T, y T) T {
+    return x + y;
+}
+```
+
+And when calling generic function you neet also to spicify the generic parameter for example
+
+```
+sum<int64>(1, 1);
+sum<intfloat>(1.0, 1.0);
 ```
