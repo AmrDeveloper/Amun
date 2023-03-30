@@ -1,0 +1,13 @@
+import "cstdio"
+
+fun sum(x int64, y int64) int64 = x + y;
+
+struct FunctionWrapper <T> {
+   function *(T, T) T;
+}
+
+fun main() int64 {
+    var wrapper = FunctionWrapper<int64>(&sum);
+    printf("%d\n", wrapper.function(10, 20));
+    return 0;
+}
