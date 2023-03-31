@@ -192,6 +192,12 @@ auto is_number_type(Shared<JotType> type) -> bool;
 
 auto is_integer_type(Shared<JotType> type) -> bool;
 
+auto is_integer1_type(Shared<JotType> type) -> bool;
+
+auto is_integer32_type(Shared<JotType> type) -> bool;
+
+auto is_integer64_type(Shared<JotType> type) -> bool;
+
 auto is_enum_type(Shared<JotType> type) -> bool;
 
 auto is_enum_element_type(Shared<JotType> type) -> bool;

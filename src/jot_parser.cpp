@@ -76,11 +76,17 @@ auto JotParser::parse_import_declaration() -> std::vector<Shared<Statement>>
             append_vectors(tree_nodes, nodes);
         }
         assert_kind(TokenKind::CloseBrace, "Expect Close brace `}` after import block");
+
+        check_unnecessary_semicolon_warning();
+
         return tree_nodes;
     }
 
     auto library_name =
         consume_kind(TokenKind::String, "Expect string as library name after import statement");
+
+    check_unnecessary_semicolon_warning();
+
     std::string library_path = "../lib/" + library_name.literal + ".jot";
 
     if (context->source_manager.is_path_registered(library_path)) {
@@ -123,11 +129,16 @@ auto JotParser::parse_load_declaration() -> std::vector<Shared<Statement>>
             append_vectors(tree_nodes, nodes);
         }
         assert_kind(TokenKind::CloseBrace, "Expect Close brace `}` after import block");
+
+        check_unnecessary_semicolon_warning();
+
         return tree_nodes;
     }
 
     auto library_name =
         consume_kind(TokenKind::String, "Expect string as file name after load statement");
+
+    check_unnecessary_semicolon_warning();
 
     std::string library_path = file_parent_path + library_name.literal + ".jot";
 
@@ -398,6 +409,12 @@ auto JotParser::parse_function_prototype(FunctionDeclarationKind kind, bool is_e
     // Parse generic parameters declarations if they exists
     std::vector<std::string> generics_parameters;
     bool is_generic_function = is_current_kind(TokenKind::Smaller);
+    if (is_external && is_generic_function) {
+        context->diagnostics.report_error(name.position,
+                                          "external function can't has generic parameter");
+        throw "Stop";
+    }
+
     if (is_generic_function) {
         advanced_token();
         while (is_source_available() && !is_current_kind(TokenKind::Greater)) {
@@ -485,15 +502,33 @@ auto JotParser::parse_function_prototype(FunctionDeclarationKind kind, bool is_e
         return_type = parse_type();
     }
 
-    // Function can't return fixed size array, you can use pointer format to return allocated array
-    if (return_type->type_kind == TypeKind::ARRAY) {
-        context->diagnostics.report_error(name.position, "Function cannot return array type " +
-                                                             jot_type_literal(return_type));
-        throw "Stop";
-    }
-
+    // External function has no body so must end with ;
     if (is_external) {
         assert_kind(TokenKind::Semicolon, "Expect ; after external function declaration");
+    }
+
+    // Perform special validation for main function
+    if (name.literal == "main") {
+        // Check that main hasn't prefix, infix or postfix keyword
+        if (kind != FunctionDeclarationKind::NORMAL_FUNCTION) {
+            context->diagnostics.report_error(name.position,
+                                              "main can't be prefix, infix or postfix function");
+            throw "Stop";
+        }
+
+        // Check that main isn't external
+        if (is_external) {
+            context->diagnostics.report_error(name.position, "main can't be external function");
+            throw "Stop";
+        }
+
+        // Check that return type is void or any integer type
+        if (!(is_void_type(return_type) || is_integer32_type(return_type) ||
+              is_integer64_type(return_type))) {
+            context->diagnostics.report_error(
+                name.position, "main has invalid return type expect void, int32 or int64");
+            throw "Stop";
+        }
     }
 
     return std::make_shared<FunctionPrototype>(name, parameters, return_type, is_external,
@@ -521,6 +556,9 @@ auto JotParser::parse_function_declaration(FunctionDeclarationKind kind)
     if (is_current_kind(TokenKind::OpenBrace)) {
         loop_levels_stack.push(0);
         auto block = parse_block_statement();
+
+        check_unnecessary_semicolon_warning();
+
         loop_levels_stack.pop();
         auto close_brace = previous_token;
 
@@ -537,7 +575,9 @@ auto JotParser::parse_function_declaration(FunctionDeclarationKind kind)
         return std::make_shared<FunctionDeclaration>(prototype, block);
     }
 
-    context->diagnostics.report_error(peek_current().position, "Invalid function declaration body");
+    auto posiiton = peek_previous().position;
+    context->diagnostics.report_error(
+        posiiton, "function declaration without a body: `{ <body> }` or `= <value>;`");
     throw "Stop";
 }
 
@@ -618,6 +658,8 @@ auto JotParser::parse_structure_declaration(bool is_packed) -> Shared<StructDecl
     }
 
     assert_kind(TokenKind::CloseBrace, "Expect } in the end of struct declaration");
+
+    check_unnecessary_semicolon_warning();
 
     auto structure_type =
         std::make_shared<JotStructType>(struct_name_str, fields_names, fields_types,
@@ -744,6 +786,9 @@ auto JotParser::parse_enum_declaration() -> Shared<EnumDeclaration>
         }
     }
     assert_kind(TokenKind::CloseBrace, "Expect } in the end of enum declaration");
+
+    check_unnecessary_semicolon_warning();
+
     auto enum_type = std::make_shared<JotEnumType>(enum_name, enum_values_indexes, element_type);
     context->enumerations[enum_name.literal] = enum_type;
     return std::make_shared<EnumDeclaration>(enum_name, enum_type);
@@ -1328,6 +1373,7 @@ auto JotParser::parse_call_or_access_expression() -> Shared<Expression>
         // Parse function call expression with generic parameters
         if (is_current_kind(TokenKind::Smaller)) {
             auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression);
+
             if (!context->functions.contains(literal->name.literal)) {
                 return expression;
             }
@@ -1343,7 +1389,8 @@ auto JotParser::parse_call_or_access_expression() -> Shared<Expression>
 
             advanced_token();
 
-            peek_and_advance_token();
+            assert_kind(TokenKind::OpenParen, "Expect ( after in the end of call expression");
+
             std::vector<Shared<Expression>> arguments;
             while (not is_current_kind(TokenKind::CloseParen)) {
                 arguments.push_back(parse_expression());
@@ -1562,9 +1609,7 @@ auto JotParser::parse_primary_expression() -> Shared<Expression>
         return parse_value_size_expression();
     }
     default: {
-        context->diagnostics.report_error(peek_current().position,
-                                          "Unexpected or unsupported expression");
-        throw "Stop";
+        unexpected_token_error();
     }
     }
 }
@@ -1755,12 +1800,12 @@ auto JotParser::parse_array_expression() -> Shared<ArrayExpression>
 
 auto JotParser::parse_cast_expression() -> Shared<CastExpression>
 {
-    auto cast_token = consume_kind(TokenKind::CastKeyword, "Expect cast keyword");
+    auto cast_keyword = consume_kind(TokenKind::CastKeyword, "Expect cast keyword");
     assert_kind(TokenKind::OpenParen, "Expect `(` after cast keyword");
-    auto cast_to_type = parse_type();
+    auto target_type = parse_type();
     assert_kind(TokenKind::CloseParen, "Expect `)` after cast type");
     auto expression = parse_expression();
-    return std::make_shared<CastExpression>(cast_token, cast_to_type, expression);
+    return std::make_shared<CastExpression>(cast_keyword, target_type, expression);
 }
 
 auto JotParser::parse_type_size_expression() -> Shared<TypeSizeExpression>
@@ -1779,6 +1824,26 @@ auto JotParser::parse_value_size_expression() -> Shared<ValueSizeExpression>
     auto value = parse_expression();
     assert_kind(TokenKind::CloseParen, "Expect `)` after value_size type");
     return std::make_shared<ValueSizeExpression>(token, value);
+}
+
+auto JotParser::unexpected_token_error() -> void
+{
+    auto current_token = peek_current();
+    auto position = current_token.position;
+    std::string token_literal = token_kind_literal[current_token.kind];
+    context->diagnostics.report_error(position,
+                                      "expected expression, found `" + token_literal + "`");
+    throw "Stop";
+}
+
+auto JotParser::check_unnecessary_semicolon_warning() -> void
+{
+    if (is_current_kind(TokenKind::Semicolon)) {
+        auto semicolon = peek_and_advance_token();
+        if (context->options.should_report_warns) {
+            context->diagnostics.report_warning(semicolon.position, "remove unnecessary semicolon");
+        }
+    }
 }
 
 auto JotParser::get_number_kind(TokenKind token) -> NumberKind

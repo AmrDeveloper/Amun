@@ -83,18 +83,8 @@ auto JotCompiler::parse_source_code(const char* source_file) -> std::shared_ptr<
 
     auto compilation_unit = parser.parse_compilation_unit();
 
-    if (jot_context->options.should_report_warns and
-        jot_context->diagnostics.level_count(DiagnosticLevel::WARNING) > 0) {
-        jot_context->diagnostics.report_diagnostics(DiagnosticLevel::WARNING);
-    }
-
     if (jot_context->diagnostics.level_count(DiagnosticLevel::ERROR) > 0) {
         jot_context->diagnostics.report_diagnostics(DiagnosticLevel::ERROR);
-        exit(EXIT_FAILURE);
-    }
-
-    if (jot_context->options.convert_warns_to_errors and
-        jot_context->diagnostics.level_count(DiagnosticLevel::WARNING) > 0) {
         exit(EXIT_FAILURE);
     }
 

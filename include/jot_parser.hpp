@@ -158,6 +158,10 @@ class JotParser {
 
     auto parse_identifier_type() -> Shared<JotType>;
 
+    auto unexpected_token_error() -> void;
+
+    auto check_unnecessary_semicolon_warning() -> void;
+
     auto get_number_kind(TokenKind token) -> NumberKind;
 
     auto is_function_declaration_kind(std::string& fun_name, FunctionDeclarationKind kind) -> bool;

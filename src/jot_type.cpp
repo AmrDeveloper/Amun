@@ -244,6 +244,33 @@ auto is_integer_type(Shared<JotType> type) -> bool
     return false;
 }
 
+auto is_integer1_type(Shared<JotType> type) -> bool
+{
+    if (type->type_kind == TypeKind::NUMBER) {
+        auto number_type = std::static_pointer_cast<JotNumberType>(type);
+        return number_type->number_kind == NumberKind::INTEGER_1;
+    }
+    return false;
+}
+
+auto is_integer32_type(Shared<JotType> type) -> bool
+{
+    if (type->type_kind == TypeKind::NUMBER) {
+        auto number_type = std::static_pointer_cast<JotNumberType>(type);
+        return number_type->number_kind == NumberKind::INTEGER_32;
+    }
+    return false;
+}
+
+auto is_integer64_type(Shared<JotType> type) -> bool
+{
+    if (type->type_kind == TypeKind::NUMBER) {
+        auto number_type = std::static_pointer_cast<JotNumberType>(type);
+        return number_type->number_kind == NumberKind::INTEGER_64;
+    }
+    return false;
+}
+
 auto is_enum_type(Shared<JotType> type) -> bool { return type->type_kind == TypeKind::ENUM; }
 
 auto is_enum_element_type(Shared<JotType> type) -> bool

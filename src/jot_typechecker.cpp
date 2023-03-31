@@ -844,23 +844,23 @@ auto JotTypeChecker::visit(ComparisonExpression* node) -> std::any
 
 auto JotTypeChecker::visit(LogicalExpression* node) -> std::any
 {
-    auto left_type = node_jot_type(node->get_left()->accept(this));
-    auto right_type = node_jot_type(node->get_right()->accept(this));
+    auto lhs = node_jot_type(node->get_left()->accept(this));
+    auto rhs = node_jot_type(node->get_right()->accept(this));
+    auto node_position = node->get_operator_token().position;
 
-    // TODO: Assert that they are int1 (bool)
-    bool is_left_number = is_number_type(left_type);
-    bool is_right_number = is_number_type(right_type);
-    if (not is_left_number || not is_right_number) {
-        if (not is_left_number) {
-            context->diagnostics.report_error(node->get_operator_token().position,
-                                              "Expected Logical left to be number but got " +
-                                                  jot_type_literal(left_type));
+    bool is_lhs_bool = is_integer1_type(lhs);
+    bool is_rhs_bool = is_integer1_type(rhs);
+    if (!is_lhs_bool || !is_rhs_bool) {
+        if (!is_lhs_bool) {
+            context->diagnostics.report_error(node_position,
+                                              "expected `bool`, found " + jot_type_literal(lhs));
         }
-        if (not is_right_number) {
-            context->diagnostics.report_error(node->get_operator_token().position,
-                                              "Expected Logical right to be number but got " +
-                                                  jot_type_literal(left_type));
+
+        if (!is_rhs_bool) {
+            context->diagnostics.report_error(node_position,
+                                              "expected `bool`, found " + jot_type_literal(rhs));
         }
+
         throw "Stop";
     }
 
@@ -1334,21 +1334,23 @@ auto JotTypeChecker::visit(CastExpression* node) -> std::any
 {
     auto value = node->get_value();
     auto value_type = node_jot_type(value->accept(this));
-    auto cast_result_type = node->get_type_node();
+    auto target_type = node->get_type_node();
+    auto node_position = node->position.position;
 
     // No need for castring if both has the same type
-    if (is_jot_types_equals(value_type, cast_result_type)) {
-        // TODO: Fire warning 'Unrequired castring because both has same type'
-        return cast_result_type;
+    if (is_jot_types_equals(value_type, target_type)) {
+        context->diagnostics.report_warning(node_position, "unnecessary cast to the same type");
+        return target_type;
     }
 
-    if (!can_jot_types_casted(value_type, cast_result_type)) {
-        context->diagnostics.report_error(node->get_position().position,
-                                          "Can't cast from " + jot_type_literal(value_type) +
-                                              " to " + jot_type_literal(cast_result_type));
+    if (!can_jot_types_casted(value_type, target_type)) {
+        context->diagnostics.report_error(node_position, "Can't cast from " +
+                                                             jot_type_literal(value_type) + " to " +
+                                                             jot_type_literal(target_type));
         throw "Stop";
     }
-    return cast_result_type;
+
+    return target_type;
 }
 
 auto JotTypeChecker::visit(TypeSizeExpression* node) -> std::any { return node->get_type_node(); }

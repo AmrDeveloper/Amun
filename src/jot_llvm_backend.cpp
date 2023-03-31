@@ -1682,7 +1682,7 @@ auto JotLLVMBackend::visit(CastExpression* node) -> std::any
     auto value_type = llvm_type_from_jot_type(node->get_value()->get_type_node());
     auto target_type = llvm_type_from_jot_type(node->get_type_node());
 
-    // No need for castring if both part has the same type
+    // No need for castring if both sides has the same type
     if (value_type == target_type) {
         return value;
     }
@@ -2631,10 +2631,10 @@ inline auto JotLLVMBackend::create_entry_block_alloca(llvm::Function* function,
     return builder_object.CreateAlloca(type, nullptr, var_name);
 }
 
-void JotLLVMBackend::create_switch_case_branch(llvm::SwitchInst* switch_inst,
+auto JotLLVMBackend::create_switch_case_branch(llvm::SwitchInst* switch_inst,
                                                llvm::Function* current_function,
                                                llvm::BasicBlock* basic_block,
-                                               std::shared_ptr<SwitchCase> switch_case)
+                                               std::shared_ptr<SwitchCase> switch_case) -> void
 {
     auto branch_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
     Builder.SetInsertPoint(branch_block);
