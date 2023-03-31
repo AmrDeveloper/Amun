@@ -624,25 +624,8 @@ auto JotTypeChecker::visit(AssignExpression* node) -> std::any
     auto left_node = node->get_left();
     auto left_type = node_jot_type(left_node->accept(this));
 
-    // Make sure to report error if use want to modify string literal using index expression
-    if (left_node->get_ast_node_type() == AstNodeType::IndexExpr) {
-        auto index_expression = std::dynamic_pointer_cast<IndexExpression>(left_node);
-        auto value_type = index_expression->get_value()->get_type_node();
-        if (jot_type_literal(value_type) == "*Int8") {
-            context->diagnostics.report_error(
-                index_expression->get_position().position,
-                "String literal are readonly can't modify it using [i]");
-            throw "Stop";
-        }
-    }
-
-    // Prevent Assign expression with lhs with type Enum Element
-    if (left_node->get_ast_node_type() == AstNodeType::EnumElementExpr) {
-        context->diagnostics.report_error(
-            node->get_operator_token().position,
-            "Enum field is un mutable constants and can't be changed at runtime");
-        throw "Stop";
-    }
+    // Check that right hand side is a valid type for assignements
+    check_valid_assignment_right_side(left_node, node->operator_token.position);
 
     auto right_type = node_jot_type(node->get_right()->accept(this));
 
@@ -1947,6 +1930,86 @@ auto JotTypeChecker::check_missing_return_statement(Shared<Statement> node) -> b
     }
 
     return false;
+}
+
+auto JotTypeChecker::check_valid_assignment_right_side(Shared<Expression> node, TokenSpan position)
+    -> void
+{
+    const auto left_node_type = node->get_ast_node_type();
+
+    // Literal expression is a valid right hand side
+    if (left_node_type == AstNodeType::LiteralExpr) {
+        return;
+    }
+
+    // Index expression is a valid right hand side but
+    // Make sure to report error if use want to modify string literal using index expression
+    if (left_node_type == AstNodeType::IndexExpr) {
+        auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node);
+        auto value_type = index_expression->get_value()->get_type_node();
+        if (jot_type_literal(value_type) == "*Int8") {
+            auto index_position = index_expression->get_position().position;
+            context->diagnostics.report_error(
+                index_position, "String literal are readonly can't modify it using [i]");
+            throw "Stop";
+        }
+        else {
+            return;
+        }
+    }
+
+    // Prefix unary expression is a valid right hand side but only if token is *
+    if (left_node_type == AstNodeType::PrefixUnaryExpr) {
+        auto prefix_unary = std::static_pointer_cast<PrefixUnaryExpression>(node);
+        if (prefix_unary->operator_token.kind == TokenKind::Star) {
+            return;
+        }
+
+        context->diagnostics.report_error(position, "Invalid right hand side for");
+        throw "Stop";
+    }
+
+    // Character literal can't be used as right hand side for assignment expression
+    if (left_node_type == AstNodeType::CharExpr) {
+        context->diagnostics.report_error(
+            position, "char literal is invalid right hand side for assignment expression");
+        throw "Stop";
+    }
+
+    // Boolean value can't be used as right hand side for assignment expression
+    if (left_node_type == AstNodeType::BoolExpr) {
+        context->diagnostics.report_error(
+            position, "boolean value is invalid right hand side for assignment expression");
+        throw "Stop";
+    }
+
+    // Number value can't be used as right hand side for assignment expression
+    if (left_node_type == AstNodeType::NumberExpr) {
+        context->diagnostics.report_error(
+            position, "number value is invalid right hand side for assignment expression");
+        throw "Stop";
+    }
+
+    // String value can't be used as right hand side for assignment expression
+    if (left_node_type == AstNodeType::StringExpr) {
+        context->diagnostics.report_error(
+            position, "string literal is invalid right hand side for assignment expression");
+        throw "Stop";
+    }
+
+    // Enum element can't be used as right hand side for assignment expression
+    if (left_node_type == AstNodeType::EnumElementExpr) {
+        context->diagnostics.report_error(
+            position, "Enum element is invalid right hand side for assignment expression");
+        throw "Stop";
+    }
+
+    // Null literal can't be used as right hand side for assignment expression
+    if (left_node_type == AstNodeType::NullExpr) {
+        context->diagnostics.report_error(
+            position, "Null literal is invalid right hand side for assignment expression");
+        throw "Stop";
+    }
 }
 
 inline auto JotTypeChecker::push_new_scope() -> void { types_table.push_new_scope(); }

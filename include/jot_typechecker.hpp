@@ -19,7 +19,7 @@ class JotTypeChecker : public TreeVisitor {
         types_table.push_new_scope();
     }
 
-    void check_compilation_unit(Shared<CompilationUnit> compilation_unit);
+    auto check_compilation_unit(Shared<CompilationUnit> compilation_unit) -> void;
 
     auto visit(BlockStatement* node) -> std::any override;
 
@@ -123,6 +123,8 @@ class JotTypeChecker : public TreeVisitor {
                                 std::vector<Shared<JotType>>& parameters, bool has_varargs,
                                 Shared<JotType> varargs_type, int implicit_parameters_count)
         -> void;
+
+    auto check_valid_assignment_right_side(Shared<Expression> node, TokenSpan position) -> void;
 
     auto push_new_scope() -> void;
 
