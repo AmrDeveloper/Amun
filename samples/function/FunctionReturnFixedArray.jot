@@ -1,0 +1,13 @@
+import "cstdio"
+
+fun return_array() [3]int64 {
+    return [1, 2, 3];
+}
+
+fun main() int64 {
+    var array = return_array();
+    for array {
+        printf("array[%d] = %d\n", it_index, it);
+    }
+    return 0;
+}
