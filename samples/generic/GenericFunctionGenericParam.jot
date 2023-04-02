@@ -1,0 +1,14 @@
+import "cstdio"
+
+struct Single <B> {
+    value B;
+}
+
+fun make_single<T> (x T, y T) Single<T> {
+    return Single<T>(x);
+}
+
+fun main() int64 {
+    var single = make_single<int64>(1, 1);
+    return 0;
+}

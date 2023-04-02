@@ -1,0 +1,16 @@
+import "cstdio"
+
+struct Pair <T, E> {
+    first T;
+    second E;
+}
+
+fun make_pair<T, E>(x T, y E) Pair<T, E> {
+    return Pair<T, E>(x, y);
+}
+
+fun main() int64 {
+    var pair = make_pair<int64, float64>(1, 1.0);
+    printf("%d, %f\n", pair.first, pair.second);
+    return 0;
+}
