@@ -1,4 +1,4 @@
-import "cstdio"
+extern fun printf(format *char, varargs Any) int64;
 
 struct IntRange {
     start int64;
