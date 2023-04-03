@@ -41,6 +41,12 @@ auto JotParser::parse_compilation_unit() -> Shared<CompilationUnit>
                 continue;
             }
 
+            // Handle compile time constants declaraion
+            if (is_current_kind(TokenKind::ConstKeyword)) {
+                parse_compiletime_constants_declaraion();
+                continue;
+            }
+
             tree_nodes.push_back(parse_declaration_statement());
         }
     }
@@ -152,6 +158,17 @@ auto JotParser::parse_load_declaration() -> std::vector<Shared<Statement>>
     }
 
     return parse_single_source_file(library_path);
+}
+
+auto JotParser::parse_compiletime_constants_declaraion() -> void
+{
+    auto const_token = peek_and_advance_token();
+    auto name = consume_kind(TokenKind::Symbol, "Expect const declaraion name");
+    assert_kind(TokenKind::Equal, "Expect = after const variable name");
+    auto expression = parse_expression();
+    check_compiletime_constants_expression(expression, name.position);
+    assert_kind(TokenKind::Semicolon, "Expect ; after const declaraion");
+    context->constants_table[name.literal] = expression;
 }
 
 auto JotParser::parse_type_alias_declaration() -> void
@@ -1582,6 +1599,12 @@ auto JotParser::parse_primary_expression() -> Shared<Expression>
         return std::make_shared<NullExpression>(peek_previous());
     }
     case TokenKind::Symbol: {
+        // Resolve const or non const variable
+        auto name = peek_current();
+        if (context->constants_table.contains(name.literal)) {
+            advanced_token();
+            return context->constants_table[name.literal];
+        }
         return parse_literal_expression();
     }
     case TokenKind::OpenParen: {
@@ -1824,6 +1847,30 @@ auto JotParser::parse_value_size_expression() -> Shared<ValueSizeExpression>
     auto value = parse_expression();
     assert_kind(TokenKind::CloseParen, "Expect `)` after value_size type");
     return std::make_shared<ValueSizeExpression>(token, value);
+}
+
+auto JotParser::check_compiletime_constants_expression(Shared<Expression> expression,
+                                                       TokenSpan position) -> void
+{
+    auto ast_node_type = expression->get_ast_node_type();
+
+    // Now we just check that the value is primitive but later must allow more types
+    if (ast_node_type == AstNodeType::CharExpr || ast_node_type == AstNodeType::StringExpr ||
+        ast_node_type == AstNodeType::NumberExpr || ast_node_type == AstNodeType::BoolExpr) {
+        return;
+    }
+
+    // Allow negative number and later should allow prefix unary with constants right
+    if (ast_node_type == AstNodeType::PrefixUnaryExpr) {
+        auto prefix_unary = std::dynamic_pointer_cast<PrefixUnaryExpression>(expression);
+        if (prefix_unary->right->get_ast_node_type() == AstNodeType::NumberExpr &&
+            prefix_unary->operator_token.kind == TokenKind::Minus) {
+            return;
+        }
+    }
+
+    context->diagnostics.report_error(position, "Value must be a compile time constants");
+    throw "Stop";
 }
 
 auto JotParser::unexpected_token_error() -> void

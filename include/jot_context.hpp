@@ -1,6 +1,7 @@
 #pragma once
 
 #include "jot_alias_table.hpp"
+#include "jot_ast.hpp"
 #include "jot_diagnostics.hpp"
 #include "jot_options.hpp"
 #include "jot_source_manager.hpp"
@@ -28,4 +29,5 @@ struct JotContext {
     std::unordered_map<std::string, FunctionDeclarationKind> functions;
     std::unordered_map<std::string, std::shared_ptr<JotStructType>> structures;
     std::unordered_map<std::string, std::shared_ptr<JotEnumType>> enumerations;
+    std::unordered_map<std::string, Shared<Expression>> constants_table;
 };

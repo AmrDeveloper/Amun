@@ -12,6 +12,7 @@ enum TokenKind {
     ImportKeyword,
 
     VarKeyword,
+    ConstKeyword,
     EnumKeyword,
     TypeKeyword,
     StructKeyword,
@@ -121,6 +122,7 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::LoadKeyword, "load"},
     {TokenKind::ImportKeyword, "import"},
     {TokenKind::VarKeyword, "var"},
+    {TokenKind::ConstKeyword, "const"},
     {TokenKind::FunKeyword, "fun"},
     {TokenKind::EnumKeyword, "enum"},
     {TokenKind::TypeKeyword, "type"},
@@ -313,6 +315,9 @@ static auto resolve_keyword_kind(const char* keyword) -> TokenKind
         }
         if (str5Equals("infix", keyword)) {
             return TokenKind::InfixKeyword;
+        }
+        if (str5Equals("const", keyword)) {
+            return TokenKind::ConstKeyword;
         }
         return TokenKind::Symbol;
     }

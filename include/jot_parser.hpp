@@ -37,6 +37,8 @@ class JotParser {
 
     auto parse_load_declaration() -> std::vector<Shared<Statement>>;
 
+    auto parse_compiletime_constants_declaraion() -> void;
+
     auto parse_type_alias_declaration() -> void;
 
     auto parse_single_source_file(std::string& path) -> std::vector<Shared<Statement>>;
@@ -157,6 +159,9 @@ class JotParser {
     auto parse_primary_type() -> Shared<JotType>;
 
     auto parse_identifier_type() -> Shared<JotType>;
+
+    auto check_compiletime_constants_expression(Shared<Expression> expression, TokenSpan position)
+        -> void;
 
     auto unexpected_token_error() -> void;
 
