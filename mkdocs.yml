@@ -82,7 +82,7 @@ nav:
     - Value Size: reference/value_size.md
     - Generic: reference/generic.md
     - Type alias: reference/type_alias.md
-
+    - Directives: reference/directives.md
   - Contribute: contribution.md
 
 extra:
