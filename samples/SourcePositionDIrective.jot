@@ -1,0 +1,6 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    printf("Check here %s:%d:%d\n", #filepath, #line, #column);
+    return 0;
+}
