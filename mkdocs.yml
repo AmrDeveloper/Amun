@@ -59,6 +59,7 @@ nav:
     - Values: reference/values.md
     - Assignment: reference/assignments.md
     - Variables: reference/variables.md
+    - Const: reference/const.md
     - Struct: reference/struct.md
     - Enum: reference/enum.md
     - Arrays: reference/arrays.md
