@@ -1631,6 +1631,9 @@ auto JotParser::parse_primary_expression() -> Shared<Expression>
     case TokenKind::ValueSizeKeyword: {
         return parse_value_size_expression();
     }
+    case TokenKind::Hash: {
+        return parse_directive_expression();
+    }
     default: {
         unexpected_token_error();
     }
@@ -1847,6 +1850,47 @@ auto JotParser::parse_value_size_expression() -> Shared<ValueSizeExpression>
     auto value = parse_expression();
     assert_kind(TokenKind::CloseParen, "Expect `)` after value_size type");
     return std::make_shared<ValueSizeExpression>(token, value);
+}
+
+auto JotParser::parse_directive_expression() -> Shared<Expression>
+{
+    auto hash_token = consume_kind(TokenKind::Hash, "Expect `#` before directive name");
+    auto directive_name = consume_kind(TokenKind::Symbol, "Expect symbol as directive name");
+    auto directive_name_literal = directive_name.literal;
+
+    if (directive_name_literal == "line") {
+        auto posiiton = directive_name.position;
+        auto current_line = posiiton.line_number;
+        Token directive_token;
+        directive_token.kind = TokenKind::Integer64Type;
+        directive_token.position = posiiton;
+        directive_token.literal = std::to_string(current_line);
+        return std::make_shared<NumberExpression>(directive_token, jot_int64_ty);
+    }
+
+    if (directive_name_literal == "column") {
+        auto posiiton = directive_name.position;
+        auto current_column = posiiton.column_start;
+        Token directive_token;
+        directive_token.kind = TokenKind::Integer64Type;
+        directive_token.position = posiiton;
+        directive_token.literal = std::to_string(current_column);
+        return std::make_shared<NumberExpression>(directive_token, jot_int64_ty);
+    }
+
+    if (directive_name_literal == "filepath") {
+        auto posiiton = directive_name.position;
+        auto current_filepath = context->source_manager.resolve_source_path(posiiton.file_id);
+        Token directive_token;
+        directive_token.kind = TokenKind::String;
+        directive_token.position = posiiton;
+        directive_token.literal = current_filepath;
+        return std::make_shared<StringExpression>(directive_token);
+    }
+
+    context->diagnostics.report_error(directive_name.position,
+                                      "No directive with name " + directive_name_literal);
+    throw "Stop";
 }
 
 auto JotParser::check_compiletime_constants_expression(Shared<Expression> expression,

@@ -51,6 +51,7 @@ auto JotTokenizer::scan_next_token() -> Token
     case '*': return build_token(match('=') ? TokenKind::StarEqual : TokenKind::Star);
     case '/': return build_token(match('=') ? TokenKind::SlashEqual : TokenKind::Slash);
     case '%': return build_token(match('=') ? TokenKind::PercentEqual : TokenKind::Percent);
+    case '#': return build_token(TokenKind::Hash);
 
     case '+': {
         if (match('=')) {

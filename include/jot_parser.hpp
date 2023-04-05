@@ -142,6 +142,8 @@ class JotParser {
 
     auto parse_value_size_expression() -> Shared<ValueSizeExpression>;
 
+    auto parse_directive_expression() -> Shared<Expression>;
+
     auto parse_type() -> Shared<JotType>;
 
     auto parse_type_with_prefix() -> Shared<JotType>;
