@@ -1268,6 +1268,21 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
             throw "Stop";
         }
 
+        if (is_jot_types_equals(pointer_to_type, jot_int8_ty)) {
+            auto attribute_token = node->get_field_name();
+            auto literal = attribute_token.literal;
+
+            if (literal == "count") {
+                node->is_constants_ = node->callee->get_ast_node_type() == AstNodeType::StringExpr;
+                node->set_type_node(jot_int64_ty);
+                return jot_int64_ty;
+            }
+
+            context->diagnostics.report_error(node->get_position().position,
+                                              "Unkown String attribute with name " + literal);
+            throw "Stop";
+        }
+
         context->diagnostics.report_error(
             node->get_position().position,
             "Dot expression expect calling member from struct or pointer to struct");

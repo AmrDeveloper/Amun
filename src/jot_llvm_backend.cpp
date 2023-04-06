@@ -1652,10 +1652,11 @@ auto JotLLVMBackend::visit(LambdaExpression* node) -> std::any
 auto JotLLVMBackend::visit(DotExpression* node) -> std::any
 {
     auto callee = node->get_callee();
-    auto callee_llvm_type = llvm_type_from_jot_type(callee->get_type_node());
-
+    auto callee_type = callee->get_type_node();
+    auto callee_llvm_type = llvm_type_from_jot_type(callee_type);
     auto expected_llvm_type = llvm_type_from_jot_type(node->get_type_node());
 
+    // Compile array attributes
     if (callee_llvm_type->isArrayTy()) {
         if (node->get_field_name().literal == "count") {
             auto llvm_array_type = llvm::dyn_cast<llvm::ArrayType>(callee_llvm_type);
@@ -1664,6 +1665,29 @@ auto JotLLVMBackend::visit(DotExpression* node) -> std::any
         }
 
         internal_compiler_error("Invalid Array Attribute");
+    }
+
+    // Compile String literal attributes
+    if (is_pointer_of_type(callee_type, jot_int8_ty)) {
+        if (node->get_field_name().literal == "count") {
+
+            // If node is string expression, length can calculated without strlen
+            if (node->callee->get_ast_node_type() == AstNodeType::StringExpr) {
+                auto string = std::dynamic_pointer_cast<StringExpression>(node->callee);
+                auto length = string->value.literal.size();
+                return create_llvm_int64(length, true);
+            }
+
+            auto string_ptr = llvm_node_value(callee->accept(this));
+
+            // Check if it **int8 that mean the string is store in variable and should dereferneceed
+            if (string_ptr->getType() != llvm_int8_ptr_type) {
+                string_ptr = derefernecs_llvm_pointer(string_ptr);
+            }
+            return create_llvm_string_length(string_ptr);
+        }
+
+        internal_compiler_error("Invalid String Attribute");
     }
 
     auto member_ptr = access_struct_member_pointer(node);
@@ -2258,6 +2282,18 @@ auto JotLLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> ope
     }
 
     internal_compiler_error("Unary expression with non global or alloca type");
+}
+
+auto JotLLVMBackend::create_llvm_string_length(llvm::Value* string) -> llvm::Value*
+{
+    std::string function_name = "strlen";
+    auto function = lookup_function(function_name);
+    if (!function) {
+        auto fun_type = llvm::FunctionType::get(llvm_int64_type, {llvm_int8_ptr_type}, false);
+        auto linkage = llvm::Function::ExternalLinkage;
+        function = llvm::Function::Create(fun_type, linkage, "strlen", *llvm_module);
+    }
+    return Builder.CreateCall(function, {string});
 }
 
 auto JotLLVMBackend::access_struct_member_pointer(DotExpression* expression) -> llvm::Value*

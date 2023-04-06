@@ -16,6 +16,7 @@ static auto llvm_int32_type = llvm::Type::getInt32Ty(llvm_context);
 static auto llvm_int64_type = llvm::Type::getInt64Ty(llvm_context);
 
 static auto llvm_int64_ptr_type = llvm::Type::getInt64PtrTy(llvm_context);
+static auto llvm_int8_ptr_type = llvm::Type::getInt8PtrTy(llvm_context);
 
 // LLVM Floating pointer types
 static auto llvm_float32_type = llvm::Type::getFloatTy(llvm_context);

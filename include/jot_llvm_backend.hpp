@@ -148,6 +148,8 @@ class JotLLVMBackend : public TreeVisitor {
     auto create_llvm_value_decrement(std::shared_ptr<Expression> right, bool is_prefix)
         -> llvm::Value*;
 
+    auto create_llvm_string_length(llvm::Value* string) -> llvm::Value*;
+
     auto access_struct_member_pointer(DotExpression* expression) -> llvm::Value*;
 
     auto access_array_element(std::shared_ptr<Expression> array, llvm::Value* index)
