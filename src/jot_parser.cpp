@@ -315,18 +315,20 @@ auto JotParser::parse_field_declaration(bool is_global) -> Shared<FieldDeclarati
 {
     assert_kind(TokenKind::VarKeyword, "Expect var keyword.");
     auto name = consume_kind(TokenKind::Symbol, "Expect identifier as variable name.");
+
     if (is_current_kind(TokenKind::Colon)) {
         advanced_token();
         auto type = parse_type();
         Shared<Expression> initalizer;
         if (is_current_kind(TokenKind::Equal)) {
-            assert_kind(TokenKind::Equal, "Expect = after variable name.");
+            assert_kind(TokenKind::Equal, "Expect `=` after field declaraion name.");
             initalizer = parse_expression();
         }
         assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after field declaration");
         return std::make_shared<FieldDeclaration>(name, type, initalizer, is_global);
     }
-    assert_kind(TokenKind::Equal, "Expect = after variable name.");
+
+    assert_kind(TokenKind::Equal, "Expect `=` or `:` after field declaraion name.");
     auto value = parse_expression();
     assert_kind(TokenKind::Semicolon, "Expect semicolon `;` after field declaration");
     return std::make_shared<FieldDeclaration>(name, jot_none_ty, value, is_global);

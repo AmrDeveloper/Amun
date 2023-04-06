@@ -181,7 +181,7 @@ auto JotParser::parse_primary_type() -> Shared<JotType>
         throw "Stop";
     }
 
-    context->diagnostics.report_error(peek_current().position, "Expected symbol as type ");
+    context->diagnostics.report_error(peek_current().position, "Expected jot type name");
     throw "Stop";
 }
 
