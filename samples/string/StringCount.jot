@@ -1,0 +1,10 @@
+extern fun printf(format *char, varargs Any) int64;
+
+var global_count = "Global Hello".count;
+
+fun main() {
+    printf("%d\n", global_count);
+    printf("%d\n", "Hello".count);
+    var message = "Hello, World!";
+    printf("%d\n", message.count);
+}
