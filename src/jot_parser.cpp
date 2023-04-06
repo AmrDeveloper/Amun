@@ -351,6 +351,14 @@ auto JotParser::parse_intrinsic_prototype() -> Shared<IntrinsicPrototype>
 
     assert_kind(TokenKind::FunKeyword, "Expect function keyword.");
     Token name = consume_kind(TokenKind::Symbol, "Expect identifier as function name.");
+
+    bool is_generic_function = is_current_kind(TokenKind::Smaller);
+    if (is_generic_function) {
+        context->diagnostics.report_error(name.position,
+                                          "intrinsic function can't has generic parameter");
+        throw "Stop";
+    }
+
     if (intrinsic_name.empty()) {
         intrinsic_name = name.literal;
     }
