@@ -327,19 +327,28 @@ auto JotTypeChecker::visit(ForEachStatement* node) -> std::any
 {
     auto collection_type = node_jot_type(node->collection->accept(this));
 
-    if (collection_type->type_kind != TypeKind::ARRAY) {
+    auto is_array_type = collection_type->type_kind == TypeKind::ARRAY;
+    auto is_string_type = is_pointer_of_type(collection_type, jot_int8_ty);
+
+    if (!is_array_type && !is_string_type) {
         context->diagnostics.report_error(node->position.position,
-                                          "For each expect array as paramter");
+                                          "For each expect array or string as paramter");
         throw "Stop";
     }
-
-    auto array_type = std::static_pointer_cast<JotArrayType>(collection_type);
-    auto element_type = array_type->element_type;
 
     push_new_scope();
 
     // Define element name only inside loop scope
-    types_table.define(node->element_name, element_type);
+    if (is_array_type) {
+        // If paramter is array, set element type to array elmenet type
+        auto array_type = std::static_pointer_cast<JotArrayType>(collection_type);
+        types_table.define(node->element_name, array_type->element_type);
+    }
+    else {
+        // If parameter is string, set element type to char (*int8) type
+        types_table.define(node->element_name, jot_int8_ty);
+    }
+
     types_table.define("it_index", jot_int64_ty);
 
     node->body->accept(this);

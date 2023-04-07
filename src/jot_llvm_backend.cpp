@@ -572,16 +572,22 @@ auto JotLLVMBackend::visit(ForRangeStatement* node) -> std::any
 
 auto JotLLVMBackend::visit(ForEachStatement* node) -> std::any
 {
-    auto collection_value = llvm_node_value(node->collection->accept(this));
+    auto collection_expression = node->collection;
+    auto collection_exp_type = collection_expression->get_type_node();
+    auto collection_value = llvm_node_value(collection_expression->accept(this));
     auto collection = llvm_resolve_value(collection_value);
     auto collection_type = collection->getType();
 
-    auto size = collection_type->getArrayNumElements();
+    auto is_foreach_string = is_jot_types_equals(collection_exp_type, jot_int8ptr_ty);
 
     auto zero_value = create_llvm_int64(-1, true);
     auto step = create_llvm_int64(1, true);
-    auto end = create_llvm_int64(size - 1, true);
 
+    auto length = is_foreach_string
+                      ? create_llvm_string_length(collection)
+                      : create_llvm_int64(collection_type->getArrayNumElements(), true);
+
+    auto end = create_llvm_integers_bianry(TokenKind::Minus, length, step);
     auto condition_block = llvm::BasicBlock::Create(llvm_context, "for.cond");
     auto body_block = llvm::BasicBlock::Create(llvm_context, "for");
     auto end_block = llvm::BasicBlock::Create(llvm_context, "for.end");
@@ -600,7 +606,7 @@ auto JotLLVMBackend::visit(ForEachStatement* node) -> std::any
 
     // Resolve it to be collection[it_index]
     const auto element_name = node->element_name;
-    auto element_type = collection_type->getArrayElementType();
+    auto element_type = is_foreach_string ? llvm_int8_type : collection_type->getArrayElementType();
     const auto element_alloca =
         create_entry_block_alloca(current_function, element_name, element_type);
 
@@ -621,8 +627,6 @@ auto JotLLVMBackend::visit(ForEachStatement* node) -> std::any
     auto value_ptr = Builder.CreateLoad(index_alloca->getAllocatedType(), index_alloca);
     auto new_value = create_llvm_numbers_bianry(TokenKind::Plus, value_ptr, step);
     Builder.CreateStore(new_value, index_alloca);
-
-    auto collection_expression = node->collection;
 
     // If array expression is passed directly we should first save it on temp variable
     if (node->collection->get_ast_node_type() == AstNodeType::ArrayExpr) {
@@ -2291,7 +2295,7 @@ auto JotLLVMBackend::create_llvm_string_length(llvm::Value* string) -> llvm::Val
     if (!function) {
         auto fun_type = llvm::FunctionType::get(llvm_int64_type, {llvm_int8_ptr_type}, false);
         auto linkage = llvm::Function::ExternalLinkage;
-        function = llvm::Function::Create(fun_type, linkage, "strlen", *llvm_module);
+        function = llvm::Function::Create(fun_type, linkage, function_name, *llvm_module);
     }
     return Builder.CreateCall(function, {string});
 }
