@@ -139,7 +139,13 @@ class JotLLVMBackend : public TreeVisitor {
     auto create_llvm_integers_comparison(TokenKind op, llvm::Value* left, llvm::Value* right)
         -> llvm::Value*;
 
+    auto create_llvm_unsigned_integers_comparison(TokenKind op, llvm::Value* left,
+                                                  llvm::Value* right) -> llvm::Value*;
+
     auto create_llvm_floats_comparison(TokenKind op, llvm::Value* left, llvm::Value* right)
+        -> llvm::Value*;
+
+    auto create_llvm_strings_comparison(TokenKind op, llvm::Value* left, llvm::Value* right)
         -> llvm::Value*;
 
     auto create_llvm_value_increment(std::shared_ptr<Expression> right, bool is_prefix)

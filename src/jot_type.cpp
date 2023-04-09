@@ -244,6 +244,17 @@ auto is_integer_type(Shared<JotType> type) -> bool
     return false;
 }
 
+auto is_unsigned_integer_type(Shared<JotType> type) -> bool
+{
+    if (type->type_kind == TypeKind::NUMBER) {
+        auto number_type = std::static_pointer_cast<JotNumberType>(type);
+        auto number_kind = number_type->number_kind;
+        return number_kind == NumberKind::U_INTEGER_8 || number_kind == NumberKind::U_INTEGER_16 ||
+               number_kind == NumberKind::U_INTEGER_32 || number_kind == NumberKind::U_INTEGER_64;
+    }
+    return false;
+}
+
 auto is_integer1_type(Shared<JotType> type) -> bool
 {
     if (type->type_kind == TypeKind::NUMBER) {

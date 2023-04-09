@@ -190,6 +190,8 @@ auto jot_number_kind_literal(NumberKind kind) -> const char*;
 
 auto is_number_type(Shared<JotType> type) -> bool;
 
+auto is_unsigned_integer_type(Shared<JotType> type) -> bool;
+
 auto is_integer_type(Shared<JotType> type) -> bool;
 
 auto is_integer1_type(Shared<JotType> type) -> bool;

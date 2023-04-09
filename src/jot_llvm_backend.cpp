@@ -1206,15 +1206,23 @@ auto JotLLVMBackend::visit(ShiftExpression* node) -> std::any
 
 auto JotLLVMBackend::visit(ComparisonExpression* node) -> std::any
 {
-    const auto left = llvm_resolve_value(node->get_left()->accept(this));
-    const auto right = llvm_resolve_value(node->get_right()->accept(this));
+    const auto left_node = node->get_left();
+    const auto right_node = node->get_right();
+    const auto left = llvm_resolve_value(left_node->accept(this));
+    const auto right = llvm_resolve_value(right_node->accept(this));
     const auto op = node->get_operator_token().kind;
+
+    const auto left_jot_type = left_node->get_type_node();
+    const auto right_jot_type = right_node->get_type_node();
 
     const auto left_type = left->getType();
     const auto right_type = right->getType();
 
     // Comparison Operations for integers types
     if (left_type->isIntegerTy() and right_type->isIntegerTy()) {
+        if (is_unsigned_integer_type(left_jot_type)) {
+            return create_llvm_unsigned_integers_comparison(op, left, right);
+        }
         return create_llvm_integers_comparison(op, left, right);
     }
 
@@ -1225,6 +1233,24 @@ auto JotLLVMBackend::visit(ComparisonExpression* node) -> std::any
 
     // Comparison Operations for pointers types thay points to the same type, no need for casting
     if (left_type->isPointerTy() and right_type->isPointerTy()) {
+
+        // Can be optimized by checking if both sides are String literal expression
+        if (left_node->get_ast_node_type() == AstNodeType::StringExpr &&
+            right_node->get_ast_node_type() == AstNodeType::StringExpr) {
+            auto left_str = std::dynamic_pointer_cast<StringExpression>(left_node)->value.literal;
+            auto right_str = std::dynamic_pointer_cast<StringExpression>(right_node)->value.literal;
+            auto compare = std::strcmp(left_str.c_str(), right_str.c_str());
+            auto result_llvm = create_llvm_int32(compare, true);
+            return create_llvm_integers_comparison(op, result_llvm, zero_int32_value);
+        }
+
+        // If both sides are strings use strcmp function
+        if (is_jot_types_equals(left_jot_type, jot_int8ptr_ty) &&
+            is_jot_types_equals(right_jot_type, jot_int8ptr_ty)) {
+            return create_llvm_strings_comparison(op, left, right);
+        }
+
+        // Compare address of both pointers
         return create_llvm_integers_comparison(op, left, right);
     }
 
@@ -2050,8 +2076,8 @@ auto JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> type) -> l
     internal_compiler_error("Can't find LLVM Type for this Jot Type");
 }
 
-inline auto JotLLVMBackend::create_llvm_numbers_bianry(TokenKind op, llvm::Value* left,
-                                                       llvm::Value* right) -> llvm::Value*
+auto JotLLVMBackend::create_llvm_numbers_bianry(TokenKind op, llvm::Value* left, llvm::Value* right)
+    -> llvm::Value*
 {
     if (left->getType()->isIntegerTy() && right->getType()->isIntegerTy()) {
         return create_llvm_integers_bianry(op, left, right);
@@ -2064,8 +2090,8 @@ inline auto JotLLVMBackend::create_llvm_numbers_bianry(TokenKind op, llvm::Value
     internal_compiler_error("llvm binary operator with number expect integers or floats");
 }
 
-inline auto JotLLVMBackend::create_llvm_integers_bianry(TokenKind op, llvm::Value* left,
-                                                        llvm::Value* right) -> llvm::Value*
+auto JotLLVMBackend::create_llvm_integers_bianry(TokenKind op, llvm::Value* left,
+                                                 llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
     case TokenKind::Plus: {
@@ -2089,8 +2115,8 @@ inline auto JotLLVMBackend::create_llvm_integers_bianry(TokenKind op, llvm::Valu
     }
 }
 
-inline auto JotLLVMBackend::create_llvm_floats_bianry(TokenKind op, llvm::Value* left,
-                                                      llvm::Value* right) -> llvm::Value*
+auto JotLLVMBackend::create_llvm_floats_bianry(TokenKind op, llvm::Value* left, llvm::Value* right)
+    -> llvm::Value*
 {
     switch (op) {
     case TokenKind::Plus: {
@@ -2114,8 +2140,8 @@ inline auto JotLLVMBackend::create_llvm_floats_bianry(TokenKind op, llvm::Value*
     }
 }
 
-inline auto JotLLVMBackend::create_llvm_numbers_comparison(TokenKind op, llvm::Value* left,
-                                                           llvm::Value* right) -> llvm::Value*
+auto JotLLVMBackend::create_llvm_numbers_comparison(TokenKind op, llvm::Value* left,
+                                                    llvm::Value* right) -> llvm::Value*
 {
     if (left->getType()->isIntegerTy() && right->getType()->isIntegerTy()) {
         return create_llvm_integers_comparison(op, left, right);
@@ -2128,8 +2154,36 @@ inline auto JotLLVMBackend::create_llvm_numbers_comparison(TokenKind op, llvm::V
     internal_compiler_error("llvm binary comparison with number expect integers or floats");
 }
 
-inline auto JotLLVMBackend::create_llvm_integers_comparison(TokenKind op, llvm::Value* left,
-                                                            llvm::Value* right) -> llvm::Value*
+auto JotLLVMBackend::create_llvm_integers_comparison(TokenKind op, llvm::Value* left,
+                                                     llvm::Value* right) -> llvm::Value*
+{
+    switch (op) {
+    case TokenKind::EqualEqual: {
+        return Builder.CreateICmpEQ(left, right);
+    }
+    case TokenKind::BangEqual: {
+        return Builder.CreateICmpNE(left, right);
+    }
+    case TokenKind::Greater: {
+        return Builder.CreateICmpSGT(left, right);
+    }
+    case TokenKind::GreaterEqual: {
+        return Builder.CreateICmpSGE(left, right);
+    }
+    case TokenKind::Smaller: {
+        return Builder.CreateICmpSLT(left, right);
+    }
+    case TokenKind::SmallerEqual: {
+        return Builder.CreateICmpSLE(left, right);
+    }
+    default: {
+        internal_compiler_error("Invalid Integers Comparison operator");
+    }
+    }
+}
+
+auto JotLLVMBackend::create_llvm_unsigned_integers_comparison(TokenKind op, llvm::Value* left,
+                                                              llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
     case TokenKind::EqualEqual: {
@@ -2145,10 +2199,10 @@ inline auto JotLLVMBackend::create_llvm_integers_comparison(TokenKind op, llvm::
         return Builder.CreateICmpUGE(left, right);
     }
     case TokenKind::Smaller: {
-        return Builder.CreateICmpSLT(left, right);
+        return Builder.CreateICmpULT(left, right);
     }
     case TokenKind::SmallerEqual: {
-        return Builder.CreateICmpSLE(left, right);
+        return Builder.CreateICmpULE(left, right);
     }
     default: {
         internal_compiler_error("Invalid Integers Comparison operator");
@@ -2156,8 +2210,8 @@ inline auto JotLLVMBackend::create_llvm_integers_comparison(TokenKind op, llvm::
     }
 }
 
-inline auto JotLLVMBackend::create_llvm_floats_comparison(TokenKind op, llvm::Value* left,
-                                                          llvm::Value* right) -> llvm::Value*
+auto JotLLVMBackend::create_llvm_floats_comparison(TokenKind op, llvm::Value* left,
+                                                   llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
     case TokenKind::EqualEqual: {
@@ -2180,6 +2234,46 @@ inline auto JotLLVMBackend::create_llvm_floats_comparison(TokenKind op, llvm::Va
     }
     default: {
         internal_compiler_error("Invalid floats Comparison operator");
+    }
+    }
+}
+
+auto JotLLVMBackend::create_llvm_strings_comparison(TokenKind op, llvm::Value* left,
+                                                    llvm::Value* right) -> llvm::Value*
+{
+
+    std::string function_name = "strcmp";
+    auto function = lookup_function(function_name);
+    if (!function) {
+        auto fun_type = llvm::FunctionType::get(llvm_int32_type,
+                                                {llvm_int8_ptr_type, llvm_int8_ptr_type}, false);
+        auto linkage = llvm::Function::ExternalLinkage;
+        function = llvm::Function::Create(fun_type, linkage, function_name, *llvm_module);
+    }
+
+    auto function_call = Builder.CreateCall(function, {left, right});
+
+    switch (op) {
+    case TokenKind::EqualEqual: {
+        return Builder.CreateICmpEQ(function_call, zero_int32_value);
+    }
+    case TokenKind::BangEqual: {
+        return Builder.CreateICmpNE(function_call, zero_int32_value);
+    }
+    case TokenKind::Greater: {
+        return Builder.CreateICmpSGT(function_call, zero_int32_value);
+    }
+    case TokenKind::GreaterEqual: {
+        return Builder.CreateICmpSGE(function_call, zero_int32_value);
+    }
+    case TokenKind::Smaller: {
+        return Builder.CreateICmpSLT(function_call, zero_int32_value);
+    }
+    case TokenKind::SmallerEqual: {
+        return Builder.CreateICmpSLE(function_call, zero_int32_value);
+    }
+    default: {
+        internal_compiler_error("Invalid strings Comparison operator");
     }
     }
 }
