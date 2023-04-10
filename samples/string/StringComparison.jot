@@ -1,0 +1,11 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    printf("%d\n", "A" == "B");
+    printf("%d\n", "A" != "B");
+    printf("%d\n", "A" > "B");
+    printf("%d\n", "A" >= "B");
+    printf("%d\n", "A" < "B");
+    printf("%d\n", "A" <= "B");
+    return 0;
+}
