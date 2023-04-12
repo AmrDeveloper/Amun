@@ -326,7 +326,6 @@ auto JotTypeChecker::visit(ForRangeStatement* node) -> std::any
 auto JotTypeChecker::visit(ForEachStatement* node) -> std::any
 {
     auto collection_type = node_jot_type(node->collection->accept(this));
-
     auto is_array_type = collection_type->type_kind == TypeKind::ARRAY;
     auto is_string_type = is_pointer_of_type(collection_type, jot_int8_ty);
 
@@ -349,9 +348,11 @@ auto JotTypeChecker::visit(ForEachStatement* node) -> std::any
         types_table.define(node->element_name, jot_int8_ty);
     }
 
-    types_table.define("it_index", jot_int64_ty);
+    // Define element name inside loop scope
+    types_table.define(node->index_name, jot_int64_ty);
 
     node->body->accept(this);
+
     pop_current_scope();
     return 0;
 }

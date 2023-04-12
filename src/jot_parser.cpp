@@ -1028,19 +1028,28 @@ auto JotParser::parse_for_statement() -> Shared<Statement>
     }
 
     // Parse optional element name or it as default
-    std::string name = "it";
+    std::string element_name = "it";
+    std::string index_name = "it_index";
     auto expr = parse_expression();
-    if (is_current_kind(TokenKind::Colon)) {
+    if (is_current_kind(TokenKind::Colon) || is_current_kind(TokenKind::Comma)) {
         if (expr->get_ast_node_type() != AstNodeType::LiteralExpr) {
             context->diagnostics.report_error(keyword.position,
                                               "Optional named variable must be identifier");
             throw "Stop";
         }
 
-        // Previous token is the LiteralExpression that contains variable name
-        name = previous_token->literal;
-        // Consume the colon
-        advanced_token();
+        if (is_current_kind(TokenKind::Comma)) {
+            index_name = previous_token->literal;
+            // Consume the comma
+            advanced_token();
+            element_name = consume_kind(TokenKind::Symbol, "Expect element name").literal;
+        }
+        else {
+            // Previous token is the LiteralExpression that contains variable name
+            element_name = previous_token->literal;
+        }
+
+        assert_kind(TokenKind::Colon, "Expect `:` after element name in foreach");
         expr = parse_expression();
     }
 
@@ -1062,7 +1071,8 @@ auto JotParser::parse_for_statement() -> Shared<Statement>
         loop_levels_stack.top() -= 1;
 
         current_ast_scope = parent_node_scope;
-        return std::make_shared<ForRangeStatement>(keyword, name, expr, range_end, step, body);
+        return std::make_shared<ForRangeStatement>(keyword, element_name, expr, range_end, step,
+                                                   body);
     }
 
     // Parse For each statement
@@ -1073,7 +1083,7 @@ auto JotParser::parse_for_statement() -> Shared<Statement>
 
     current_ast_scope = parent_node_scope;
 
-    return std::make_shared<ForEachStatement>(keyword, name, expr, body);
+    return std::make_shared<ForEachStatement>(keyword, element_name, index_name, expr, body);
 }
 
 auto JotParser::parse_while_statement() -> Shared<WhileStatement>

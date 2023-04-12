@@ -310,10 +310,10 @@ class ForRangeStatement : public Statement {
 
 class ForEachStatement : public Statement {
   public:
-    ForEachStatement(Token position, std::string element_name, Shared<Expression> collection,
-                     Shared<Statement> body)
-        : position(position), element_name(std::move(element_name)), collection(collection),
-          body(body)
+    ForEachStatement(Token position, std::string element_name, std::string index_name,
+                     Shared<Expression> collection, Shared<Statement> body)
+        : position(std::move(position)), element_name(std::move(element_name)),
+          index_name(std::move(index_name)), collection(std::move(collection)), body(body)
     {
     }
 
@@ -323,6 +323,7 @@ class ForEachStatement : public Statement {
 
     Token position;
     std::string element_name;
+    std::string index_name;
     Shared<Expression> collection;
     Shared<Statement> body;
 };

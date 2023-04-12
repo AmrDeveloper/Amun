@@ -598,7 +598,7 @@ auto JotLLVMBackend::visit(ForEachStatement* node) -> std::any
     push_alloca_inst_scope();
 
     // Resolve it_index
-    const auto index_name = "it_index";
+    const auto index_name = node->index_name;
     const auto current_function = Builder.GetInsertBlock()->getParent();
     auto index_alloca = create_entry_block_alloca(current_function, index_name, llvm_int64_type);
     Builder.CreateStore(zero_value, index_alloca);
