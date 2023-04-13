@@ -102,7 +102,20 @@ auto JotParser::parse_fixed_size_array_type() -> Shared<JotType>
     return std::make_shared<JotArrayType>(element_type, number_value);
 }
 
-auto JotParser::parse_type_with_postfix() -> Shared<JotType> { return parse_generic_struct_type(); }
+auto JotParser::parse_type_with_postfix() -> Shared<JotType>
+{
+    auto type = parse_generic_struct_type();
+
+    // Report useful message when user create pointer type with prefix `*` like in C
+    if (is_current_kind(TokenKind::Star)) {
+        context->diagnostics.report_error(peek_previous().position,
+                                          "In pointer type `*` must be before the type like *" +
+                                              jot_type_literal(type));
+        throw "Stop";
+    }
+
+    return type;
+}
 
 auto JotParser::parse_generic_struct_type() -> Shared<JotType>
 {
