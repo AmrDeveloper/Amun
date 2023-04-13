@@ -48,7 +48,7 @@ auto JotParser::parse_pointer_to_type() -> Shared<JotType>
 
 auto JotParser::parse_function_type() -> Shared<JotType>
 {
-    auto paren = consume_kind(TokenKind::OpenParen, "Function type expect to start with {");
+    auto paren = consume_kind(TokenKind::OpenParen, "Function type expect to start with (");
 
     std::vector<Shared<JotType>> parameters_types;
     while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
