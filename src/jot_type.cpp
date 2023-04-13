@@ -1,4 +1,5 @@
 #include "../include/jot_type.hpp"
+#include "../include/jot_primitives.hpp"
 
 auto is_jot_types_equals(const Shared<JotType>& type, const Shared<JotType>& other) -> bool
 {
@@ -89,33 +90,29 @@ auto can_jot_types_casted(const Shared<JotType>& from, const Shared<JotType>& to
     const auto from_kind = from->type_kind;
     const auto to_kind = to->type_kind;
 
+    // Catch casting from un castable type
     if (from_kind == TypeKind::VOID || from_kind == TypeKind::NONE || from_kind == TypeKind::ENUM ||
         from_kind == TypeKind::ENUM_ELEMENT || from_kind == TypeKind::FUNCTION) {
         return false;
     }
 
+    // Catch casting to un castable type
     if (to_kind == TypeKind::VOID || to_kind == TypeKind::NONE || to_kind == TypeKind::ENUM ||
         to_kind == TypeKind::ENUM_ELEMENT || to_kind == TypeKind::FUNCTION) {
         return false;
     }
 
+    // Casting between numbers
     if (from_kind == TypeKind::NUMBER && to_kind == TypeKind::NUMBER) {
         return true;
     }
 
-    if (from_kind == TypeKind::POINTER) {
-        auto from_pointer = std::static_pointer_cast<JotPointerType>(from);
-        if (from_pointer->base_type->type_kind == TypeKind::VOID) {
-            return true;
-        }
-        if (to_kind == TypeKind::POINTER) {
-            auto to_ptr = std::static_pointer_cast<JotPointerType>(to);
-            return to_ptr->base_type->type_kind == TypeKind::VOID;
-        }
-
-        return false;
+    // Allow casting to and from void pointer type
+    if (is_pointer_of_type(from, jot_void_ty) || is_pointer_of_type(to, jot_void_ty)) {
+        return true;
     }
 
+    // Casting Array to pointer of the same elemnet type
     if (from_kind == TypeKind::ARRAY && to_kind == TypeKind::POINTER) {
         auto from_array = std::static_pointer_cast<JotArrayType>(from);
         auto to_pointer = std::static_pointer_cast<JotPointerType>(to);
