@@ -1,0 +1,13 @@
+extern fun printf(format *char, varargs Any) int64;
+
+extern fun scanf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var name : [20]char;
+    printf("Enter name: ");
+    scanf("%s", cast(*char) name);
+    for name {
+        printf("%c", it);
+    }
+    return 0;
+}
