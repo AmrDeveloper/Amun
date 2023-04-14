@@ -1,3 +1,4 @@
+#include "../include/jot_name_mangle.hpp"
 #include "../include/jot_parser.hpp"
 
 #include <unordered_map>
@@ -26,9 +27,9 @@ auto JotParser::parse_type_with_prefix() -> Shared<JotType>
         return parse_pointer_to_type();
     }
 
-    // Parse function pointer type
+    // Parse tuple type
     if (is_current_kind(TokenKind::OpenParen)) {
-        return parse_function_type();
+        return parse_tuple_type();
     }
 
     // Parse Fixed size array type
@@ -42,6 +43,13 @@ auto JotParser::parse_type_with_prefix() -> Shared<JotType>
 auto JotParser::parse_pointer_to_type() -> Shared<JotType>
 {
     auto star_token = consume_kind(TokenKind::Star, "Pointer type must start with *");
+
+    // Parse function pointer type
+    if (is_current_kind(TokenKind::OpenParen)) {
+        auto function_type = parse_function_type();
+        return std::make_shared<JotPointerType>(function_type);
+    }
+
     auto base_type = parse_type_with_prefix();
     return std::make_shared<JotPointerType>(base_type);
 }
@@ -60,6 +68,31 @@ auto JotParser::parse_function_type() -> Shared<JotType>
     assert_kind(TokenKind::CloseParen, "Expect ) after function type parameters");
     auto return_type = parse_type();
     return std::make_shared<JotFunctionType>(paren, parameters_types, return_type);
+}
+
+auto JotParser::parse_tuple_type() -> Shared<JotType>
+{
+    auto paren = consume_kind(TokenKind::OpenParen, "tuple type expect to start with (");
+
+    std::vector<Shared<JotType>> field_types;
+    while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
+        field_types.push_back(parse_type());
+        if (is_current_kind(TokenKind::Comma)) {
+            advanced_token();
+        }
+    }
+
+    assert_kind(TokenKind::CloseParen, "Expect ) after tuple values");
+
+    if (field_types.size() < 2) {
+        context->diagnostics.report_error(paren.position,
+                                          "Can't create tuple type with less than 2 types");
+        throw "Stop";
+    }
+
+    auto tuple_type = std::make_shared<JotTupleType>("", field_types);
+    tuple_type->name = mangle_tuple_type(tuple_type);
+    return tuple_type;
 }
 
 auto JotParser::parse_fixed_size_array_type() -> Shared<JotType>

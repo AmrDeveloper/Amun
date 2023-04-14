@@ -24,46 +24,47 @@ class ExpressionStatement;
 
 class StatementVisitor {
   public:
-    virtual std::any visit(BlockStatement* node) = 0;
+    virtual auto visit(BlockStatement* node) -> std::any = 0;
 
-    virtual std::any visit(FieldDeclaration* node) = 0;
+    virtual auto visit(FieldDeclaration* node) -> std::any = 0;
 
-    virtual std::any visit(FunctionPrototype* node) = 0;
+    virtual auto visit(FunctionPrototype* node) -> std::any = 0;
 
-    virtual std::any visit(IntrinsicPrototype* node) = 0;
+    virtual auto visit(IntrinsicPrototype* node) -> std::any = 0;
 
-    virtual std::any visit(FunctionDeclaration* node) = 0;
+    virtual auto visit(FunctionDeclaration* node) -> std::any = 0;
 
-    virtual std::any visit(StructDeclaration* node) = 0;
+    virtual auto visit(StructDeclaration* node) -> std::any = 0;
 
-    virtual std::any visit(EnumDeclaration* node) = 0;
+    virtual auto visit(EnumDeclaration* node) -> std::any = 0;
 
-    virtual std::any visit(IfStatement* node) = 0;
+    virtual auto visit(IfStatement* node) -> std::any = 0;
 
-    virtual std::any visit(ForRangeStatement* node) = 0;
+    virtual auto visit(ForRangeStatement* node) -> std::any = 0;
 
-    virtual std::any visit(ForEachStatement* node) = 0;
+    virtual auto visit(ForEachStatement* node) -> std::any = 0;
 
-    virtual std::any visit(ForeverStatement* node) = 0;
+    virtual auto visit(ForeverStatement* node) -> std::any = 0;
 
-    virtual std::any visit(WhileStatement* node) = 0;
+    virtual auto visit(WhileStatement* node) -> std::any = 0;
 
-    virtual std::any visit(SwitchStatement* node) = 0;
+    virtual auto visit(SwitchStatement* node) -> std::any = 0;
 
-    virtual std::any visit(ReturnStatement* node) = 0;
+    virtual auto visit(ReturnStatement* node) -> std::any = 0;
 
-    virtual std::any visit(DeferStatement* node) = 0;
+    virtual auto visit(DeferStatement* node) -> std::any = 0;
 
-    virtual std::any visit(BreakStatement* node) = 0;
+    virtual auto visit(BreakStatement* node) -> std::any = 0;
 
-    virtual std::any visit(ContinueStatement* node) = 0;
+    virtual auto visit(ContinueStatement* node) -> std::any = 0;
 
-    virtual std::any visit(ExpressionStatement* node) = 0;
+    virtual auto visit(ExpressionStatement* node) -> std::any = 0;
 };
 
 class IfExpression;
 class SwitchExpression;
 class GroupExpression;
+class TupleExpression;
 class AssignExpression;
 class BinaryExpression;
 class ShiftExpression;
@@ -90,57 +91,59 @@ class NullExpression;
 
 class ExpressionVisitor {
   public:
-    virtual std::any visit(IfExpression* node) = 0;
+    virtual auto visit(IfExpression* node) -> std::any = 0;
 
-    virtual std::any visit(SwitchExpression* node) = 0;
+    virtual auto visit(SwitchExpression* node) -> std::any = 0;
 
-    virtual std::any visit(GroupExpression* node) = 0;
+    virtual auto visit(GroupExpression* node) -> std::any = 0;
 
-    virtual std::any visit(AssignExpression* node) = 0;
+    virtual auto visit(TupleExpression* node) -> std::any = 0;
 
-    virtual std::any visit(BinaryExpression* node) = 0;
+    virtual auto visit(AssignExpression* node) -> std::any = 0;
 
-    virtual std::any visit(ShiftExpression* node) = 0;
+    virtual auto visit(BinaryExpression* node) -> std::any = 0;
 
-    virtual std::any visit(ComparisonExpression* node) = 0;
+    virtual auto visit(ShiftExpression* node) -> std::any = 0;
 
-    virtual std::any visit(LogicalExpression* node) = 0;
+    virtual auto visit(ComparisonExpression* node) -> std::any = 0;
 
-    virtual std::any visit(PrefixUnaryExpression* node) = 0;
+    virtual auto visit(LogicalExpression* node) -> std::any = 0;
 
-    virtual std::any visit(PostfixUnaryExpression* node) = 0;
+    virtual auto visit(PrefixUnaryExpression* node) -> std::any = 0;
 
-    virtual std::any visit(CallExpression* node) = 0;
+    virtual auto visit(PostfixUnaryExpression* node) -> std::any = 0;
 
-    virtual std::any visit(InitializeExpression* node) = 0;
+    virtual auto visit(CallExpression* node) -> std::any = 0;
 
-    virtual std::any visit(LambdaExpression* node) = 0;
+    virtual auto visit(InitializeExpression* node) -> std::any = 0;
 
-    virtual std::any visit(DotExpression* node) = 0;
+    virtual auto visit(LambdaExpression* node) -> std::any = 0;
 
-    virtual std::any visit(CastExpression* node) = 0;
+    virtual auto visit(DotExpression* node) -> std::any = 0;
 
-    virtual std::any visit(TypeSizeExpression* node) = 0;
+    virtual auto visit(CastExpression* node) -> std::any = 0;
 
-    virtual std::any visit(ValueSizeExpression* node) = 0;
+    virtual auto visit(TypeSizeExpression* node) -> std::any = 0;
 
-    virtual std::any visit(IndexExpression* node) = 0;
+    virtual auto visit(ValueSizeExpression* node) -> std::any = 0;
 
-    virtual std::any visit(EnumAccessExpression* node) = 0;
+    virtual auto visit(IndexExpression* node) -> std::any = 0;
 
-    virtual std::any visit(LiteralExpression* node) = 0;
+    virtual auto visit(EnumAccessExpression* node) -> std::any = 0;
 
-    virtual std::any visit(NumberExpression* node) = 0;
+    virtual auto visit(LiteralExpression* node) -> std::any = 0;
 
-    virtual std::any visit(StringExpression* node) = 0;
+    virtual auto visit(NumberExpression* node) -> std::any = 0;
 
-    virtual std::any visit(ArrayExpression* node) = 0;
+    virtual auto visit(StringExpression* node) -> std::any = 0;
 
-    virtual std::any visit(CharacterExpression* node) = 0;
+    virtual auto visit(ArrayExpression* node) -> std::any = 0;
 
-    virtual std::any visit(BooleanExpression* node) = 0;
+    virtual auto visit(CharacterExpression* node) -> std::any = 0;
 
-    virtual std::any visit(NullExpression* node) = 0;
+    virtual auto visit(BooleanExpression* node) -> std::any = 0;
+
+    virtual auto visit(NullExpression* node) -> std::any = 0;
 };
 
 class TreeVisitor : public StatementVisitor, public ExpressionVisitor {};

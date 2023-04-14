@@ -1402,9 +1402,27 @@ auto JotParser::parse_call_or_access_expression() -> Shared<Expression>
         // Parse structure field access expression
         if (is_current_kind(TokenKind::Dot)) {
             auto dot_token = peek_and_advance_token();
-            auto field_name = consume_kind(TokenKind::Symbol, "Expect literal as field name");
-            expression = std::make_shared<DotExpression>(dot_token, expression, field_name);
-            continue;
+
+            // Struct field access using field name
+            if (is_current_kind(TokenKind::Symbol)) {
+                auto field_name = consume_kind(TokenKind::Symbol, "Expect literal as field name");
+                expression = std::make_shared<DotExpression>(dot_token, expression, field_name);
+                continue;
+            }
+
+            // Tuple field access using field index
+            if (is_current_kind(TokenKind::Integer)) {
+                auto field_name = consume_kind(TokenKind::Integer, "Expect literal as field name");
+                auto access = std::make_shared<DotExpression>(dot_token, expression, field_name);
+                access->field_index = str_to_int(field_name.literal.c_str());
+                expression = access;
+                continue;
+            }
+
+            context->diagnostics.report_error(
+                dot_token.position,
+                "DotExpression `.` must followed by symnol or integer for struct or tuple access");
+            throw "Stop";
         }
 
         // Parse function call expression with generic parameters
@@ -1628,7 +1646,7 @@ auto JotParser::parse_primary_expression() -> Shared<Expression>
         return parse_literal_expression();
     }
     case TokenKind::OpenParen: {
-        return parse_group_expression();
+        return parse_group_or_tuple_expression();
     }
     case TokenKind::OpenBracket: {
         return parse_array_expression();
@@ -1822,10 +1840,28 @@ auto JotParser::parse_switch_expression() -> Shared<SwitchExpression>
     return std::make_shared<SwitchExpression>(keyword, argument, cases, values, default_value);
 }
 
-auto JotParser::parse_group_expression() -> Shared<GroupExpression>
+auto JotParser::parse_group_or_tuple_expression() -> Shared<Expression>
 {
     Token position = peek_and_advance_token();
     auto expression = parse_expression();
+
+    // Parse Tuple values expression
+    if (is_current_kind(TokenKind::Comma)) {
+        auto token = peek_and_advance_token();
+        std::vector<Shared<Expression>> values;
+        values.push_back(expression);
+
+        while (!is_current_kind(TokenKind::CloseParen)) {
+            values.push_back(parse_expression());
+            if (is_current_kind(TokenKind::Comma)) {
+                advanced_token();
+            }
+        }
+
+        assert_kind(TokenKind::CloseParen, "Expect ) at the end of tuple values expression");
+        return std::make_shared<TupleExpression>(token, values);
+    }
+
     assert_kind(TokenKind::CloseParen, "Expect ) at the end of group expression");
     return std::make_shared<GroupExpression>(position, expression);
 }
@@ -2064,4 +2100,6 @@ void JotParser::assert_kind(TokenKind kind, const char* message)
 auto JotParser::is_source_available() -> bool
 {
     return peek_current().kind != TokenKind::EndOfFile;
+}
+TokenKind::EndOfFile;
 }

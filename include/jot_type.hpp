@@ -15,6 +15,7 @@ enum class TypeKind : int8 {
     FUNCTION,
     ARRAY,
     STRUCT,
+    TUPLE,
     ENUM,
     ENUM_ELEMENT,
     GENERIC_PARAMETER,
@@ -106,8 +107,9 @@ struct JotFunctionType : public JotType {
 
 struct JotStructType : public JotType {
     JotStructType(std::string name, std::vector<std::string> fields_names,
-                  std::vector<Shared<JotType>> types, std::vector<std::string> generic_parameters,
-                  bool is_packed, bool is_generic)
+                  std::vector<Shared<JotType>> types,
+                  std::vector<std::string> generic_parameters = {}, bool is_packed = false,
+                  bool is_generic = false)
         : name(std::move(name)), fields_names(std::move(fields_names)),
           fields_types(std::move(types)), generic_parameters(std::move(generic_parameters)),
           is_packed(is_packed), is_generic(is_generic)
@@ -121,6 +123,16 @@ struct JotStructType : public JotType {
     std::vector<std::string> generic_parameters;
     bool is_packed;
     bool is_generic;
+};
+
+struct JotTupleType : public JotType {
+    JotTupleType(std::string name, std::vector<Shared<JotType>> fields_types)
+        : name(std::move(name)), fields_types(std::move(fields_types))
+    {
+        type_kind = TypeKind::TUPLE;
+    }
+    std::string name;
+    std::vector<Shared<JotType>> fields_types;
 };
 
 struct JotEnumType : public JotType {

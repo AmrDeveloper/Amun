@@ -37,6 +37,12 @@ auto is_jot_types_equals(const Shared<JotType>& type, const Shared<JotType>& oth
         return jot_type_literal(type_struct) == jot_type_literal(other_struct);
     }
 
+    if (type_kind == TypeKind::TUPLE && other->type_kind == TypeKind::TUPLE) {
+        auto type_tuple = std::static_pointer_cast<JotTupleType>(type);
+        auto other_tuple = std::static_pointer_cast<JotTupleType>(other);
+        return jot_type_literal(type_tuple) == jot_type_literal(other_tuple);
+    }
+
     if (type_kind == TypeKind::ENUM_ELEMENT && other->type_kind == TypeKind::ENUM_ELEMENT) {
         auto type_element = std::static_pointer_cast<JotEnumElementType>(type);
         auto other_element = std::static_pointer_cast<JotEnumElementType>(other);
@@ -160,6 +166,23 @@ auto jot_type_literal(const Shared<JotType>& type) -> std::string
     if (type_kind == TypeKind::STRUCT) {
         auto struct_type = std::static_pointer_cast<JotStructType>(type);
         return struct_type->name;
+    }
+
+    if (type_kind == TypeKind::TUPLE) {
+        auto tuple_type = std::static_pointer_cast<JotTupleType>(type);
+        std::stringstream string_stream;
+        string_stream << "(";
+        auto number_of_fields = tuple_type->fields_types.size();
+        auto current_filed_index = 0;
+        for (auto& parameter : tuple_type->fields_types) {
+            current_filed_index++;
+            string_stream << jot_type_literal(parameter);
+            if (current_filed_index < number_of_fields) {
+                string_stream << ", ";
+            }
+        }
+        string_stream << ")";
+        return string_stream.str();
     }
 
     if (type_kind == TypeKind::ENUM) {

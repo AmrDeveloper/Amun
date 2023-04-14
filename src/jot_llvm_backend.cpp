@@ -1057,6 +1057,23 @@ auto JotLLVMBackend::visit(GroupExpression* node) -> std::any
     return node->get_expression()->accept(this);
 }
 
+auto JotLLVMBackend::visit(TupleExpression* node) -> std::any
+{
+    auto tuple_type = llvm_type_from_jot_type(node->type);
+    auto alloc_inst = Builder.CreateAlloca(tuple_type);
+
+    size_t argument_index = 0;
+    for (auto& argument : node->values) {
+        auto argument_value = llvm_resolve_value(argument->accept(this));
+        auto index = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, argument_index, true));
+        auto member_ptr = Builder.CreateGEP(tuple_type, alloc_inst, {zero_int32_value, index});
+        Builder.CreateStore(argument_value, member_ptr);
+        argument_index++;
+    }
+
+    return alloc_inst;
+}
+
 auto JotLLVMBackend::visit(AssignExpression* node) -> std::any
 {
     auto left_node = node->get_left();
@@ -2057,6 +2074,26 @@ auto JotLLVMBackend::llvm_type_from_jot_type(std::shared_ptr<JotType> type) -> l
         auto struct_type = std::static_pointer_cast<JotStructType>(type);
         auto struct_name = struct_type->name;
         return structures_types_map[struct_name];
+    }
+
+    if (type_kind == TypeKind::TUPLE) {
+        auto tuple_type = std::static_pointer_cast<JotTupleType>(type);
+        if (generated_tuples.contains(tuple_type->name)) {
+            return generated_tuples[tuple_type->name];
+        }
+
+        auto* tuple_llvm_type = llvm::StructType::create(llvm_context);
+        tuple_llvm_type->setName(tuple_type->name);
+
+        const auto fields = tuple_type->fields_types;
+        std::vector<llvm::Type*> struct_fields;
+        struct_fields.reserve(fields.size());
+        for (const auto& field : fields) {
+            struct_fields.push_back(llvm_type_from_jot_type(field));
+        }
+        tuple_llvm_type->setBody(struct_fields, false);
+        generated_tuples[tuple_type->name] = tuple_llvm_type;
+        return tuple_llvm_type;
     }
 
     if (type_kind == TypeKind::ENUM_ELEMENT) {

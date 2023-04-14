@@ -36,6 +36,7 @@ enum class AstNodeType {
     IfExpr,
     SwitchExpr,
     GroupExpr,
+    TupleExpr,
     AssignExpr,
     BinaryExpr,
     ShiftExpr,
@@ -627,6 +628,29 @@ class GroupExpression : public Expression {
 
     Token position;
     Shared<Expression> expression;
+    Shared<JotType> type;
+};
+
+class TupleExpression : public Expression {
+  public:
+    TupleExpression(Token position, std::vector<Shared<Expression>> values)
+        : position(position), values(values)
+    {
+        type = jot_none_ty;
+    }
+
+    auto get_type_node() -> Shared<JotType> override { return type; }
+
+    void set_type_node(Shared<JotType> new_type) override { type = new_type; }
+
+    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+
+    bool is_constant() override { return true; }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::TupleExpr; }
+
+    Token position;
+    std::vector<Shared<Expression>> values;
     Shared<JotType> type;
 };
 

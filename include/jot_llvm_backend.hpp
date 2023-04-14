@@ -64,6 +64,8 @@ class JotLLVMBackend : public TreeVisitor {
 
     auto visit(GroupExpression* node) -> std::any override;
 
+    auto visit(TupleExpression* node) -> std::any override;
+
     auto visit(AssignExpression* node) -> std::any override;
 
     auto visit(BinaryExpression* node) -> std::any override;
@@ -211,6 +213,8 @@ class JotLLVMBackend : public TreeVisitor {
     std::unordered_map<std::string, llvm::Function*> llvm_functions;
     std::unordered_map<std::string, llvm::Constant*> constants_string_pool;
     std::unordered_map<std::string, llvm::Type*> structures_types_map;
+
+    std::unordered_map<std::string, llvm::StructType*> generated_tuples;
 
     // TODO: think of sharing them with Type Checker
     // Generic function declaraions and parameters

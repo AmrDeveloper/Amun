@@ -629,6 +629,19 @@ auto JotTypeChecker::visit(GroupExpression* node) -> std::any
     return node->get_expression()->accept(this);
 }
 
+auto JotTypeChecker::visit(TupleExpression* node) -> std::any
+{
+    std::vector<Shared<JotType>> field_types;
+    field_types.reserve(node->values.size());
+    for (const auto& value : node->values) {
+        field_types.push_back(node_jot_type(value->accept(this)));
+    }
+    auto tuple_type = std::make_shared<JotTupleType>("", field_types);
+    tuple_type->name = mangle_tuple_type(tuple_type);
+    node->set_type_node(tuple_type);
+    return tuple_type;
+}
+
 auto JotTypeChecker::visit(AssignExpression* node) -> std::any
 {
     auto left_node = node->get_left();
@@ -1049,6 +1062,19 @@ auto JotTypeChecker::visit(CallExpression* node) -> std::any
                 generic_types[generic->name] = return_type;
             }
 
+            if (return_type->type_kind == TypeKind::TUPLE) {
+                auto tuple = std::static_pointer_cast<JotTupleType>(return_type);
+                for (auto& field : tuple->fields_types) {
+                    if (field->type_kind == TypeKind::GENERIC_PARAMETER) {
+                        auto generic = std::static_pointer_cast<JotGenericParameterType>(field);
+                        auto position = index_of(prototype->generic_parameters, generic->name);
+                        field = generic_parameters[position];
+                    }
+                }
+                tuple->name = mangle_tuple_type(tuple);
+                return_type = tuple;
+            }
+
             return_types_stack.push(return_type);
 
             std::vector<Shared<JotType>> resolved_parameters;
@@ -1060,14 +1086,29 @@ auto JotTypeChecker::visit(CallExpression* node) -> std::any
                     auto position = index_of(prototype->generic_parameters, generic->name);
                     generic_types[generic->name] = generic_parameters[position];
                     resolved_parameters.push_back(generic_parameters[position]);
+                    continue;
                 }
                 else if (parameter_type->type_kind == TypeKind::GENERIC_STRUCT) {
                     auto generic = std::static_pointer_cast<JotGenericStructType>(parameter_type);
                     resolved_parameters.push_back(resolve_generic_struct(generic));
+                    continue;
                 }
-                else {
-                    resolved_parameters.push_back(parameter_type);
+
+                if (parameter_type->type_kind == TypeKind::TUPLE) {
+                    auto tuple = std::static_pointer_cast<JotTupleType>(parameter_type);
+                    for (auto& field : tuple->fields_types) {
+                        if (field->type_kind == TypeKind::GENERIC_PARAMETER) {
+                            auto generic = std::static_pointer_cast<JotGenericParameterType>(field);
+                            auto position = index_of(prototype->generic_parameters, generic->name);
+                            field = generic_parameters[position];
+                        }
+                    }
+                    tuple->name = mangle_tuple_type(tuple);
+                    resolved_parameters.push_back(tuple);
+                    continue;
                 }
+
+                resolved_parameters.push_back(parameter_type);
             }
 
             push_new_scope();
@@ -1239,8 +1280,17 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
     auto callee = node->get_callee()->accept(this);
     auto callee_type = node_jot_type(callee);
     auto callee_type_kind = callee_type->type_kind;
+    auto node_position = node->get_position().position;
 
     if (callee_type_kind == TypeKind::STRUCT) {
+
+        // Assert that use access struct member only using field name
+        if (node->field_name.kind != TokenKind::Symbol) {
+            context->diagnostics.report_error(
+                node_position, "Can't access struct member using index, only tuples can do this");
+            throw "Stop";
+        }
+
         auto struct_type = std::static_pointer_cast<JotStructType>(callee_type);
         auto field_name = node->get_field_name().literal;
         auto fields_names = struct_type->fields_names;
@@ -1252,10 +1302,31 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
             return field_type;
         }
 
-        context->diagnostics.report_error(node->get_position().position,
-                                          "Can't find a field with name " + field_name +
-                                              " in struct " + struct_type->name);
+        context->diagnostics.report_error(node_position, "Can't find a field with name " +
+                                                             field_name + " in struct " +
+                                                             struct_type->name);
         throw "Stop";
+    }
+
+    if (callee_type_kind == TypeKind::TUPLE) {
+        // Assert that use access tuple using integer position only
+        if (node->field_name.kind != TokenKind::Integer) {
+            context->diagnostics.report_error(node_position,
+                                              "Tuple must be accessed using position only");
+            throw "Stop";
+        }
+
+        auto tuple_type = std::static_pointer_cast<JotTupleType>(callee_type);
+        auto field_index = node->field_index;
+
+        if (field_index >= tuple_type->fields_types.size()) {
+            context->diagnostics.report_error(node_position, "No tuple field with index " +
+                                                                 std::to_string(field_index));
+            throw "Stop";
+        }
+        auto field_type = tuple_type->fields_types[field_index];
+        node->set_type_node(field_type);
+        return field_type;
     }
 
     if (callee_type_kind == TypeKind::POINTER) {
@@ -1272,9 +1343,9 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
                 node->field_index = member_index;
                 return field_type;
             }
-            context->diagnostics.report_error(node->get_position().position,
-                                              "Can't find a field with name " + field_name +
-                                                  " in struct " + struct_type->name);
+            context->diagnostics.report_error(node_position, "Can't find a field with name " +
+                                                                 field_name + " in struct " +
+                                                                 struct_type->name);
             throw "Stop";
         }
 
@@ -1288,14 +1359,13 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
                 return jot_int64_ty;
             }
 
-            context->diagnostics.report_error(node->get_position().position,
+            context->diagnostics.report_error(node_position,
                                               "Unkown String attribute with name " + literal);
             throw "Stop";
         }
 
         context->diagnostics.report_error(
-            node->get_position().position,
-            "Dot expression expect calling member from struct or pointer to struct");
+            node_position, "Dot expression expect calling member from struct or pointer to struct");
         throw "Stop";
     }
 
@@ -1309,7 +1379,7 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
             return jot_int64_ty;
         }
 
-        context->diagnostics.report_error(node->get_position().position,
+        context->diagnostics.report_error(node_position,
                                           "Unkown Array attribute with name " + literal);
         throw "Stop";
     }
@@ -1327,13 +1397,13 @@ auto JotTypeChecker::visit(DotExpression* node) -> std::any
             node->field_index = member_index;
             return field_type;
         }
-        context->diagnostics.report_error(node->get_position().position,
-                                          "Can't find a field with name " + field_name +
-                                              " in struct " + struct_type->name);
+        context->diagnostics.report_error(node_position, "Can't find a field with name " +
+                                                             field_name + " in struct " +
+                                                             struct_type->name);
         throw "Stop";
     }
 
-    context->diagnostics.report_error(node->get_position().position,
+    context->diagnostics.report_error(node_position,
                                       "Dot expression expect struct or enum type as lvalue");
     throw "Stop";
 }
@@ -1549,6 +1619,9 @@ auto JotTypeChecker::node_jot_type(std::any any_type) -> Shared<JotType>
     }
     if (any_type.type() == typeid(Shared<JotStructType>)) {
         return std::any_cast<Shared<JotStructType>>(any_type);
+    }
+    if (any_type.type() == typeid(Shared<JotTupleType>)) {
+        return std::any_cast<Shared<JotTupleType>>(any_type);
     }
     if (any_type.type() == typeid(Shared<JotEnumType>)) {
         return std::any_cast<Shared<JotEnumType>>(any_type);

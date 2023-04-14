@@ -43,8 +43,19 @@ auto mangle_type(Shared<JotType> type) -> std::string
         return struct_type->name;
     }
 
+    if (kind == TypeKind::TUPLE) {
+        auto tuple_type = std::static_pointer_cast<JotTupleType>(type);
+        return mangle_tuple_type(tuple_type);
+    }
+
     return "";
 }
+
+auto mangle_tuple_type(Shared<JotTupleType> type) -> std::string
+{
+    return "_tuple_" + mangle_types(type->fields_types);
+}
+
 auto mangle_types(std::vector<Shared<JotType>> types) -> std::string
 {
     std::string result;

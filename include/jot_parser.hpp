@@ -132,7 +132,7 @@ class JotParser {
 
     auto parse_switch_expression() -> Shared<SwitchExpression>;
 
-    auto parse_group_expression() -> Shared<GroupExpression>;
+    auto parse_group_or_tuple_expression() -> Shared<Expression>;
 
     auto parse_array_expression() -> Shared<ArrayExpression>;
 
@@ -151,6 +151,8 @@ class JotParser {
     auto parse_pointer_to_type() -> Shared<JotType>;
 
     auto parse_function_type() -> Shared<JotType>;
+
+    auto parse_tuple_type() -> Shared<JotType>;
 
     auto parse_fixed_size_array_type() -> Shared<JotType>;
 

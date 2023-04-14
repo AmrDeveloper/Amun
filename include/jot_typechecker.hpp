@@ -63,6 +63,8 @@ class JotTypeChecker : public TreeVisitor {
 
     auto visit(GroupExpression* node) -> std::any override;
 
+    auto visit(TupleExpression* node) -> std::any override;
+
     auto visit(AssignExpression* node) -> std::any override;
 
     auto visit(BinaryExpression* node) -> std::any override;
