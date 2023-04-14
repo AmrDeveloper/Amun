@@ -158,6 +158,9 @@ class JotLLVMBackend : public TreeVisitor {
 
     auto create_llvm_string_length(llvm::Value* string) -> llvm::Value*;
 
+    auto create_llvm_struct_type(std::string name, std::vector<Shared<JotType>> members,
+                                 bool is_packed) -> llvm::StructType*;
+
     auto access_struct_member_pointer(DotExpression* expression) -> llvm::Value*;
 
     auto access_array_element(std::shared_ptr<Expression> array, llvm::Value* index)
