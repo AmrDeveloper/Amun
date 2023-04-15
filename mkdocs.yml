@@ -24,15 +24,15 @@ theme:
 
   palette: 
     - scheme: default
-      primary: amber
-      accent: amber
+      primary: white
+      accent: red
       toggle:
         icon: material/brightness-7 
         name: Switch to dark mode
 
     - scheme: slate
-      primary: amber
-      accent: amber
+      primary: black
+      accent: purple
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -61,6 +61,7 @@ nav:
     - Variables: reference/variables.md
     - Const: reference/const.md
     - Struct: reference/struct.md
+    - Tuples: reference/tuples.md
     - Enum: reference/enum.md
     - Arrays: reference/arrays.md
     - Switch: reference/switch.md

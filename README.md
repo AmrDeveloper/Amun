@@ -27,7 +27,6 @@ fun main() int64 {
     printf("%s on %d", scon.value, icon.value);
     return 0;
 }
-
 ```
 
 ### Documentation:

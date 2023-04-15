@@ -1,3 +1,5 @@
+## Structure
+
 Jot has structures type similer to C and Go
 
 ## Declaration
