@@ -1,6 +1,18 @@
-# Jot Programming Language
+<h1 align="center">Jot Programming Language</h1></br>
 
-A Statically typed, compiled general purpose low level programming language built using C++ and LLVM Infrastructure framework, the design inspired from many programming languages such as C/C++, Swift, Go, Kotlin, Rust.
+<p align="center">
+<img src="media/logo.svg" width="20%" height="20%"/>
+</p>
+
+<p align="center">
+  <a target="_blank" href="https://github.com/amrdeveloper/jot/actions/workflows/docs.yml"><img src="https://github.com/amrdeveloper/jot/actions/workflows/docs.yaml/badge.svg"></a>
+  <a target="_blank" href="https://makeapullrequest.com"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg"></a>
+  <a target="_blank" href="./LICENSE.md"><img src="https://img.shields.io/github/license/amrdeveloper/jot"></a>
+</p>
+
+<p align="center">
+A Statically typed, compiled general purpose low level programming language built using C++ and LLVM Infrastructure framework, the design was inspired from many programming languages with the goal to be simple and productive
+</p>
 
 ```
 import "cstdio"
@@ -15,43 +27,16 @@ fun main() int64 {
     printf("%s on %d", scon.value, icon.value);
     return 0;
 }
-```
-### Features
-- Static Types
-- Type inference
-- Functions
-- Pointers
-- Arrays
-- Struct and Packed struct
-- Multi Dimensional Arrays
-- Strong Enumeration
-- Function Pointer
-- Local Variables
-- Global Variables
-- Import and Load statements and blocks
-- If, else if and else statements
-- If Else Expression
-- While statement
-- For range, Forever statements
-- For Range statement with optional name and step
-- Switch Statement and Expression
-- Break and continue statements with optional times
-- Declare Prefix, Infix, Postfix functions
-- Binary, Logical, Comparisons, Bitwise Operators
-- Assignments Operatiors =, +=, -=, *=, /=
-- Singed and Un Singed Integer types
-- Standard C Headers as part of the Standard library
-- No implicit casting, every cast must be explicit to be clear
-- Defer Statement
-- Default initalization value for global and local variables
-- Resolving Constants Index, If Expressions at Compile time
-- Generic Programming
 
-### Documentations:
+```
+
+### Documentation:
   - [Build](https://amrdeveloper.github.io/Jot/build/)
   - [Compile Options](https://amrdeveloper.github.io/Jot/compiler_options/)
   - [Reference](https://amrdeveloper.github.io/Jot/)
   - [Contribution](https://amrdeveloper.github.io/Jot/contribution/)
+  - [Editors](editors)
+  - [Samples](samples)
 
 ### License
 ```
