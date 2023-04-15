@@ -117,7 +117,9 @@ class JotTypeChecker : public TreeVisitor {
 
     auto check_number_limits(const char* literal, NumberKind kind) -> bool;
 
-    auto resolve_generic_struct(Shared<JotType> type) -> Shared<JotType>;
+    auto resolve_generic_type(Shared<JotType> type, std::vector<std::string> generic_names = {},
+                              std::vector<Shared<JotType>> generic_parameters = {})
+        -> Shared<JotType>;
 
     auto check_missing_return_statement(Shared<Statement> node) -> bool;
 
