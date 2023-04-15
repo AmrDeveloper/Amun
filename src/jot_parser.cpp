@@ -2101,5 +2101,3 @@ auto JotParser::is_source_available() -> bool
 {
     return peek_current().kind != TokenKind::EndOfFile;
 }
-TokenKind::EndOfFile;
-}
