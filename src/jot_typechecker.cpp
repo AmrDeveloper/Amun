@@ -679,18 +679,20 @@ auto JotTypeChecker::visit(BinaryExpression* node) -> std::any
     bool is_left_number = is_number_type(left_type);
     bool is_right_number = is_number_type(right_type);
     bool is_the_same = is_jot_types_equals(left_type, right_type);
-    if (not is_left_number || not is_right_number) {
+    if (!is_the_same) {
 
-        if (not is_left_number) {
+        if (!is_left_number) {
             context->diagnostics.report_error(node->get_operator_token().position,
                                               "Expected binary left to be number but got " +
                                                   jot_type_literal(left_type));
+            throw "Stop";
         }
 
-        if (not is_right_number) {
+        if (!is_right_number) {
             context->diagnostics.report_error(node->get_operator_token().position,
                                               "Expected binary right to be number but got " +
                                                   jot_type_literal(left_type));
+            throw "Stop";
         }
 
         if (not is_the_same) {
