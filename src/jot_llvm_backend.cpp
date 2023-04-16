@@ -1058,12 +1058,14 @@ auto JotLLVMBackend::visit(AssignExpression* node) -> std::any
             }
 
             alloca_inst_table.update(name, alloca);
-            return Builder.CreateStore(right_value, alloca);
+            Builder.CreateStore(right_value, alloca);
+            return right_value;
         }
 
         if (left_value.type() == typeid(llvm::GlobalVariable*)) {
             auto global_variable = std::any_cast<llvm::GlobalVariable*>(left_value);
-            return Builder.CreateStore(right_value, global_variable);
+            Builder.CreateStore(right_value, global_variable);
+            return right_value;
         }
     }
 
@@ -1082,7 +1084,8 @@ auto JotLLVMBackend::visit(AssignExpression* node) -> std::any
                     llvm_node_value(alloca_inst_table.lookup(array_literal->get_name().literal)));
                 auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca,
                                              {zero_int32_value, index});
-                return Builder.CreateStore(right_value, ptr);
+                Builder.CreateStore(right_value, ptr);
+                return right_value;
             }
 
             if (array.type() == typeid(llvm::GlobalVariable*)) {
@@ -1090,7 +1093,8 @@ auto JotLLVMBackend::visit(AssignExpression* node) -> std::any
                     llvm::dyn_cast<llvm::GlobalVariable>(llvm_node_value(array));
                 auto ptr = Builder.CreateGEP(global_variable_array->getValueType(),
                                              global_variable_array, {zero_int32_value, index});
-                return Builder.CreateStore(right_value, ptr);
+                Builder.CreateStore(right_value, ptr);
+                return right_value;
             }
 
             internal_compiler_error("Assign value index expression");
@@ -1102,7 +1106,8 @@ auto JotLLVMBackend::visit(AssignExpression* node) -> std::any
             auto load_inst = dyn_cast<llvm::LoadInst>(array);
             auto ptr = Builder.CreateGEP(array->getType(), load_inst->getPointerOperand(),
                                          {zero_int32_value, index});
-            return Builder.CreateStore(right_value, ptr);
+            Builder.CreateStore(right_value, ptr);
+            return right_value;
         }
 
         // Update element value in struct field array
@@ -1115,7 +1120,8 @@ auto JotLLVMBackend::visit(AssignExpression* node) -> std::any
                 if (right_value->getType() == ptr->getType()) {
                     right_value = derefernecs_llvm_pointer(right_value);
                 }
-                return Builder.CreateStore(right_value, ptr);
+                Builder.CreateStore(right_value, ptr);
+                return right_value;
             }
         }
     }
@@ -1124,7 +1130,8 @@ auto JotLLVMBackend::visit(AssignExpression* node) -> std::any
     if (auto dot_expression = std::dynamic_pointer_cast<DotExpression>(left_node)) {
         auto member_ptr = access_struct_member_pointer(dot_expression.get());
         auto rvalue = llvm_resolve_value(node->get_right()->accept(this));
-        return Builder.CreateStore(rvalue, member_ptr);
+        Builder.CreateStore(rvalue, member_ptr);
+        return rvalue;
     }
 
     // Assign value to pointer address
