@@ -12,6 +12,8 @@ class JotCompiler {
 
     auto compile_source_code(const char* source_file) -> int;
 
+    auto emit_llvm_ir_from_source_code(const char* source_file) -> int;
+
     auto check_source_code(const char* source_file) -> int;
 
     auto parse_source_code(const char* source_file) -> Shared<CompilationUnit>;

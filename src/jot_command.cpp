@@ -2,9 +2,9 @@
 
 #include <cstdio>
 
-auto JotCommands::registerCommand(const char* literal, const CommandFunction& command) -> void
+auto JotCommands::registerCommand(const char* name, const CommandFunction& command) -> void
 {
-    commands_map[literal] = command;
+    commands_map[name] = command;
 }
 
 auto JotCommands::executeCommand(int argc, char** argv) -> int

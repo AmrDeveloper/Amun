@@ -56,5 +56,12 @@ file(GLOB source_files CONFIGURE_DEPENDS
 
 add_executable(jot ${source_files})
 
-llvm_map_components_to_libnames(llvm_libs core)
+# Map Cpmponent to libraries names
+llvm_map_components_to_libnames(llvm_libs
+    Core
+    MC
+    Support
+    native
+)
+
 target_link_libraries(jot ${llvm_libs})

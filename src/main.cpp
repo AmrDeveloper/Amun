@@ -67,6 +67,33 @@ auto execute_compile_command(unused int argc, char** argv) -> int
     return jot_compiler.compile_source_code(source_file);
 }
 
+auto emit_llvm_ir_coomand(unused int argc, char** argv) -> int
+{
+    if (argc < 3) {
+        printf("Invalid number of arguments for `compile` command expect at last %i but got %i\n",
+               3, argc);
+        printf("Usage : %s compile <file> <options>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const char* source_file = argv[2];
+    if (!is_file_exists(source_file)) {
+        printf("Path %s not exists\n", source_file);
+        return EXIT_FAILURE;
+    }
+
+    if (!is_ends_with(source_file, ".jot")) {
+        printf("Invalid source file extension, valid source file must end with `.jot`\n");
+        return EXIT_FAILURE;
+    }
+
+    auto jot_context = std::make_shared<JotContext>();
+    parse_compiler_options(&jot_context->options, argc, argv);
+
+    JotCompiler jot_compiler(jot_context);
+    return jot_compiler.emit_llvm_ir_from_source_code(source_file);
+}
+
 auto execute_check_command(unused int argc, char** argv) -> int
 {
     if (argc < 3) {
@@ -102,7 +129,8 @@ auto execute_help_command(unused int argc, char** argv) -> int
     printf("Usage: %s <command> <options>\n", argv[0]);
     printf("Commands:\n");
     printf("    - create  <name>           : Create a new project with Hello world code.\n");
-    printf("    - compile <file> <options> : Compile source file with options.\n");
+    printf("    - compile <file> <options> : Compile source files to executables with options.\n");
+    printf("    - emit-ir <file> <options> : Compile source to llvm ir files with options.\n");
     printf("    - check   <file>           : Check if the source code is valid.\n");
     printf("    - version                  : Print the current Jot version.\n");
     printf("    - help                     : Print how to use and list of commands.\n");
@@ -118,6 +146,7 @@ auto main(int argc, char** argv) -> int
     JotCommands jot_commands;
     jot_commands.registerCommand("create", execute_create_command);
     jot_commands.registerCommand("compile", execute_compile_command);
+    jot_commands.registerCommand("emit-ir", emit_llvm_ir_coomand);
     jot_commands.registerCommand("check", execute_check_command);
     jot_commands.registerCommand("version", execute_version_command);
     jot_commands.registerCommand("help", execute_help_command);
