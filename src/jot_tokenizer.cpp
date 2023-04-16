@@ -493,6 +493,13 @@ auto JotTokenizer::skip_multi_lines_comment() -> void
     }
     advance();
     advance();
+
+    // If multi line comments end with new line update the line number
+    if (peek() == '\n') {
+        advance();
+        line_number++;
+        column_current = 0;
+    }
 }
 
 auto JotTokenizer::match(char expected) -> bool
