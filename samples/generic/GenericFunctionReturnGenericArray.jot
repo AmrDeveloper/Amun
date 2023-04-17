@@ -1,0 +1,13 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun make_fixed_array<T>() [5]T {
+    return [1, 2, 3, 4, 5];
+}
+
+fun main() int64 {
+    var array = make_fixed_array<int64>();
+    for (array) {
+        printf("%d\n", it);
+    }
+    return 0;
+}

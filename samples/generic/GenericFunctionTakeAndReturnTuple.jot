@@ -1,0 +1,12 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun tuple_append<T>(tuple (T, T), element T) (T, T, T) {
+    return (tuple.0, tuple.1, element);
+}
+
+fun main() int64 {
+    var tuple = (1, 2);
+    var new_tuple = tuple_append<int64>(tuple, 3);
+    printf("%d %d %d\n", new_tuple.0, new_tuple.1, new_tuple.2);
+    return 0;
+}

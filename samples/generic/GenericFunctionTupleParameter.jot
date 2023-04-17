@@ -1,0 +1,12 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun print_tuple<T>(tuple (T, T)) {
+    printf("%d\n", tuple.0);
+    printf("%d\n", tuple.1);
+}
+
+fun main() int64 {
+    var tuple = (1, 2);
+    print_tuple<int64>(tuple);
+    return 0;
+}
