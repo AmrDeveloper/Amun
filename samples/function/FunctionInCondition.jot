@@ -1,0 +1,10 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun function() bool = true;
+
+fun main() int64 {
+    if (function()) {
+        printf("True\n");
+    }
+    return 0;
+}
