@@ -19,6 +19,13 @@ auto JotCompiler::compile_source_code(const char* source_file) -> int
 {
     auto external_linker = JotExternalLinker();
 
+    // Append extra linker flags passed to the jot compiler
+    if (!jot_context->options.linker_extra_flags.empty()) {
+        for (const auto& option_flag : jot_context->options.linker_extra_flags) {
+            external_linker.linker_flags.push_back(option_flag);
+        }
+    }
+
     // Check aviable linkers before start compiling
     if (!external_linker.check_aviable_linker()) {
         std::cout << "No aviable linker please install one of thoses options\n";

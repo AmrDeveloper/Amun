@@ -2,8 +2,8 @@
 
 #include "jot_alias_table.hpp"
 #include "jot_ast.hpp"
+#include "jot_compiler_options.hpp"
 #include "jot_diagnostics.hpp"
-#include "jot_options.hpp"
 #include "jot_source_manager.hpp"
 #include "jot_type.hpp"
 
