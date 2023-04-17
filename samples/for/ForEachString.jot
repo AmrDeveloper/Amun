@@ -2,13 +2,13 @@ extern fun printf(format *char, varargs Any) int64;
 
 fun main() {
     var message = "Hello, World!";
-    for message {
+    for (message) {
         printf("%c\t", it);
     }
 
     printf("\n");
 
-    for "Hello, World!" {
+    for ("Hello, World!") {
         printf("%c\t", it);
     }
 

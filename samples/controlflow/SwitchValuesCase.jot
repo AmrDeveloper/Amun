@@ -2,7 +2,7 @@ extern fun printf(format *char, value int64) int64;
 
 fun main() int64 {
     var x = 2;
-    switch x {
+    switch (x) {
         1, 2, 3, 4, 5 -> printf("%d <= 5\n", x);
         else -> printf("%d > 5\n", x);
     }

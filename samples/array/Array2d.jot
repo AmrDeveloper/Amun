@@ -5,7 +5,7 @@ fun main() int64 {
     var matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
 
     var i = 0;
-    while i < 3 {
+    while (i < 3) {
         printf("%d ", matrix[i][0]);
         printf("%d ", matrix[i][1]);
         printf("%d ", matrix[i][2]);

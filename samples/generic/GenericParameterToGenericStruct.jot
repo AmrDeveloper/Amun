@@ -10,7 +10,7 @@ fun main() int64 {
     printf("Value is %d\n", scon.value.value);
 
     var arr_con = Container<[3]int64>([1, 2, 3]);
-    for arr_con.value {
+    for (arr_con.value) {
        printf("value[%d] = %d\n", it_index, it);
     }
 

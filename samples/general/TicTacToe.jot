@@ -7,35 +7,35 @@ extern fun system(string *char) int32;
 var square = ['o', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 fun check_win() bool {
-    if square[1] == square[2] && square[2] == square[3] {
+    if (square[1] == square[2] && square[2] == square[3]) {
         return true;
     }
         
-    else if square[4] == square[5] && square[5] == square[6] {
+    else if (square[4] == square[5] && square[5] == square[6]) {
         return true;
     }
         
-    else if square[7] == square[8] && square[8] == square[9] {
+    else if (square[7] == square[8] && square[8] == square[9]) {
         return true;
     }
         
-    else if square[1] == square[4] && square[4] == square[7] {
+    else if (square[1] == square[4] && square[4] == square[7]) {
         return true;
     }
         
-    else if square[2] == square[5] && square[5] == square[8] {
+    else if (square[2] == square[5] && square[5] == square[8]) {
         return true;
     }
         
-    else if square[3] == square[6] && square[6] == square[9] {
+    else if (square[3] == square[6] && square[6] == square[9]) {
         return true;
     }
         
-    else if square[1] == square[5] && square[5] == square[9] {
+    else if (square[1] == square[5] && square[5] == square[9]) {
         return true;
     }
 
-    else if square[3] == square[5] && square[5] == square[7] {
+    else if (square[3] == square[5] && square[5] == square[7]) {
         return true;
     }
 
@@ -77,7 +77,7 @@ fun main() int64 {
     var is_game_end = false;
     var first_player = true;
     
-    while !is_game_end {
+    while (!is_game_end) {
         var player_number = if (first_player) 1 else 2;
         printf("Player number %d start", player_number);
 
@@ -100,7 +100,7 @@ fun main() int64 {
         is_game_end = check_win();
         first_player = !first_player;
 
-        if is_game_end {
+        if (is_game_end) {
             printf("Player number %d win :D\n", player_number);
         }
     }

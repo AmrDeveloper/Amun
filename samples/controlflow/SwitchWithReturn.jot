@@ -2,7 +2,7 @@ extern fun printf(format *char, value int64) int64;
 
 fun main() int64 {
     var x = 10;
-    switch x {
+    switch (x) {
         1 -> {
             printf("Value is %d\n", x);
             return 1;

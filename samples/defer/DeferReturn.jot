@@ -4,7 +4,7 @@ fun function() void {
     defer printf("Return From Function\n");
     {
         defer printf("Return From Scope\n");
-        if true {
+        if (true) {
             return;
         }
     }

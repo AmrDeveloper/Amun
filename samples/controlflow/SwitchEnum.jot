@@ -7,7 +7,7 @@ fun main() int64 {
     var y = 20;
 
     var op = Op::Plus;
-    switch op {
+    switch (op) {
         Op::Plus -> printf("X + y is %d\n", x + y);
         Op::Minus -> printf("x - y is %d\n", x - y);
         Op::Pow -> printf("x * y is %d\n", x * y);

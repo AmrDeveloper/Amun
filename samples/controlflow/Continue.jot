@@ -1,7 +1,7 @@
 extern fun puts(s *char) int64;
 
 fun main(argc int64) int64 {
-    while true {
+    while (true) {
         puts("Hello");
         continue;
         puts("World");

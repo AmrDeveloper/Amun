@@ -6,7 +6,7 @@ enum Build { DEBUG, RELEASE }
 
 var build_type = Build::RELEASE;
 
-var isDebug = switch build_type {
+var isDebug = switch (build_type) {
     Build::DEBUG -> 1;
     else -> 0;
 };

@@ -973,7 +973,9 @@ auto JotParser::parse_if_statement() -> Shared<IfStatement>
     current_ast_scope = AstNodeScope::CONDITION_SCOPE;
 
     auto if_token = consume_kind(TokenKind::IfKeyword, "Expect If keyword.");
+    assert_kind(TokenKind::OpenParen, "Expect ( before if condition");
     auto condition = parse_expression();
+    assert_kind(TokenKind::CloseParen, "Expect ) after if condition");
     auto then_block = parse_statement();
     auto conditional_block = std::make_shared<ConditionalBlock>(if_token, condition, then_block);
     std::vector<Shared<ConditionalBlock>> conditional_blocks;
@@ -1027,6 +1029,8 @@ auto JotParser::parse_for_statement() -> Shared<Statement>
         return std::make_shared<ForeverStatement>(keyword, body);
     }
 
+    assert_kind(TokenKind::OpenParen, "Expect ( before for names and collection");
+
     // Parse optional element name or it as default
     std::string element_name = "it";
     std::string index_name = "it_index";
@@ -1066,17 +1070,21 @@ auto JotParser::parse_for_statement() -> Shared<Statement>
             step = parse_expression();
         }
 
+        assert_kind(TokenKind::CloseParen, "Expect ) after for names and collection");
+
         loop_levels_stack.top() += 1;
         auto body = parse_statement();
         loop_levels_stack.top() -= 1;
 
         current_ast_scope = parent_node_scope;
+
         return std::make_shared<ForRangeStatement>(keyword, element_name, expr, range_end, step,
                                                    body);
     }
 
-    // Parse For each statement
+    assert_kind(TokenKind::CloseParen, "Expect ) after for names and collection");
 
+    // Parse For each statement
     loop_levels_stack.top() += 1;
     auto body = parse_statement();
     loop_levels_stack.top() -= 1;
@@ -1092,7 +1100,10 @@ auto JotParser::parse_while_statement() -> Shared<WhileStatement>
     current_ast_scope = AstNodeScope::CONDITION_SCOPE;
 
     auto keyword = consume_kind(TokenKind::WhileKeyword, "Expect while keyword.");
+
+    assert_kind(TokenKind::OpenParen, "Expect ( before while condition");
     auto condition = parse_expression();
+    assert_kind(TokenKind::CloseParen, "Expect ) after while condition");
 
     loop_levels_stack.top() += 1;
     auto body = parse_statement();
@@ -1105,7 +1116,11 @@ auto JotParser::parse_while_statement() -> Shared<WhileStatement>
 auto JotParser::parse_switch_statement() -> Shared<SwitchStatement>
 {
     auto keyword = consume_kind(TokenKind::SwitchKeyword, "Expect switch keyword.");
+
+    assert_kind(TokenKind::OpenParen, "Expect ( before switch argument");
     auto argument = parse_expression();
+    assert_kind(TokenKind::CloseParen, "Expect ) after switch argument");
+
     assert_kind(TokenKind::OpenBrace, "Expect { after switch value");
 
     std::vector<Shared<SwitchCase>> switch_cases;
@@ -1755,7 +1770,9 @@ auto JotParser::parse_literal_expression() -> Shared<LiteralExpression>
 auto JotParser::parse_if_expression() -> Shared<IfExpression>
 {
     Token if_token = peek_and_advance_token();
+    assert_kind(TokenKind::OpenParen, "Expect ( before if condition");
     auto condition = parse_expression();
+    assert_kind(TokenKind::CloseParen, "Expect ) after if condition");
     auto then_value = parse_expression();
     Token else_token =
         consume_kind(TokenKind::ElseKeyword, "Expect `else` keyword after then value.");
@@ -1766,7 +1783,9 @@ auto JotParser::parse_if_expression() -> Shared<IfExpression>
 auto JotParser::parse_switch_expression() -> Shared<SwitchExpression>
 {
     auto keyword = consume_kind(TokenKind::SwitchKeyword, "Expect switch keyword.");
+    assert_kind(TokenKind::OpenParen, "Expect ( before swich argument");
     auto argument = parse_expression();
+    assert_kind(TokenKind::CloseParen, "Expect ) after swich argument");
     assert_kind(TokenKind::OpenBrace, "Expect { after switch value");
     std::vector<Shared<Expression>> cases;
     std::vector<Shared<Expression>> values;

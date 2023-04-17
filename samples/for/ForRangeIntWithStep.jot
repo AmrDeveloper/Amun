@@ -1,7 +1,7 @@
 extern fun printf(format *char, varargs Any) int64;
 
 fun main() int64 {
-    for 0 .. 10 : 2 {
+    for (0 .. 10 : 2) {
         printf("Single for %d\n", it);
     }
     return 0;

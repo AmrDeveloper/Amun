@@ -4,7 +4,7 @@ extern fun puts(s *char) int64;
 
 fun main(argc int64, argv **char) int64 {
     var i = 0;
-    while i < argc {
+    while (i < argc) {
         printf("%s\n", argv[i]);
         i += 1;
     }

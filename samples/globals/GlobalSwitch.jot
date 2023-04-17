@@ -2,7 +2,7 @@ extern fun printf(format *char, value int64) int64;
 
 // Resolve constants global Switch expression at compile time
 var debug = 0;
-var value = switch debug {
+var value = switch (debug) {
    1 -> 10;
    else -> 20;
 };

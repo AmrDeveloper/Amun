@@ -7,14 +7,14 @@ fun main() int64 {
     var array = [1, 2, 3];
 
     printf("Local array\n");
-    for 0 .. array.count - 1 {
+    for (0 .. array.count - 1) {
         printf("array[%d] = %d\n", it, array[it]);
     }
 
     printf("\n");
 
     printf("Global array\n");
-    for 0 .. len - 1 {
+    for (0 .. len - 1) {
         printf("array[%d] = %d\n", it, global_array[it]);
     }
 

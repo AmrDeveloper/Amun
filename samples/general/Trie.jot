@@ -14,7 +14,7 @@ struct TrieNode {
 fun trie_make() *TrieNode {
     var node = cast(*TrieNode) malloc(type_size(TrieNode));
     node.isEnd = false;
-    for 0 .. 25 {
+    for (0 .. 25) {
         node.children[it] = null;
     }
     return node;
@@ -22,9 +22,9 @@ fun trie_make() *TrieNode {
 
 fun trie_insert(t *TrieNode, s *char) void {
     var node = t;
-    for 0 .. strlen(s) - 1 {
+    for (0 .. strlen(s) - 1) {
         var index = s[it] - 'a';
-        if node.children[index] == null {
+        if (node.children[index] == null) {
             node.children[index] = trie_make();
         }
         node = node.children[index];
@@ -34,7 +34,7 @@ fun trie_insert(t *TrieNode, s *char) void {
 
 fun trie_search(t *TrieNode, s *char) bool {
     var node = t;
-    for 0 .. strlen(s) - 1 {
+    for (0 .. strlen(s) - 1) {
         var index = s[it] - 'a';
         if (node.children[index] == null) return false;
         node = node.children[index];
@@ -44,7 +44,7 @@ fun trie_search(t *TrieNode, s *char) bool {
 
 fun trie_free(t *TrieNode) void {
     if (t == null) return;
-    for 0 .. 25 {
+    for (0 .. 25) {
         trie_free(t.children[it]);
     }
     free(cast(*void) t);

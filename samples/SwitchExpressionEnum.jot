@@ -3,7 +3,7 @@ extern fun printf(format *char, value int64) int64;
 enum Op { PLUS, MINUS, POW, DIV }
 
 fun switch_expr_return(x int64, y int64, op Op) int64 {
-    return switch op {
+    return switch (op) {
         Op::PLUS -> x + y;
         Op::MINUS -> x - y;
         Op::POW -> x * y;

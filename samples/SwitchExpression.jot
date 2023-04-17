@@ -5,7 +5,7 @@ fun main() int64 {
     var y = 5;
     var i = 0;
 
-    var value = switch i {
+    var value = switch (i) {
         1 -> x + y;
         2 -> x - y;
         3 -> x * y;

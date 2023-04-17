@@ -1,7 +1,7 @@
 extern fun printf(format *char, varargs Any) int64;
 
 fun repeat(n int64, callback *(int64) void) void {
-    for 0 .. n {
+    for (0 .. n) {
         callback(it);
     }
 }

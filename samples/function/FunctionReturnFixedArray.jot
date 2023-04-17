@@ -6,7 +6,7 @@ fun return_array() [3]int64 {
 
 fun main() int64 {
     var array = return_array();
-    for array {
+    for (array) {
         printf("array[%d] = %d\n", it_index, it);
     }
     return 0;

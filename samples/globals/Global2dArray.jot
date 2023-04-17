@@ -4,9 +4,9 @@ var array = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
 
 fun main() int64 {
     var i = 0;
-    while i < 3 {
+    while (i < 3) {
         var j = 0;
-        while j < 3 {
+        while (j < 3) {
             printf("%d\n", array[i][j]);
             j += 1;
         }

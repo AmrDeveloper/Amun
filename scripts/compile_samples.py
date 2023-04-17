@@ -1,9 +1,18 @@
 import os
+import sys
 from pathlib import Path
 
 extension = ".exe" if os == "nt" else ""
 executable = "./jot" + extension
 samples_directory = "../samples"
+
+argv = sys.argv[1:]
+if len(argv) > 1:
+    print("Expect only one argument which is folder name")
+    exit(1)
+
+if len(argv) == 1:
+    samples_directory = samples_directory + "/" + argv[0]
 
 # Setup directory to be inside the executable directory
 current_directly = os.getcwd()

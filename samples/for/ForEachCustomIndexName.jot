@@ -3,7 +3,7 @@ extern fun printf(format *char, varargs Any) int64;
 fun main() int64 {
     var elements = [1, 2, 3, 4];
     
-    for index, element : elements {
+    for (index, element : elements) {
         printf("elements[%d] = %d\n", index, element);
     }
 

@@ -10,7 +10,7 @@ struct Point {
 }
 
 fun let(p *Point, callback *() void) void {
-    if p != null {
+    if (p != null) {
         callback();
     }
 }

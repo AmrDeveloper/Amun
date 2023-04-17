@@ -1,7 +1,7 @@
 extern fun printf(format *char, varargs Any) int64;
 
 fun main() int64 {
-    for 'a' .. 'z' {
+    for ('a' .. 'z') {
         printf("Char %c\n", it);
     }
     return 0;
