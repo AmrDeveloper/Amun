@@ -733,50 +733,67 @@ auto JotLLVMBackend::visit(ReturnStatement* node) -> std::any
 {
     has_return_statement = true;
 
+    // If node has no value that mean it will return void
     if (not node->has_value()) {
         return Builder.CreateRetVoid();
     }
 
     auto value = node->return_value()->accept(this);
 
-    // This code must be cleard with branches in Field Dec to be more clear and easy to extend
     if (value.type() == typeid(llvm::Value*)) {
         auto return_value = std::any_cast<llvm::Value*>(value);
         return Builder.CreateRet(return_value);
     }
-    else if (value.type() == typeid(llvm::CallInst*)) {
+
+    if (value.type() == typeid(llvm::CallInst*)) {
         auto init_value = std::any_cast<llvm::CallInst*>(value);
         return Builder.CreateRet(init_value);
     }
-    else if (value.type() == typeid(llvm::AllocaInst*)) {
+
+    if (value.type() == typeid(llvm::AllocaInst*)) {
         auto init_value = std::any_cast<llvm::AllocaInst*>(value);
         auto value_litearl = Builder.CreateLoad(init_value->getAllocatedType(), init_value);
         return Builder.CreateRet(value_litearl);
     }
-    else if (value.type() == typeid(llvm::Function*)) {
+
+    if (value.type() == typeid(llvm::Function*)) {
         auto node = std::any_cast<llvm::Function*>(value);
         return Builder.CreateRet(node);
     }
-    else if (value.type() == typeid(llvm::Constant*)) {
+
+    if (value.type() == typeid(llvm::Constant*)) {
         auto init_value = std::any_cast<llvm::Constant*>(value);
         return Builder.CreateRet(init_value);
     }
-    else if (value.type() == typeid(llvm::ConstantInt*)) {
+
+    if (value.type() == typeid(llvm::ConstantInt*)) {
         auto init_value = std::any_cast<llvm::ConstantInt*>(value);
         return Builder.CreateRet(init_value);
     }
-    else if (value.type() == typeid(llvm::LoadInst*)) {
+
+    if (value.type() == typeid(llvm::LoadInst*)) {
         auto load_inst = std::any_cast<llvm::LoadInst*>(value);
         return Builder.CreateRet(load_inst);
     }
-    else if (value.type() == typeid(llvm::GlobalVariable*)) {
+
+    if (value.type() == typeid(llvm::GlobalVariable*)) {
         auto variable = std::any_cast<llvm::GlobalVariable*>(value);
         auto value = Builder.CreateLoad(variable->getValueType(), variable);
         return Builder.CreateRet(value);
     }
-    else if (value.type() == typeid(llvm::PHINode*)) {
+
+    // Used when use return node is if or switch expression
+    if (value.type() == typeid(llvm::PHINode*)) {
         auto phi = std::any_cast<llvm::PHINode*>(value);
-        return Builder.CreateRet(phi);
+        auto expected_type = node->return_value()->get_type_node();
+        auto expected_llvm_type = llvm_type_from_jot_type(expected_type);
+
+        // Return type from PHI node is primitives and no need for derefernece
+        if (phi->getType() == expected_llvm_type) {
+            return Builder.CreateRet(phi);
+        }
+        auto phi_value = derefernecs_llvm_pointer(phi);
+        return Builder.CreateRet(phi_value);
     }
 
     internal_compiler_error("Un expected return type");
