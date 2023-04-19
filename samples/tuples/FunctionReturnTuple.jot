@@ -1,0 +1,19 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun count_even_odd(array [10]int64) (int64, int64) {
+    var even_count = 0;
+    var odd_count = 0;
+    for (array) {
+        if (it % 2 == 0) even_count++;
+        else odd_count++;
+    }
+    return (even_count, odd_count);
+}
+
+fun main() int64 {
+    var array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    var result = count_even_odd(array);
+    printf("Number of even element : %d\n", result.0);
+    printf("Number of odd element : %d\n", result.1);
+    return 0;
+}

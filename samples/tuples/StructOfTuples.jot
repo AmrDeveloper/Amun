@@ -1,0 +1,16 @@
+extern fun printf(format *char, varargs Any) int64;
+
+struct Tuples {
+    ituple (int64, int64);
+    ftuple (float64, float64);
+}
+
+fun main() int64 {
+    var tuples = Tuples((1, 2), (1.1, 2.2));
+    printf("%d\n", tuples.ituple.0);
+    printf("%d\n", tuples.ituple.1);
+
+    printf("%f\n", tuples.ftuple.0);
+    printf("%f\n", tuples.ftuple.1);
+    return 0;
+}

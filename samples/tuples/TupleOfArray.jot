@@ -1,0 +1,9 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var tuple = ([1, 2, 3], ["a", "b", "c"]);
+    for (0 .. 2) {
+        printf("%d - %s\n", tuple.0[it], tuple.1[it]);
+    }
+    return 0;
+}

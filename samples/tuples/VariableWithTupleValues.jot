@@ -1,0 +1,7 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var tuple = (1, 2);
+    printf("%d %d\n", tuple.0, tuple.1);
+    return 0;
+}
