@@ -1,13 +1,13 @@
-site_name: Jot Programming Language
+site_name: Amun Programming Language
 
-site_url: https://amrdeveloper.github.io/jot
+site_url: https://amrdeveloper.github.io/amun
 site_description: General purpose system programming language written using C++ and LLVM
 site_author: AmrDeveloper
 
 copyright: Copyright &copy; 2022 Amr Heshan
 
-repo_name: AmrDeveloper/Jot
-repo_url: https://github.com/amrdeveloper/jot
+repo_name: AmrDeveloper/Amun
+repo_url: https://github.com/amrdeveloper/Amun
 edit_uri: blob/master/docs/
 
 theme:
@@ -25,14 +25,14 @@ theme:
   palette: 
     - scheme: default
       primary: white
-      accent: red
+      accent: orange
       toggle:
         icon: material/brightness-7 
         name: Switch to dark mode
 
     - scheme: slate
       primary: black
-      accent: purple
+      accent: orange
       toggle:
         icon: material/brightness-4
         name: Switch to light mode

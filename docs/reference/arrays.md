@@ -1,4 +1,4 @@
-Jot has single and multi dimensions arrays
+Amun has single and multi dimensions arrays
 
 ## Fixed size Array type
 

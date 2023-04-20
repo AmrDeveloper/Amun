@@ -1,4 +1,4 @@
-Jot has support for lambda expression with explicit and implicit capture
+Amun has support for lambda expression with explicit and implicit capture
 
 ### Lambda Expression
 
@@ -14,7 +14,7 @@ var sum_lambda = { (x int64, y int64) ->
 var result = sum_lambda(1, 1);
 ```
 
-If your lambda has no explicit parameters and return void jot has syntax sugger for this case for example
+If your lambda has no explicit parameters and return void Amun has syntax sugger for this case for example
 
 ```
 var hello = {
@@ -32,7 +32,7 @@ var one = { () int64 -> return 1; }();
 
 ### lambda outside parentheses
 
-In jot if your function call last parameter type is lambda you can write it outside the parentheses for example
+In Amun if your function call last parameter type is lambda you can write it outside the parentheses for example
 
 ```
 fun do(callback *() void) void {

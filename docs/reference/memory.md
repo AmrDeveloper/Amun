@@ -1,4 +1,4 @@
-Jot gives you the same level of freedom of dealing with memory managment like C/C++,
+Amun gives you the same level of freedom of dealing with memory managment like C/C++,
 there is no garbage collection at all, 
 
 ## Pointer type

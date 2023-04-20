@@ -1,6 +1,6 @@
 Generics Programming
 
-Jot has supporting for generic programming and give you the ability to create generic functions and structures
+Amun has supporting for generic programming and give you the ability to create generic functions and structures
 
 Here is an example on how to To create declare generic parameter for struct
 

@@ -1,4 +1,4 @@
-In Jot defer statement is used to make call statement to called as before ending the current scope
+In Amun defer statement is used to make call statement to called as before ending the current scope
 
 To make and call expression as defered you need to prefix it with defer keyword for example
 

@@ -1,6 +1,6 @@
 ## Structure
 
-Jot has structures type similer to C and Go
+Amun has structures type similer to C and Go
 
 ## Declaration
 
@@ -54,7 +54,7 @@ var vector3 = Vector3(1, 2, 3);
 
 ## Destructor
 
-Current Jot design has not destructor, but for destructors you can easily depend on `defer` feature to got the same feature for example
+Current Amun design has not destructor, but for destructors you can easily depend on `defer` feature to got the same feature for example
 
 ```
 var point : *Point = create_poinnt();

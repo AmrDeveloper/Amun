@@ -52,6 +52,6 @@ fun main() int64 {
 - Generic Programming
 
 ## Inspiration
-The design of Jot is inspired by a number of languages such as `C`, `C++`, `Go`, `Rust`, `Jai`,
+The design of Amun is inspired by a number of languages such as `C`, `C++`, `Go`, `Rust`, `Jai`,
 special thanks for every create language designer and for every open source project that share
 the creativity and knowledge.

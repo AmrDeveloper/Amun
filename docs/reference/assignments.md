@@ -1,4 +1,4 @@
-In Jot assignments is an statement not expression so it will not return a value
+In Amun assignments is an statement not expression so it will not return a value
 
 ```
 var x = 10;

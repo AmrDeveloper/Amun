@@ -1,4 +1,4 @@
-Jot has compile time strong enumeration by default so you can't compare enum element with integer values,
+Amun has compile time strong enumeration by default so you can't compare enum element with integer values,
 
 ## Declare Enum
 
@@ -50,7 +50,7 @@ fun pass_number(number Number) void {
 
 ## Enum number of fields
 
-Jot has compile time attribute for enums to get the number of fields for example
+Amun has compile time attribute for enums to get the number of fields for example
 
 ```
 var c = Number.count;

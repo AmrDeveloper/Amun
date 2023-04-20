@@ -1,8 +1,8 @@
-Jot has support for primitives types similer to C/C++
+Amun has support for primitives types similer to C/C++
 
 ## Numbers
 
-Jot has different size of signed and un signed integers and floats
+Amun has different size of signed and un signed integers and floats
 
 ### un signed integers
 
@@ -32,7 +32,7 @@ float64
 
 ## BooIean
 
-In jot you can use `bool` or `int1` to declare boolean type, they are totaly the same
+In Amun you can use `bool` or `int1` to declare boolean type, they are totaly the same
 
 ```
 var t : bool = true;

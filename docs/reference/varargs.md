@@ -1,4 +1,4 @@
-Jot has typed and un typed var arguments
+Amun has typed and un typed var arguments
 
 ## Un typed varargs
 

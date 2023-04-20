@@ -1,4 +1,4 @@
-Jot has both switch statement and expression
+Amun has both switch statement and expression
 
 ## Switch Statement
 

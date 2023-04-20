@@ -1,10 +1,10 @@
 ## Build from source code
 
-For now you need to build Jot from source code, it's simple to do that in small steps
+For now you need to build Amun from source code, it's simple to do that in small steps
 
 ## Requirements
 
-To build jot source code you need to have some program installed
+To build Amun source code you need to have some program installed
 
 - C++ Compiler (GCC or Clang) that supports C++20
 - LLVM 14 or 15
@@ -18,13 +18,13 @@ To build jot source code you need to have some program installed
 ## Clone the repository
 
 ```
-git clone https://github.com/amrdeveloper/jot.git
+git clone https://github.com/amrdeveloper/amun.git
 ```
 
 ## Build the project
 
 ```
-cd jot
+cd amun
 mkdir build
 cd build
 cmake ..

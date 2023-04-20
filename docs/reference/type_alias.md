@@ -1,4 +1,4 @@
-Jot has support for type alias to make your code simpler, more readable
+Amun has support for type alias to make your code simpler, more readable
 
 It easy to declare type alias with syntax inspired from declaring variables
 

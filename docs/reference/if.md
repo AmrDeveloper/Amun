@@ -1,4 +1,4 @@
-Jot has both If statement and Expression
+Amun has both If statement and Expression
 
 ## If Statement
 

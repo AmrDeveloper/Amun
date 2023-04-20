@@ -1,4 +1,4 @@
-Jot is an open source language and everyone is welcome to contribute and be part of the community,
+Amun is an open source language and everyone is welcome to contribute and be part of the community,
 every help is very useful and you can contribute in different ways
 
 ### Contribute in source code

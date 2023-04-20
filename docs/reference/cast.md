@@ -1,4 +1,4 @@
-Jot has no implict casting even between integers types, every cast must be explicit
+Amun has no implict casting even between integers types, every cast must be explicit
 
 To cast from your expression to another type for example to int64 you need to prefix the value with cast expression for example
 

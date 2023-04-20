@@ -1,4 +1,4 @@
-The continue statement in Jot programming works somewhat like the break statement. Instead of forcing termination, it forces the next iteration of the loop to take place, skipping any code in between.
+The continue statement in Amun programming works somewhat like the break statement. Instead of forcing termination, it forces the next iteration of the loop to take place, skipping any code in between.
 
 ```
 for {

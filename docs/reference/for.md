@@ -1,4 +1,4 @@
-Currently Jot has theww types of for statement and we may have more in the future
+Currently Amun has theww types of for statement and we may have more in the future
 
 ## Forever
 
@@ -54,7 +54,7 @@ for 0 to 10 : 2{
 
 ## For each
 
-Jot has for each support for single and multi dimensions fixed size arrays, and implicit variables for index and value
+Amun has for each support for single and multi dimensions fixed size arrays, and implicit variables for index and value
 
 ```
 var array = [1, 2, 3];

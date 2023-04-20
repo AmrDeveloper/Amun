@@ -1,4 +1,4 @@
-Jot has support for single and multi lines comments with the same C/C++ Comments styles
+Amun has support for single and multi lines comments with the same C/C++ Comments styles
 
 ### Single line commnet
 

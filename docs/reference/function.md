@@ -1,4 +1,4 @@
-Functions in Jot is like function in any other language it take parameter and return value,
+Functions in Amun is like function in any other language it take parameter and return value,
 but with extra syntax sugger for readability
 
 ## Function declaration
