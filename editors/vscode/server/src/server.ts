@@ -106,57 +106,57 @@ connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): Com
 connection.onCompletionResolve(
 	(item: CompletionItem): CompletionItem => {
 		if (item.data === 'int1' || item.data === 'bool') {
-			item.detail = 'Jot integer type with 1 bit size';
+			item.detail = 'Amun integer type with 1 bit size';
 			item.documentation = 'Contains a integer value that can be 1 or 0';
 		}
 		
 		else if (item.data === 'int8' || item.data === 'char') {
-			item.detail = 'Jot integer type with 8 bits size';
+			item.detail = 'Amun integer type with 8 bits size';
 			item.documentation = 'Contains a singed integer value with size 8 bits';
 		}
 		
 		else if (item.data === 'int16') {
-			item.detail = 'Jot integer type with 16 bits size';
+			item.detail = 'Amun integer type with 16 bits size';
 			item.documentation = 'Contains a singed integer value with size 16 bits';
 		}
 
 		else if (item.data === 'int32') {
-			item.detail = 'Jot integer type with 32 bits size';
+			item.detail = 'Amun integer type with 32 bits size';
 			item.documentation = 'Contains a singed integer value with size 32 bits';
 		}
 
 		else if (item.data === 'int64') {
-			item.detail = 'Jot integer type with 64 bits size';
+			item.detail = 'Amun integer type with 64 bits size';
 			item.documentation = 'Contains a singed integer value with size 64 bits';
 		}
 
 		else if (item.data === 'uint8' || item.data === 'uchar') {
-			item.detail = 'Jot integer type with 8 bits size';
+			item.detail = 'Amun integer type with 8 bits size';
 			item.documentation = 'Contains singed integer value with size 8 bits';
 		}
 		
 		else if (item.data === 'uint16') {
-			item.detail = 'Jot integer type with 16 bits size';
+			item.detail = 'Amun integer type with 16 bits size';
 			item.documentation = 'Contains un singed integer value with size 16 bits';
 		}
 
 		else if (item.data === 'uint32') {
-			item.detail = 'Jot integer type with 32 bits size';
+			item.detail = 'Amun integer type with 32 bits size';
 			item.documentation = 'Contains un singed integer value with size 32 bits';
 		}
 
 		else if (item.data === 'uint64') {
-			item.detail = 'Jot integer type with 64 bits size';
+			item.detail = 'Amun integer type with 64 bits size';
 			item.documentation = 'Contains un singed integer value with size 64 bits';
 		}
 
 		else if (item.data === 'float32') {
-			item.detail = 'Jot float type with 32 bits size';
+			item.detail = 'Amun float type with 32 bits size';
 			item.documentation = 'Contains floating point value with size 32 bits';
 		}
 
 		else if (item.data === 'float64') {
-			item.detail = 'Jot float type with 64 bits size';
+			item.detail = 'Amun float type with 64 bits size';
 			item.documentation = 'Contains floating point value with size 64 bits';
 		}
 

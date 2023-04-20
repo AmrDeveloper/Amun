@@ -1,0 +1,57 @@
+{
+	"$schema": "https://amunw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Amun",
+	"fileTypes": [
+		"amun"
+	],
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#comment"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [
+				{
+					"name": "keyword.control.amun",
+					"match": "\\b(packed|var|const|load|import|type|if|else|fun|extern|intrinsic|cast|defer|switch|prefix|infix|postfix|break|continue|vaamunrgs|void|true|false|null|for|while|struct|enum|return|value_size|type_size)\\b"
+				},
+				{
+					"name": "keyword.types.amun",
+					"match": "\\b(int1|int8|int16|int32|int64|uint8|uint16|uint32|uint64|float32|float64|bool|char)\\b"
+				}
+			]
+		},
+		"strings": {
+			"name": "string.quoted.double.amun",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.chaamuncter.escape.amun",
+					"match": "\\\\."
+				}
+			]
+		},
+		"comment": {
+			"patterns": [
+				{
+					"captures": {
+						"1": {
+							"name": "punctuation.definition.comment.amun"
+						}
+					},
+					"match": "(//).*$\\n?",
+					"name": "comment.line.double-slash.amun"
+				}
+			]
+		}
+	},
+	"scopeName": "source.amun"
+}

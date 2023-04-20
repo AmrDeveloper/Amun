@@ -1,6 +1,6 @@
-## Jot VSCode Extension
+## Amun VSCode Extension
 
-Vistual studio code extension for Jot Progrmming language that provies
+Vistual studio code extension for Amun Progrmming language that provies
 
 - Syntax highlighting
 - Code snippets

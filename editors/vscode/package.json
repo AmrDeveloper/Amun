@@ -1,12 +1,12 @@
 {
-  "name": "jot",
-  "displayName": "Jot",
-  "description": "Jot Programming Language support",
+  "name": "amun",
+  "displayName": "amun",
+  "description": "Amun Programming Language support",
   "version": "0.0.1",
   "license": "MIT",
   "repository": {
     "type": "git",
-		"url": "https://github.com/amrdeveloper/jot/tree/main/editors/vscode"
+    "url": "https://github.com/amrdeveloper/amun/tree/main/editors/vscode"
   },
   "publisher": "AmrDeveloper",
   "engines": {
@@ -18,34 +18,38 @@
   "contributes": {
     "languages": [
       {
-        "id": "jot",
-        "aliases": [ 
-          "jot" 
+        "id": "amun",
+        "aliases": [
+          "Amun"
         ],
         "extensions": [
-          ".jot"
+          ".amun"
         ],
+        "icon": {
+          "light": "./icons/logo.png",
+          "dark": "./icons/logo.png"
+        },
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "jot",
-        "scopeName": "source.jot",
-        "path": "./syntaxes/jot.tmLanguage.json"
+        "language": "amun",
+        "scopeName": "source.amun",
+        "path": "./syntaxes/amun.tmLanguage.json"
       }
     ],
     "snippets": [
       {
-        "language": "jot",
+        "language": "amun",
         "path": "./snippets/snippets.code-snippets"
       }
     ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-		"compile": "tsc -b",
-		"watch": "tsc -b -w",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
     "install": "cd server && npm install && cd ../client && npm install && cd .. && npm install"
   },
   "devDependencies": {

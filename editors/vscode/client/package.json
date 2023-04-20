@@ -1,13 +1,13 @@
 {
-	"name": "jot-lsp-client",
-	"description": "Jot Programming Language support vscode client",
+	"name": "amun-lsp-client",
+	"description": "Amun Programming Language support vscode client",
 	"author": "AmrDeveloper",
 	"license": "MIT",
 	"version": "0.0.1",
 	"publisher": "vscode",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/amrdeveloper/jot/tree/main/editors/vscode"
+		"url": "https://github.com/amrdeveloper/ra/tree/main/editors/vscode"
 	},
 	"engines": {
 		"vscode": "^1.63.0"
