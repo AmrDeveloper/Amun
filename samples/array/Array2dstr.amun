@@ -1,7 +1,7 @@
 extern fun puts(s *char) int64;
 
 fun main() int64 {
-    var matrix = [["Hello", "world!"], ["From", "Jot"]];
+    var matrix = [["Hello", "world!"], ["From", "Amun"]];
 
     puts(matrix[0][0]);
     puts(matrix[0][1]);
