@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 extension = ".exe" if os == "nt" else ""
-executable = "./jot" + extension
+executable = "./amun" + extension
 samples_directory = "../samples"
 
 argv = sys.argv[1:]
@@ -20,17 +20,17 @@ if not current_directly.endswith('bin'):
     current_directly += "/bin"
     os.chdir(current_directly)
 
-# Collect all jot source files
+# Collect all amun source files
 def collect_all_files(path):
     root = Path(path)
     for p in root.rglob("*"):
         if not p.is_file():
             continue
         file_path = str(p)
-        if file_path.endswith(".jot"):
+        if file_path.endswith(".amun"):
             yield file_path
 
-# Compile each jot file
+# Compile each amun file
 number_of_samples = 0
 for file in collect_all_files(samples_directory):
     command = executable + " compile " + file

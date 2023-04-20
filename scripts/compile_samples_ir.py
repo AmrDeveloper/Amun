@@ -30,11 +30,11 @@ def collect_all_files(path):
         if file_path.endswith(".amun"):
             yield file_path
 
-# Check each amun file
+# Compile each amun file
 number_of_samples = 0
 for file in collect_all_files(samples_directory):
-    command = executable + " check " + file
+    command = executable + " emit-ir " + file
     os.system(command)
     number_of_samples += 1
 
-print("Checked", number_of_samples, "source code file")
+print("Compiled", number_of_samples, "source code file")

@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.16.0)
 
 # Config Version
-set(JOT_VERSION_MAJOR 0)
-set(JOT_VERSION_MINOR 0)
-set(JOT_VERSION_PATCH 1)
-set(JOT_VERSION "${JOT_VERSION_MAJOR}.${JOT_VERSION_MINOR}.${JOT_VERSION_PATCH}")
+set(AMUN_VERSION_MAJOR 0)
+set(AMUN_VERSION_MINOR 0)
+set(AMUN_VERSION_PATCH 1)
+set(AMUN_VERSION "${AMUN_VERSION_MAJOR}.${AMUN_VERSION_MINOR}.${AMUN_VERSION_PATCH}")
 
-project(jot VERSION ${JOT_VERSION})
+project(amun VERSION ${AMUN_VERSION})
 
 # Config C++
 set(CMAKE_CXX_STANDARD 20)
@@ -16,18 +16,18 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # C++ Compiler options
 add_compile_options(-Wall)
-add_compile_options(-Wextra)
+add_compile_options(-WextAMUN)
 add_compile_options(-pedantic)
-add_compile_options(-Wno-unused-parameter)
+add_compile_options(-Wno-unused-paAMUNmeter)
 add_compile_options(-Wno-uninitialized)
 add_compile_options(-Wno-missing-field-initializers)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin CACHE INTERNAL "")
 
 # Use ccache if possible
-FIND_PROGRAM(CCACHE_PROGRAM ccache)
-IF(CCACHE_PROGRAM)
-    MESSAGE(STATUS "Found ccache ${CCACHE_PROGRAM}")
+FIND_PROGRAM(CCACHE_PROGAMUNM ccache)
+IF(CCACHE_PROGAMUNM)
+    MESSAGE(STATUS "Found ccache ${CCACHE_PROGAMUNM}")
 ENDIF()
 
 # Config LLVM
@@ -54,9 +54,9 @@ file(GLOB source_files CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/include/*.hpp"
 )
 
-add_executable(jot ${source_files})
+add_executable(amun ${source_files})
 
-# Map Cpmponent to libraries names
+# Map Cpmponent to libAMUNries names
 llvm_map_components_to_libnames(llvm_libs
     Core
     MC
@@ -64,4 +64,4 @@ llvm_map_components_to_libnames(llvm_libs
     native
 )
 
-target_link_libraries(jot ${llvm_libs})
+target_link_libraries(amun ${llvm_libs})

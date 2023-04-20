@@ -1,13 +1,12 @@
-#include "../include/jot_basic.hpp"
-#include "../include/jot_command.hpp"
-#include "../include/jot_compiler.hpp"
-#include "../include/jot_context.hpp"
-#include "../include/jot_files.hpp"
+#include "../include/amun_basic.hpp"
+#include "../include/amun_command.hpp"
+#include "../include/amun_compiler.hpp"
+#include "../include/amun_context.hpp"
+#include "../include/amun_files.hpp"
 
 #include <memory>
 
 #define unused [[maybe_unused]]
-#define JOT_VERSION "0.0.1"
 
 auto execute_create_command(unused int argc, char** argv) -> int
 {
@@ -18,12 +17,12 @@ auto execute_create_command(unused int argc, char** argv) -> int
     }
 
     std::string project_name = argv[2];
-    if (is_file_exists(project_name)) {
+    if (amun::is_file_exists(project_name)) {
         printf("Directory with name %s is already exists.\n", project_name.c_str());
         return EXIT_FAILURE;
     }
 
-    create_new_directory(project_name);
+    amun::create_new_directory(project_name);
 
     std::stringstream string_stream;
     string_stream << "import \"cstdio\"" << '\n';
@@ -33,7 +32,7 @@ auto execute_create_command(unused int argc, char** argv) -> int
     string_stream << "    return 0;" << '\n';
     string_stream << "}";
 
-    create_file_with_content(project_name + "/main.jot", string_stream.str());
+    amun::create_file_with_content(project_name + "/main.amun", string_stream.str());
 
     printf("New Project %s is created\n", project_name.c_str());
 
@@ -50,21 +49,21 @@ auto execute_compile_command(unused int argc, char** argv) -> int
     }
 
     const char* source_file = argv[2];
-    if (!is_file_exists(source_file)) {
+    if (!amun::is_file_exists(source_file)) {
         printf("Path %s not exists\n", source_file);
         return EXIT_FAILURE;
     }
 
-    if (!is_ends_with(source_file, ".jot")) {
-        printf("Invalid source file extension, valid source file must end with `.jot`\n");
+    if (!is_ends_with(source_file, AMUN_LANGUAGE_EXTENSION)) {
+        printf("Invalid source file extension, file must end with `%s`\n", AMUN_LANGUAGE_EXTENSION);
         return EXIT_FAILURE;
     }
 
-    auto jot_context = std::make_shared<JotContext>();
-    parse_compiler_options(&jot_context->options, argc, argv);
+    auto context = std::make_shared<amun::Context>();
+    parse_compiler_options(&context->options, argc, argv);
 
-    JotCompiler jot_compiler(jot_context);
-    return jot_compiler.compile_source_code(source_file);
+    amun::Compiler compiler(context);
+    return compiler.compile_source_code(source_file);
 }
 
 auto emit_llvm_ir_coomand(unused int argc, char** argv) -> int
@@ -77,21 +76,21 @@ auto emit_llvm_ir_coomand(unused int argc, char** argv) -> int
     }
 
     const char* source_file = argv[2];
-    if (!is_file_exists(source_file)) {
+    if (!amun::is_file_exists(source_file)) {
         printf("Path %s not exists\n", source_file);
         return EXIT_FAILURE;
     }
 
-    if (!is_ends_with(source_file, ".jot")) {
-        printf("Invalid source file extension, valid source file must end with `.jot`\n");
+    if (!is_ends_with(source_file, AMUN_LANGUAGE_EXTENSION)) {
+        printf("Invalid source file extension, file must end with `%s`\n", AMUN_LANGUAGE_EXTENSION);
         return EXIT_FAILURE;
     }
 
-    auto jot_context = std::make_shared<JotContext>();
-    parse_compiler_options(&jot_context->options, argc, argv);
+    auto context = std::make_shared<amun::Context>();
+    parse_compiler_options(&context->options, argc, argv);
 
-    JotCompiler jot_compiler(jot_context);
-    return jot_compiler.emit_llvm_ir_from_source_code(source_file);
+    amun::Compiler compiler(context);
+    return compiler.emit_llvm_ir_from_source_code(source_file);
 }
 
 auto execute_check_command(unused int argc, char** argv) -> int
@@ -103,24 +102,24 @@ auto execute_check_command(unused int argc, char** argv) -> int
     }
 
     const char* source_file = argv[2];
-    if (!is_file_exists(source_file)) {
+    if (!amun::is_file_exists(source_file)) {
         printf("Path %s not exists\n", source_file);
         return EXIT_FAILURE;
     }
 
-    if (!is_ends_with(source_file, ".jot")) {
-        printf("Invalid source file extension, valid source file must end with `.jot`\n");
+    if (!is_ends_with(source_file, AMUN_LANGUAGE_EXTENSION)) {
+        printf("Invalid source file extension, file must end with `%s`\n", AMUN_LANGUAGE_EXTENSION);
         return EXIT_FAILURE;
     }
 
-    auto jot_context = std::make_shared<JotContext>();
-    JotCompiler jot_compiler(jot_context);
-    return jot_compiler.check_source_code(source_file);
+    auto context = std::make_shared<amun::Context>();
+    amun::Compiler compiler(context);
+    return compiler.check_source_code(source_file);
 }
 
 auto execute_version_command(unused int argc, unused char** argv) -> int
 {
-    printf("Jot version is %s\n", JOT_VERSION);
+    printf("Language version is %s\n", AMUN_LANGUAGE_VERSION);
     return EXIT_SUCCESS;
 }
 
@@ -132,7 +131,7 @@ auto execute_help_command(unused int argc, char** argv) -> int
     printf("    - compile <file> <options> : Compile source files to executables with options.\n");
     printf("    - emit-ir <file> <options> : Compile source to llvm ir files with options.\n");
     printf("    - check   <file>           : Check if the source code is valid.\n");
-    printf("    - version                  : Print the current Jot version.\n");
+    printf("    - version                  : Print the current compiler version.\n");
     printf("    - help                     : Print how to use and list of commands.\n");
     printf("Options:\n");
     printf("    -o  <name>                 : Set the output exeutable name.\n");
@@ -143,12 +142,12 @@ auto execute_help_command(unused int argc, char** argv) -> int
 
 auto main(int argc, char** argv) -> int
 {
-    JotCommands jot_commands;
-    jot_commands.registerCommand("create", execute_create_command);
-    jot_commands.registerCommand("compile", execute_compile_command);
-    jot_commands.registerCommand("emit-ir", emit_llvm_ir_coomand);
-    jot_commands.registerCommand("check", execute_check_command);
-    jot_commands.registerCommand("version", execute_version_command);
-    jot_commands.registerCommand("help", execute_help_command);
-    return jot_commands.executeCommand(argc, argv);
+    amun::CommandMap command_map;
+    command_map.registerCommand("create", execute_create_command);
+    command_map.registerCommand("compile", execute_compile_command);
+    command_map.registerCommand("emit-ir", emit_llvm_ir_coomand);
+    command_map.registerCommand("check", execute_check_command);
+    command_map.registerCommand("version", execute_version_command);
+    command_map.registerCommand("help", execute_help_command);
+    return command_map.executeCommand(argc, argv);
 }

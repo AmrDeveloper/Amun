@@ -1,13 +1,13 @@
-<h1 align="center">Jot Programming Language</h1></br>
+<h1 align="center">The Amun Programming Language</h1></br>
 
 <p align="center">
 <img src="media/logo.svg" width="20%" height="20%"/>
 </p>
 
 <p align="center">
-  <a target="_blank" href="https://github.com/amrdeveloper/jot/actions/workflows/docs.yml"><img src="https://github.com/amrdeveloper/jot/actions/workflows/docs.yaml/badge.svg"></a>
+  <a target="_blank" href="https://github.com/amrdeveloper/amun/actions/workflows/docs.yml"><img src="https://github.com/amrdeveloper/amun/actions/workflows/docs.yaml/badge.svg"></a>
   <a target="_blank" href="https://makeapullrequest.com"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg"></a>
-  <a target="_blank" href="./LICENSE.md"><img src="https://img.shields.io/github/license/amrdeveloper/jot"></a>
+  <a target="_blank" href="./LICENSE.md"><img src="https://img.shields.io/github/license/amrdeveloper/amun"></a>
 </p>
 
 <p align="center">
@@ -30,10 +30,10 @@ fun main() int64 {
 ```
 
 ### Documentation:
-  - [Build](https://amrdeveloper.github.io/Jot/build/)
-  - [Compile Options](https://amrdeveloper.github.io/Jot/compiler_options/)
-  - [Reference](https://amrdeveloper.github.io/Jot/)
-  - [Contribution](https://amrdeveloper.github.io/Jot/contribution/)
+  - [Build](https://amrdeveloper.github.io/amun/build/)
+  - [Compile Options](https://amrdeveloper.github.io/amun/compiler_options/)
+  - [Reference](https://amrdeveloper.github.io/amun/)
+  - [Contribution](https://amrdeveloper.github.io/amun/contribution/)
   - [Editors](editors)
   - [Samples](samples)
 
