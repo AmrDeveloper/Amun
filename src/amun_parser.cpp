@@ -1990,6 +1990,13 @@ auto amun::Parser::check_generic_parameter_name(Token name) -> void
             position, "You can't use alias as generic parameter name " + literal);
         throw "Stop";
     }
+
+    // Make sure this generic parameter type is unique in this node
+    if (!generic_parameters_names.insert(literal).second) {
+        context->diagnostics.report_error(
+            position, "You already declared generic parameter with name " + literal);
+        throw "Stop";
+    }
 }
 
 auto amun::Parser::check_compiletime_constants_expression(Shared<Expression> expression,
