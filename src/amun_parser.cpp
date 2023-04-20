@@ -449,16 +449,8 @@ auto amun::Parser::parse_function_prototype(amun::FunctionKind kind, bool is_ext
         advanced_token();
         while (is_source_available() && !is_current_kind(TokenKind::Greater)) {
             auto parameter = consume_kind(TokenKind::Symbol, "Expect parameter name");
-
-            if (!generic_parameters_names.insert(parameter.literal).second) {
-                context->diagnostics.report_error(
-                    parameter.position,
-                    "You already declared generic parameter with name " + parameter.literal);
-                throw "Stop";
-            }
-
+            check_generic_parameter_name(parameter);
             generics_parameters.push_back(parameter.literal);
-
             if (is_current_kind(TokenKind::Comma)) {
                 advanced_token();
             }
@@ -641,16 +633,8 @@ auto amun::Parser::parse_structure_declaration(bool is_packed) -> Shared<StructD
         advanced_token();
         while (is_source_available() && !is_current_kind(TokenKind::Greater)) {
             auto parameter = consume_kind(TokenKind::Symbol, "Expect parameter name");
-
-            if (!generic_parameters_names.insert(parameter.literal).second) {
-                context->diagnostics.report_error(
-                    parameter.position,
-                    "You already declared generic parameter with name " + parameter.literal);
-                throw "Stop";
-            }
-
+            check_generic_parameter_name(parameter);
             generics_parameters.push_back(parameter.literal);
-
             if (is_current_kind(TokenKind::Comma)) {
                 advanced_token();
             }
@@ -1972,6 +1956,40 @@ auto amun::Parser::parse_directive_expression() -> Shared<Expression>
     context->diagnostics.report_error(directive_name.position,
                                       "No directive with name " + directive_name_literal);
     throw "Stop";
+}
+
+auto amun::Parser::check_generic_parameter_name(Token name) -> void
+{
+    auto literal = name.literal;
+    auto position = name.position;
+
+    // Check that parameter name is not a built in primitive type
+    if (primitive_types.contains(literal)) {
+        context->diagnostics.report_error(
+            position, "primitives type can't be used as generic parameter name " + literal);
+        throw "Stop";
+    }
+
+    // Make sure this name is not a struct name
+    if (context->structures.contains(literal)) {
+        context->diagnostics.report_error(
+            position, "Struct name can't be used as generic parameter name " + literal);
+        throw "Stop";
+    }
+
+    // Make sure this name is not an enum name
+    if (context->enumerations.contains(literal)) {
+        context->diagnostics.report_error(
+            position, "Enum name can't be used as generic parameter name " + literal);
+        throw "Stop";
+    }
+
+    // Make sure this name is unique and no alias use it
+    if (context->type_alias_table.contains(literal)) {
+        context->diagnostics.report_error(
+            position, "You can't use alias as generic parameter name " + literal);
+        throw "Stop";
+    }
 }
 
 auto amun::Parser::check_compiletime_constants_expression(Shared<Expression> expression,

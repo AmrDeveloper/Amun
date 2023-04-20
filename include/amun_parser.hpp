@@ -23,6 +23,21 @@ enum class AstNodeScope {
     CONDITION_SCOPE,
 };
 
+static std::unordered_map<std::string, Shared<amun::Type>> primitive_types = {
+    {"int1", amun::i1_type},     {"bool", amun::i1_type},
+    {"char", amun::i8_type},     {"uchar", amun::u8_type},
+
+    {"int8", amun::i8_type},     {"int16", amun::i6_type},
+    {"int32", amun::i32_type},   {"int64", amun::i64_type},
+
+    {"uint8", amun::u8_type},    {"uint16", amun::u16_type},
+    {"uint32", amun::u32_type},  {"uint64", amun::u64_type},
+
+    {"float32", amun::f32_type}, {"float64", amun::f64_type},
+
+    {"void", amun::void_type},
+};
+
 class Parser {
   public:
     Parser(Shared<amun::Context> context, amun::Tokenizer& tokenizer)
@@ -165,6 +180,8 @@ class Parser {
     auto parse_primary_type() -> Shared<amun::Type>;
 
     auto parse_identifier_type() -> Shared<amun::Type>;
+
+    auto check_generic_parameter_name(Token name) -> void;
 
     auto check_compiletime_constants_expression(Shared<Expression> expression, TokenSpan position)
         -> void;
