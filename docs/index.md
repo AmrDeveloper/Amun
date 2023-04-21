@@ -23,21 +23,18 @@ fun main() int64 {
 - Static Types
 - Type inference
 - Functions
-- Pointers
-- Arrays
-- Struct and Packed struct
-- Tuples
-- Multi Dimensional Arrays
+- Pointers and Function Pointer
+- Struct, Packed struct and Tuples
+- Single and Multi Dimensional Arrays
 - Strong Enumeration
-- Function Pointer
-- Local Variables
-- Global Variables
+- Local and Global Variables
+- Local and Global compile time constants declaraions
 - Import and Load statements and blocks
 - If, else if and else statements
 - If Else Expression
 - While statement
 - For range, Forever statements
-- For Range statement with optional name and step
+- For each statement with optional name and step
 - Switch Statement and Expression
 - Break and continue statements with optional times
 - Declare Prefix, Infix, Postfix functions
