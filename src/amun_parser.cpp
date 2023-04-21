@@ -41,12 +41,6 @@ auto amun::Parser::parse_compilation_unit() -> Shared<CompilationUnit>
                 continue;
             }
 
-            // Handle compile time constants declaraion
-            if (is_current_kind(TokenKind::ConstKeyword)) {
-                parse_compiletime_constants_declaraion();
-                continue;
-            }
-
             tree_nodes.push_back(parse_declaration_statement());
         }
     }
@@ -163,7 +157,7 @@ auto amun::Parser::parse_load_declaration() -> std::vector<Shared<Statement>>
     return parse_single_source_file(library_path);
 }
 
-auto amun::Parser::parse_compiletime_constants_declaraion() -> void
+auto amun::Parser::parse_compiletime_constants_declaraion() -> Shared<ConstDeclaration>
 {
     auto const_token = peek_and_advance_token();
     auto name = consume_kind(TokenKind::Symbol, "Expect const declaraion name");
@@ -171,7 +165,8 @@ auto amun::Parser::parse_compiletime_constants_declaraion() -> void
     auto expression = parse_expression();
     check_compiletime_constants_expression(expression, name.position);
     assert_kind(TokenKind::Semicolon, "Expect ; after const declaraion");
-    context->constants_table[name.literal] = expression;
+    context->constants_table_map.define(name.literal, expression);
+    return std::make_shared<ConstDeclaration>(name, expression);
 }
 
 auto amun::Parser::parse_type_alias_declaration() -> void
@@ -257,6 +252,9 @@ auto amun::Parser::parse_declaration_statement() -> Shared<Statement>
     case TokenKind::VarKeyword: {
         return parse_field_declaration(true);
     }
+    case TokenKind::ConstKeyword: {
+        return parse_compiletime_constants_declaraion();
+    }
     case TokenKind::StructKeyword: {
         return parse_structure_declaration(false);
     }
@@ -280,6 +278,9 @@ auto amun::Parser::parse_statement() -> Shared<Statement>
     switch (peek_current().kind) {
     case TokenKind::VarKeyword: {
         return parse_field_declaration(false);
+    }
+    case TokenKind::ConstKeyword: {
+        return parse_compiletime_constants_declaraion();
     }
     case TokenKind::IfKeyword: {
         return parse_if_statement();
@@ -563,6 +564,7 @@ auto amun::Parser::parse_function_declaration(amun::FunctionKind kind)
 {
     auto parent_node_scope = current_ast_scope;
     current_ast_scope = amun::AstNodeScope::FUNCTION_SCOPE;
+    context->constants_table_map.push_new_scope();
 
     auto prototype = parse_function_prototype(kind, false);
 
@@ -572,6 +574,7 @@ auto amun::Parser::parse_function_declaration(amun::FunctionKind kind)
         auto return_statement = std::make_shared<ReturnStatement>(equal_token, value, true);
         assert_kind(TokenKind::Semicolon, "Expect ; after function value");
         current_ast_scope = parent_node_scope;
+        context->constants_table_map.pop_current_scope();
         return std::make_shared<FunctionDeclaration>(prototype, return_statement);
     }
 
@@ -594,6 +597,7 @@ auto amun::Parser::parse_function_declaration(amun::FunctionKind kind)
         }
 
         current_ast_scope = parent_node_scope;
+        context->constants_table_map.pop_current_scope();
         return std::make_shared<FunctionDeclaration>(prototype, block);
     }
 
@@ -1644,9 +1648,9 @@ auto amun::Parser::parse_primary_expression() -> Shared<Expression>
     case TokenKind::Symbol: {
         // Resolve const or non const variable
         auto name = peek_current();
-        if (context->constants_table.contains(name.literal)) {
+        if (context->constants_table_map.is_defined(name.literal)) {
             advanced_token();
-            return context->constants_table[name.literal];
+            return context->constants_table_map.lookup(name.literal);
         }
         return parse_literal_expression();
     }

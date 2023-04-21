@@ -4,6 +4,7 @@
 #include "amun_ast.hpp"
 #include "amun_compiler_options.hpp"
 #include "amun_diagnostics.hpp"
+#include "amun_scoped_map.hpp"
 #include "amun_source_manager.hpp"
 #include "amun_type.hpp"
 
@@ -20,7 +21,10 @@ enum FunctionKind {
 };
 
 struct Context {
-    Context() : diagnostics(amun::DiagnosticEngine(source_manager)) {}
+    Context() : diagnostics(amun::DiagnosticEngine(source_manager))
+    {
+        constants_table_map.push_new_scope();
+    }
 
     amun::CompilerOptions options;
     amun::DiagnosticEngine diagnostics;
@@ -31,7 +35,7 @@ struct Context {
     std::unordered_map<std::string, FunctionKind> functions;
     std::unordered_map<std::string, std::shared_ptr<amun::StructType>> structures;
     std::unordered_map<std::string, std::shared_ptr<amun::EnumType>> enumerations;
-    std::unordered_map<std::string, Shared<Expression>> constants_table;
+    amun::ScopedMap<std::string, Shared<Expression>> constants_table_map;
 };
 
 } // namespace amun

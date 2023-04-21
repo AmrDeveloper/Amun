@@ -139,6 +139,21 @@ class FieldDeclaration : public Statement {
     bool global;
 };
 
+class ConstDeclaration : public Statement {
+  public:
+    ConstDeclaration(Token name, Shared<Expression> value)
+        : name(std::move(name)), value(std::move(value))
+    {
+    }
+
+    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::Field; }
+
+    Token name;
+    Shared<Expression> value;
+};
+
 class FunctionPrototype : public Statement {
   public:
     FunctionPrototype(Token name, std::vector<Shared<Parameter>> parameters,

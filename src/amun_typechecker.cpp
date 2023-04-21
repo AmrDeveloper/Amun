@@ -156,6 +156,19 @@ auto amun::TypeChecker::visit(FieldDeclaration* node) -> std::any
     return 0;
 }
 
+auto amun::TypeChecker::visit(ConstDeclaration* node) -> std::any
+{
+    auto name = node->name.literal;
+    auto type = node_amun_type(node->value->accept(this));
+    bool is_first_defined = types_table.define(name, type);
+    if (!is_first_defined) {
+        context->diagnostics.report_error(node->name.position,
+                                          "Field " + name + " is defined twice in the same scope");
+        throw "Stop";
+    }
+    return 0;
+}
+
 auto amun::TypeChecker::visit(FunctionPrototype* node) -> std::any
 {
     auto name = node->get_name();
@@ -683,7 +696,7 @@ auto amun::TypeChecker::visit(BinaryExpression* node) -> std::any
     bool is_left_number = amun::is_number_type(left_type);
     bool is_right_number = amun::is_number_type(right_type);
     bool is_the_same = amun::is_types_equals(left_type, right_type);
-    if (!is_the_same) {
+    if (!is_the_same || !is_left_number || !is_right_number) {
 
         if (!is_left_number) {
             context->diagnostics.report_error(node->get_operator_token().position,

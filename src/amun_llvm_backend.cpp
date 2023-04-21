@@ -181,6 +181,8 @@ auto amun::LLVMBackend::visit(FieldDeclaration* node) -> std::any
     return 0;
 }
 
+auto amun::LLVMBackend::visit(ConstDeclaration* node) -> std::any { return 0; }
+
 auto amun::LLVMBackend::visit(FunctionPrototype* node) -> std::any
 {
     auto parameters = node->get_parameters();

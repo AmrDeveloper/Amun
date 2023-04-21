@@ -54,7 +54,7 @@ class Parser {
 
     auto parse_load_declaration() -> std::vector<Shared<Statement>>;
 
-    auto parse_compiletime_constants_declaraion() -> void;
+    auto parse_compiletime_constants_declaraion() -> Shared<ConstDeclaration>;
 
     auto parse_type_alias_declaration() -> void;
 
