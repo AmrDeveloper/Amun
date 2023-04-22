@@ -34,17 +34,17 @@ fun main() int64 {
 - If Else Expression
 - While statement
 - For range, Forever statements
-- For each statement with optional name and step
+- For each statement with an optional name and step
 - Switch Statement and Expression
 - Break and continue statements with optional times
-- Declare Prefix, Infix, Postfix functions
+- Declare Prefix, Infix, and Postfix functions
 - Binary, Logical, Comparisons, Bitwise Operators
-- Assignments Operatiors =, +=, -=, *=, /=
+- Assignments Operators =, +=, -=, *=, /=
 - Singed and Un Singed Integer types
 - Standard C Headers as part of the Standard library
 - No implicit casting, every cast must be explicit to be clear
 - Defer Statement
-- Default initalization value for global and local variables
+- Default initialization value for global and local variables
 - Resolving Constants Index, If Expressions at Compile time
 - Generic Programming
 

@@ -1,3 +1,5 @@
+## Infix function
+
 Amun has support for `infix` keyword inspired from `switt` and `kotlin` design, simpily it used to mark
 function with two parameter to be used as nomral function and also as infix operator
 

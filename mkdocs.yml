@@ -75,6 +75,7 @@ nav:
     - Infix Function: reference/infix_function.md
     - Prefix Function: reference/prefix_function.md
     - Postfix Function: reference/postfix_function.md
+    - Operator Overloading: reference/operator_overloading.md
     - Lambda: reference/lambda.md
     - Memory: reference/memory.md
     - Varargs: reference/varargs.md
