@@ -46,7 +46,7 @@ auto amun::LLVMBackend::visit(BlockStatement* node) -> std::any
     bool should_execute_defers = true;
     for (auto& statement : node->get_nodes()) {
         const auto ast_node_type = statement->get_ast_node_type();
-        if (ast_node_type == AstNodeType::Return) {
+        if (ast_node_type == AstNodeType::AST_RETURN) {
             should_execute_defers = false;
             execute_all_defer_calls();
         }
@@ -54,8 +54,8 @@ auto amun::LLVMBackend::visit(BlockStatement* node) -> std::any
         statement->accept(this);
 
         // In the same block there are no needs to generate code for unreachable code
-        if (ast_node_type == AstNodeType::Return or ast_node_type == AstNodeType::Break or
-            ast_node_type == AstNodeType::Continue) {
+        if (ast_node_type == AstNodeType::AST_RETURN or ast_node_type == AstNodeType::AST_BREAK or
+            ast_node_type == AstNodeType::AST_CONTINUE) {
             break;
         }
     }
@@ -321,10 +321,11 @@ auto amun::LLVMBackend::resolve_generic_function(FunctionDeclaration* node,
     alloca_inst_table.define(mangled_name, function);
 
     // Assert that this block end with return statement or unreachable
-    if (body->get_ast_node_type() == AstNodeType::Block) {
+    if (body->get_ast_node_type() == AstNodeType::AST_BLOCK) {
         const auto& body_statement = std::dynamic_pointer_cast<BlockStatement>(body);
         const auto& statements = body_statement->statements;
-        if (statements.empty() || statements.back()->get_ast_node_type() != AstNodeType::Return) {
+        if (statements.empty() ||
+            statements.back()->get_ast_node_type() != AstNodeType::AST_RETURN) {
             Builder.CreateUnreachable();
         }
     }
@@ -372,10 +373,11 @@ auto amun::LLVMBackend::visit(FunctionDeclaration* node) -> std::any
     alloca_inst_table.define(name, function);
 
     // Assert that this block end with return statement or unreachable
-    if (body->get_ast_node_type() == AstNodeType::Block) {
+    if (body->get_ast_node_type() == AstNodeType::AST_BLOCK) {
         const auto& body_statement = std::dynamic_pointer_cast<BlockStatement>(body);
         const auto& statements = body_statement->statements;
-        if (statements.empty() || statements.back()->get_ast_node_type() != AstNodeType::Return) {
+        if (statements.empty() ||
+            statements.back()->get_ast_node_type() != AstNodeType::AST_RETURN) {
             Builder.CreateUnreachable();
         }
     }
@@ -385,6 +387,11 @@ auto amun::LLVMBackend::visit(FunctionDeclaration* node) -> std::any
     has_return_statement = false;
     is_on_global_scope = true;
     return function;
+}
+
+auto amun::LLVMBackend::visit(OperatorFunctionDeclaraion* node) -> std::any
+{
+    return node->function->accept(this);
 }
 
 auto amun::LLVMBackend::visit(StructDeclaration* node) -> std::any
@@ -473,8 +480,8 @@ auto amun::LLVMBackend::visit(ForRangeStatement* node) -> std::any
         step = llvm_number_value("1", number_type->number_kind);
     }
 
-    start = create_llvm_numbers_bianry(TokenKind::Minus, start, step);
-    end = create_llvm_numbers_bianry(TokenKind::Minus, end, step);
+    start = create_llvm_numbers_bianry(TokenKind::TOKEN_MINUS, start, step);
+    end = create_llvm_numbers_bianry(TokenKind::TOKEN_MINUS, end, step);
 
     const auto element_llvm_type = start->getType();
 
@@ -499,7 +506,7 @@ auto amun::LLVMBackend::visit(ForRangeStatement* node) -> std::any
     current_function->getBasicBlockList().push_back(condition_block);
     Builder.SetInsertPoint(condition_block);
     auto variable = derefernecs_llvm_pointer(alloc_inst);
-    auto condition = create_llvm_numbers_comparison(TokenKind::SmallerEqual, variable, end);
+    auto condition = create_llvm_numbers_comparison(TokenKind::TOKEN_SMALLER_EQUAL, variable, end);
     Builder.CreateCondBr(condition, body_block, end_block);
 
     // Generate For body IR Code
@@ -508,7 +515,7 @@ auto amun::LLVMBackend::visit(ForRangeStatement* node) -> std::any
 
     // Increment loop variable
     auto value_ptr = Builder.CreateLoad(alloc_inst->getAllocatedType(), alloc_inst);
-    auto new_value = create_llvm_numbers_bianry(TokenKind::Plus, value_ptr, step);
+    auto new_value = create_llvm_numbers_bianry(TokenKind::TOKEN_PLUS, value_ptr, step);
     Builder.CreateStore(new_value, alloc_inst);
 
     node->body->accept(this);
@@ -548,7 +555,7 @@ auto amun::LLVMBackend::visit(ForEachStatement* node) -> std::any
                       ? create_llvm_string_length(collection)
                       : create_llvm_int64(collection_type->getArrayNumElements(), true);
 
-    auto end = create_llvm_integers_bianry(TokenKind::Minus, length, step);
+    auto end = create_llvm_integers_bianry(TokenKind::TOKEN_MINUS, length, step);
     auto condition_block = llvm::BasicBlock::Create(llvm_context, "for.cond");
     auto body_block = llvm::BasicBlock::Create(llvm_context, "for");
     auto end_block = llvm::BasicBlock::Create(llvm_context, "for.end");
@@ -577,7 +584,7 @@ auto amun::LLVMBackend::visit(ForEachStatement* node) -> std::any
     current_function->getBasicBlockList().push_back(condition_block);
     Builder.SetInsertPoint(condition_block);
     auto variable = derefernecs_llvm_pointer(index_alloca);
-    auto condition = create_llvm_numbers_comparison(TokenKind::Smaller, variable, end);
+    auto condition = create_llvm_numbers_comparison(TokenKind::TOKEN_SMALLER, variable, end);
     Builder.CreateCondBr(condition, body_block, end_block);
 
     // Generate For body IR Code
@@ -586,11 +593,11 @@ auto amun::LLVMBackend::visit(ForEachStatement* node) -> std::any
 
     // Increment loop variable
     auto value_ptr = Builder.CreateLoad(index_alloca->getAllocatedType(), index_alloca);
-    auto new_value = create_llvm_numbers_bianry(TokenKind::Plus, value_ptr, step);
+    auto new_value = create_llvm_numbers_bianry(TokenKind::TOKEN_PLUS, value_ptr, step);
     Builder.CreateStore(new_value, index_alloca);
 
     // If array expression is passed directly we should first save it on temp variable
-    if (node->collection->get_ast_node_type() == AstNodeType::ArrayExpr) {
+    if (node->collection->get_ast_node_type() == AstNodeType::AST_ARRAY) {
         auto temp_name = "_temp";
         auto temp_alloca = create_entry_block_alloca(current_function, temp_name, collection_type);
         Builder.CreateStore(collection, temp_alloca);
@@ -599,7 +606,7 @@ auto amun::LLVMBackend::visit(ForEachStatement* node) -> std::any
         auto collection_amun_type = node->collection->get_type_node();
 
         auto location = TokenSpan();
-        auto token = Token{TokenKind::Symbol, location, temp_name};
+        auto token = Token{TokenKind::TOKEN_IDENTIFIER, location, temp_name};
         collection_expression = std::make_shared<LiteralExpression>(token, collection_amun_type);
     }
 
@@ -847,7 +854,7 @@ auto amun::LLVMBackend::visit(DeferStatement* node) -> std::any
         auto value = llvm_node_value(argument->accept(this));
 
         if (i >= parameter_size) {
-            if (argument->get_ast_node_type() == AstNodeType::LiteralExpr) {
+            if (argument->get_ast_node_type() == AstNodeType::AST_LITERAL) {
                 auto argument_type = llvm_type_from_amun_type(argument->get_type_node());
                 auto loaded_value = Builder.CreateLoad(argument_type, value);
                 arguments_values.push_back(loaded_value);
@@ -1159,7 +1166,7 @@ auto amun::LLVMBackend::visit(AssignExpression* node) -> std::any
     // *ptr = value;
     if (auto unary_expression = std::dynamic_pointer_cast<PrefixUnaryExpression>(left_node)) {
         auto opt = unary_expression->get_operator_token().kind;
-        if (opt == TokenKind::Star) {
+        if (opt == TokenKind::TOKEN_STAR) {
             auto rvalue = llvm_node_value(node->get_right()->accept(this));
             auto pointer = llvm_node_value(unary_expression->get_right()->accept(this));
             auto load = Builder.CreateLoad(pointer->getType()->getPointerElementType(), pointer);
@@ -1173,113 +1180,126 @@ auto amun::LLVMBackend::visit(AssignExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(BinaryExpression* node) -> std::any
 {
-    auto left = llvm_resolve_value(node->get_left()->accept(this));
-    auto right = llvm_resolve_value(node->get_right()->accept(this));
+    auto lhs = llvm_resolve_value(node->left->accept(this));
+    auto rhs = llvm_resolve_value(node->right->accept(this));
     auto op = node->get_operator_token().kind;
 
     // Binary Operations for integer types
-    if (left->getType()->isIntegerTy() and right->getType()->isIntegerTy()) {
-        return create_llvm_integers_bianry(op, left, right);
+    if (lhs->getType()->isIntegerTy() && rhs->getType()->isIntegerTy()) {
+        return create_llvm_integers_bianry(op, lhs, rhs);
     }
 
     // Binary Operations for floating point types
-    if (left->getType()->isFloatingPointTy() and right->getType()->isFloatingPointTy()) {
-        return create_llvm_floats_bianry(op, left, right);
+    if (lhs->getType()->isFloatingPointTy() && rhs->getType()->isFloatingPointTy()) {
+        return create_llvm_floats_bianry(op, lhs, rhs);
     }
 
-    internal_compiler_error("Binary Operators work only for Numeric types");
+    // Perform overloading function call
+    // No need for extra checks after type checker pass
+    auto lhs_type = node->left->get_type_node();
+    auto rhs_type = node->right->get_type_node();
+    auto name = mangle_operator_function(op, lhs_type, rhs_type);
+    return create_overloading_function_call(name, lhs, rhs);
 }
 
 auto amun::LLVMBackend::visit(ShiftExpression* node) -> std::any
 {
-    auto left = llvm_resolve_value(node->get_left()->accept(this));
-    auto right = llvm_resolve_value(node->get_right()->accept(this));
-    auto operator_kind = node->get_operator_token().kind;
+    auto lhs = llvm_resolve_value(node->get_left()->accept(this));
+    auto rhs = llvm_resolve_value(node->get_right()->accept(this));
 
-    if (operator_kind == TokenKind::LeftShift) {
-        return Builder.CreateShl(left, right);
+    auto lhs_type = node->left->get_type_node();
+    auto rhs_type = node->right->get_type_node();
+    auto op = node->get_operator_token().kind;
+
+    if (amun::is_integer_type(lhs_type) && amun::is_integer_type(rhs_type)) {
+        if (op == TokenKind::TOKEN_LEFT_SHIFT) {
+            return Builder.CreateShl(lhs, rhs);
+        }
+
+        if (op == TokenKind::TOKEN_RIGHT_SHIFT) {
+            return Builder.CreateAShr(lhs, rhs);
+        }
     }
 
-    if (operator_kind == TokenKind::RightShift) {
-        return Builder.CreateAShr(left, right);
-    }
-
-    internal_compiler_error("Invalid Shift expression operator");
+    // Perform overloading function call
+    // No need for extra checks after type checker pass
+    auto name = mangle_operator_function(op, lhs_type, rhs_type);
+    return create_overloading_function_call(name, lhs, rhs);
 }
 
 auto amun::LLVMBackend::visit(ComparisonExpression* node) -> std::any
 {
-    const auto left_node = node->get_left();
-    const auto right_node = node->get_right();
-    const auto left = llvm_resolve_value(left_node->accept(this));
-    const auto right = llvm_resolve_value(right_node->accept(this));
+    auto lhs = llvm_resolve_value(node->left->accept(this));
+    auto rhs = llvm_resolve_value(node->right->accept(this));
     const auto op = node->get_operator_token().kind;
 
-    const auto left_amun_type = left_node->get_type_node();
-    const auto right_amun_type = right_node->get_type_node();
-
-    const auto left_type = left->getType();
-    const auto right_type = right->getType();
-
     // Comparison Operations for integers types
-    if (left_type->isIntegerTy() and right_type->isIntegerTy()) {
-        if (amun::is_unsigned_integer_type(left_amun_type)) {
-            return create_llvm_unsigned_integers_comparison(op, left, right);
+    if (lhs->getType()->isIntegerTy() && rhs->getType()->isIntegerTy()) {
+        if (amun::is_unsigned_integer_type(node->left->get_type_node())) {
+            return create_llvm_unsigned_integers_comparison(op, lhs, rhs);
         }
-        return create_llvm_integers_comparison(op, left, right);
+        return create_llvm_integers_comparison(op, lhs, rhs);
     }
 
     // Comparison Operations for floating point types
-    if (left_type->isFloatingPointTy() and right_type->isFloatingPointTy()) {
-        return create_llvm_floats_comparison(op, left, right);
+    if (lhs->getType()->isFloatingPointTy() && rhs->getType()->isFloatingPointTy()) {
+        return create_llvm_floats_comparison(op, lhs, rhs);
     }
 
     // Comparison Operations for pointers types thay points to the same type, no need for casting
-    if (left_type->isPointerTy() and right_type->isPointerTy()) {
+    if (lhs->getType()->isPointerTy() && rhs->getType()->isPointerTy()) {
 
         // Can be optimized by checking if both sides are String literal expression
-        if (left_node->get_ast_node_type() == AstNodeType::StringExpr &&
-            right_node->get_ast_node_type() == AstNodeType::StringExpr) {
-            auto left_str = std::dynamic_pointer_cast<StringExpression>(left_node)->value.literal;
-            auto right_str = std::dynamic_pointer_cast<StringExpression>(right_node)->value.literal;
-            auto compare = std::strcmp(left_str.c_str(), right_str.c_str());
+        if (node->left->get_ast_node_type() == AstNodeType::AST_STRING &&
+            node->right->get_ast_node_type() == AstNodeType::AST_STRING) {
+            auto lhs_str = std::dynamic_pointer_cast<StringExpression>(node->left)->value.literal;
+            auto rlhs_str = std::dynamic_pointer_cast<StringExpression>(node->right)->value.literal;
+            auto compare = std::strcmp(lhs_str.c_str(), rlhs_str.c_str());
             auto result_llvm = create_llvm_int32(compare, true);
             return create_llvm_integers_comparison(op, result_llvm, zero_int32_value);
         }
 
         // If both sides are strings use strcmp function
-        if (amun::is_types_equals(left_amun_type, amun::i8_ptr_type) &&
-            amun::is_types_equals(right_amun_type, amun::i8_ptr_type)) {
-            return create_llvm_strings_comparison(op, left, right);
+        if (amun::is_types_equals(node->left->get_type_node(), amun::i8_ptr_type) &&
+            amun::is_types_equals(node->right->get_type_node(), amun::i8_ptr_type)) {
+            return create_llvm_strings_comparison(op, lhs, rhs);
         }
 
         // Compare address of both pointers
-        return create_llvm_integers_comparison(op, left, right);
+        return create_llvm_integers_comparison(op, lhs, rhs);
     }
 
-    // This line must be unreacable and any type error must handled in type checker pass
-    internal_compiler_error("Binary Operators work only for Numeric types");
+    // Perform overloading function call
+    // No need for extra checks after type checker pass
+    auto lhs_type = node->left->get_type_node();
+    auto rhs_type = node->right->get_type_node();
+    auto name = mangle_operator_function(op, lhs_type, rhs_type);
+    return create_overloading_function_call(name, lhs, rhs);
 }
 
 auto amun::LLVMBackend::visit(LogicalExpression* node) -> std::any
 {
-    auto left = llvm_node_value(node->get_left()->accept(this));
-    auto right = llvm_node_value(node->get_right()->accept(this));
-    if (not left || not right) {
-        return nullptr;
+    auto lhs = llvm_resolve_value(node->left->accept(this));
+    auto rhs = llvm_resolve_value(node->right->accept(this));
+
+    auto lhs_type = node->left->get_type_node();
+    auto rhs_type = node->right->get_type_node();
+    auto op = node->get_operator_token().kind;
+
+    if (amun::is_integer1_type(lhs_type) && amun::is_integer1_type(rhs_type)) {
+        if (op == TokenKind::TOKEN_AND_AND) {
+            return Builder.CreateLogicalAnd(lhs, rhs);
+        }
+
+        if (op == TokenKind::TOKEN_OR_OR) {
+            return Builder.CreateLogicalOr(lhs, rhs);
+        }
     }
 
-    switch (node->get_operator_token().kind) {
-    case TokenKind::LogicalAnd: {
-        return Builder.CreateLogicalAnd(left, right);
-    }
-    case TokenKind::LogicalOr: {
-        return Builder.CreateLogicalOr(left, right);
-    }
-    default: {
-        internal_compiler_error("Invalid Logical operator");
-    }
-    }
+    // Perform overloading function call
+    // No need for extra checks after type checker pass
+    auto name = mangle_operator_function(op, lhs_type, rhs_type);
+    return create_overloading_function_call(name, lhs, rhs);
 }
 
 auto amun::LLVMBackend::visit(PrefixUnaryExpression* node) -> std::any
@@ -1288,7 +1308,7 @@ auto amun::LLVMBackend::visit(PrefixUnaryExpression* node) -> std::any
     auto operator_kind = node->get_operator_token().kind;
 
     // Unary - minus operator
-    if (operator_kind == TokenKind::Minus) {
+    if (operator_kind == TokenKind::TOKEN_MINUS) {
         auto right = llvm_resolve_value(operand->accept(this));
         if (right->getType()->isFloatingPointTy()) {
             return Builder.CreateFNeg(right);
@@ -1297,13 +1317,13 @@ auto amun::LLVMBackend::visit(PrefixUnaryExpression* node) -> std::any
     }
 
     // Bang can be implemented as (value == false)
-    if (operator_kind == TokenKind::Bang) {
+    if (operator_kind == TokenKind::TOKEN_BANG) {
         auto right = llvm_resolve_value(operand->accept(this));
         return Builder.CreateICmpEQ(right, false_value);
     }
 
     // Pointer * Dereference operator
-    if (operator_kind == TokenKind::Star) {
+    if (operator_kind == TokenKind::TOKEN_STAR) {
         auto right = llvm_node_value(operand->accept(this));
         auto is_expect_struct_type = node->get_type_node()->type_kind == amun::TypeKind::STRUCT;
         // No need to emit 2 load inst if the current type is pointer to struct
@@ -1315,7 +1335,7 @@ auto amun::LLVMBackend::visit(PrefixUnaryExpression* node) -> std::any
     }
 
     // Address of operator (&) to return pointer of operand
-    if (operator_kind == TokenKind::And) {
+    if (operator_kind == TokenKind::TOKEN_AND) {
         auto right = llvm_node_value(operand->accept(this));
         auto ptr = Builder.CreateAlloca(right->getType(), nullptr);
         Builder.CreateStore(right, ptr);
@@ -1323,18 +1343,18 @@ auto amun::LLVMBackend::visit(PrefixUnaryExpression* node) -> std::any
     }
 
     // Unary ~ not operator
-    if (operator_kind == TokenKind::Not) {
+    if (operator_kind == TokenKind::TOKEN_NOT) {
         auto right = llvm_resolve_value(operand->accept(this));
         return Builder.CreateNot(right);
     }
 
     // Unary prefix ++ operator, example (++x)
-    if (operator_kind == TokenKind::PlusPlus) {
+    if (operator_kind == TokenKind::TOKEN_PLUS_PLUS) {
         return create_llvm_value_increment(operand, true);
     }
 
     // Unary prefix -- operator, example (--x)
-    if (operator_kind == TokenKind::MinusMinus) {
+    if (operator_kind == TokenKind::TOKEN_MINUS_MINUS) {
         return create_llvm_value_decrement(operand, true);
     }
 
@@ -1347,12 +1367,12 @@ auto amun::LLVMBackend::visit(PostfixUnaryExpression* node) -> std::any
     auto operator_kind = node->get_operator_token().kind;
 
     // Unary postfix ++ operator, example (x++)
-    if (operator_kind == TokenKind::PlusPlus) {
+    if (operator_kind == TokenKind::TOKEN_PLUS_PLUS) {
         return create_llvm_value_increment(operand, false);
     }
 
     // Unary postfix -- operator, example (x--)
-    if (operator_kind == TokenKind::MinusMinus) {
+    if (operator_kind == TokenKind::TOKEN_MINUS_MINUS) {
         return create_llvm_value_decrement(operand, false);
     }
 
@@ -1365,7 +1385,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
 
     // If callee is also a CallExpression this case when you have a function that return a
     // function pointer and you call it for example function()();
-    if (callee_ast_node_type == AstNodeType::CallExpr) {
+    if (callee_ast_node_type == AstNodeType::AST_CALL) {
         auto callee_function = llvm_node_value(node->get_callee()->accept(this));
         auto call_instruction = llvm::dyn_cast<llvm::CallInst>(callee_function);
         auto function = call_instruction->getCalledFunction();
@@ -1392,7 +1412,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
     }
 
     // If callee is literal expression that mean it a function call or function pointer call
-    if (callee_ast_node_type == AstNodeType::LiteralExpr) {
+    if (callee_ast_node_type == AstNodeType::AST_LITERAL) {
         auto callee = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee());
         auto callee_literal = callee->get_name().literal;
         auto function = lookup_function(callee_literal);
@@ -1460,7 +1480,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
 
             // This condition works only if this function has varargs flag
             if (i >= parameter_size) {
-                if (argument->get_ast_node_type() == AstNodeType::LiteralExpr) {
+                if (argument->get_ast_node_type() == AstNodeType::AST_LITERAL) {
                     auto argument_type = llvm_type_from_amun_type(argument->get_type_node());
                     auto loaded_value = Builder.CreateLoad(argument_type, value);
                     arguments_values.push_back(loaded_value);
@@ -1487,7 +1507,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
     }
 
     // If callee is lambda expression that mean we can call it as function pointer
-    if (callee_ast_node_type == AstNodeType::LambdaExpr) {
+    if (callee_ast_node_type == AstNodeType::AST_LAMBDA) {
         auto lambda = std::dynamic_pointer_cast<LambdaExpression>(node->get_callee());
         auto lambda_value = llvm_node_value(lambda->accept(this));
         auto function = llvm::dyn_cast<llvm::Function>(lambda_value);
@@ -1503,7 +1523,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
 
             // This condition works only if this function has varargs flag
             if (i >= parameter_size) {
-                if (argument->get_ast_node_type() == AstNodeType::LiteralExpr) {
+                if (argument->get_ast_node_type() == AstNodeType::AST_LITERAL) {
                     auto argument_type = llvm_type_from_amun_type(argument->get_type_node());
                     auto loaded_value = Builder.CreateLoad(argument_type, value);
                     arguments_values.push_back(loaded_value);
@@ -1529,7 +1549,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
     }
 
     // If callee is dot expression that mean we call function pointer from struct element
-    if (callee_ast_node_type == AstNodeType::DotExpr) {
+    if (callee_ast_node_type == AstNodeType::AST_DOT) {
         auto dot = std::dynamic_pointer_cast<DotExpression>(node->get_callee());
         auto struct_fun_ptr = llvm_node_value(dot->accept(this));
 
@@ -1550,7 +1570,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
 
             // This condition works only if this function has varargs flag
             if (i >= parameter_size) {
-                if (argument->get_ast_node_type() == AstNodeType::LiteralExpr) {
+                if (argument->get_ast_node_type() == AstNodeType::AST_LITERAL) {
                     auto argument_type = llvm_type_from_amun_type(argument->get_type_node());
                     auto loaded_value = Builder.CreateLoad(argument_type, value);
                     arguments_values.push_back(loaded_value);
@@ -1705,7 +1725,7 @@ auto amun::LLVMBackend::visit(DotExpression* node) -> std::any
         if (node->get_field_name().literal == "count") {
 
             // If node is string expression, length can calculated without strlen
-            if (node->callee->get_ast_node_type() == AstNodeType::StringExpr) {
+            if (node->callee->get_ast_node_type() == AstNodeType::AST_STRING) {
                 auto string = std::dynamic_pointer_cast<StringExpression>(node->callee);
                 auto length = string->value.literal.size();
                 return create_llvm_int64(length, true);
@@ -1883,7 +1903,7 @@ auto amun::LLVMBackend::visit(CharacterExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(BooleanExpression* node) -> std::any
 {
-    return create_llvm_int1(node->get_value().kind == TokenKind::TrueKeyword);
+    return create_llvm_int1(node->get_value().kind == TokenKind::TOKEN_TRUE);
 }
 
 auto amun::LLVMBackend::visit(NullExpression* node) -> std::any
@@ -2107,19 +2127,19 @@ auto amun::LLVMBackend::create_llvm_integers_bianry(TokenKind op, llvm::Value* l
                                                     llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
-    case TokenKind::Plus: {
+    case TokenKind::TOKEN_PLUS: {
         return Builder.CreateAdd(left, right, "addtemp");
     }
-    case TokenKind::Minus: {
+    case TokenKind::TOKEN_MINUS: {
         return Builder.CreateSub(left, right, "subtmp");
     }
-    case TokenKind::Star: {
+    case TokenKind::TOKEN_STAR: {
         return Builder.CreateMul(left, right, "multmp");
     }
-    case TokenKind::Slash: {
+    case TokenKind::TOKEN_SLASH: {
         return Builder.CreateUDiv(left, right, "divtmp");
     }
-    case TokenKind::Percent: {
+    case TokenKind::TOKEN_PERCENT: {
         return Builder.CreateURem(left, right, "remtemp");
     }
     default: {
@@ -2132,19 +2152,19 @@ auto amun::LLVMBackend::create_llvm_floats_bianry(TokenKind op, llvm::Value* lef
                                                   llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
-    case TokenKind::Plus: {
+    case TokenKind::TOKEN_PLUS: {
         return Builder.CreateFAdd(left, right, "addtemp");
     }
-    case TokenKind::Minus: {
+    case TokenKind::TOKEN_MINUS: {
         return Builder.CreateFSub(left, right, "subtmp");
     }
-    case TokenKind::Star: {
+    case TokenKind::TOKEN_STAR: {
         return Builder.CreateFMul(left, right, "multmp");
     }
-    case TokenKind::Slash: {
+    case TokenKind::TOKEN_SLASH: {
         return Builder.CreateFDiv(left, right, "divtmp");
     }
-    case TokenKind::Percent: {
+    case TokenKind::TOKEN_PERCENT: {
         return Builder.CreateFRem(left, right, "remtemp");
     }
     default: {
@@ -2171,22 +2191,22 @@ auto amun::LLVMBackend::create_llvm_integers_comparison(TokenKind op, llvm::Valu
                                                         llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
-    case TokenKind::EqualEqual: {
+    case TokenKind::TOKEN_EQUAL_EQUAL: {
         return Builder.CreateICmpEQ(left, right);
     }
-    case TokenKind::BangEqual: {
+    case TokenKind::TOKEN_BANG_EQUAL: {
         return Builder.CreateICmpNE(left, right);
     }
-    case TokenKind::Greater: {
+    case TokenKind::TOKEN_GREATER: {
         return Builder.CreateICmpSGT(left, right);
     }
-    case TokenKind::GreaterEqual: {
+    case TokenKind::TOKEN_GREATER_EQUAL: {
         return Builder.CreateICmpSGE(left, right);
     }
-    case TokenKind::Smaller: {
+    case TokenKind::TOKEN_SMALLER: {
         return Builder.CreateICmpSLT(left, right);
     }
-    case TokenKind::SmallerEqual: {
+    case TokenKind::TOKEN_SMALLER_EQUAL: {
         return Builder.CreateICmpSLE(left, right);
     }
     default: {
@@ -2199,22 +2219,22 @@ auto amun::LLVMBackend::create_llvm_unsigned_integers_comparison(TokenKind op, l
                                                                  llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
-    case TokenKind::EqualEqual: {
+    case TokenKind::TOKEN_EQUAL_EQUAL: {
         return Builder.CreateICmpEQ(left, right);
     }
-    case TokenKind::BangEqual: {
+    case TokenKind::TOKEN_BANG_EQUAL: {
         return Builder.CreateICmpNE(left, right);
     }
-    case TokenKind::Greater: {
+    case TokenKind::TOKEN_GREATER: {
         return Builder.CreateICmpUGT(left, right);
     }
-    case TokenKind::GreaterEqual: {
+    case TokenKind::TOKEN_GREATER_EQUAL: {
         return Builder.CreateICmpUGE(left, right);
     }
-    case TokenKind::Smaller: {
+    case TokenKind::TOKEN_SMALLER: {
         return Builder.CreateICmpULT(left, right);
     }
-    case TokenKind::SmallerEqual: {
+    case TokenKind::TOKEN_SMALLER_EQUAL: {
         return Builder.CreateICmpULE(left, right);
     }
     default: {
@@ -2227,22 +2247,22 @@ auto amun::LLVMBackend::create_llvm_floats_comparison(TokenKind op, llvm::Value*
                                                       llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
-    case TokenKind::EqualEqual: {
+    case TokenKind::TOKEN_EQUAL_EQUAL: {
         return Builder.CreateFCmpOEQ(left, right);
     }
-    case TokenKind::BangEqual: {
+    case TokenKind::TOKEN_BANG_EQUAL: {
         return Builder.CreateFCmpONE(left, right);
     }
-    case TokenKind::Greater: {
+    case TokenKind::TOKEN_GREATER: {
         return Builder.CreateFCmpOGT(left, right);
     }
-    case TokenKind::GreaterEqual: {
+    case TokenKind::TOKEN_GREATER_EQUAL: {
         return Builder.CreateFCmpOGE(left, right);
     }
-    case TokenKind::Smaller: {
+    case TokenKind::TOKEN_SMALLER: {
         return Builder.CreateFCmpOLT(left, right);
     }
-    case TokenKind::SmallerEqual: {
+    case TokenKind::TOKEN_SMALLER_EQUAL: {
         return Builder.CreateFCmpOLE(left, right);
     }
     default: {
@@ -2267,22 +2287,22 @@ auto amun::LLVMBackend::create_llvm_strings_comparison(TokenKind op, llvm::Value
     auto function_call = Builder.CreateCall(function, {left, right});
 
     switch (op) {
-    case TokenKind::EqualEqual: {
+    case TokenKind::TOKEN_EQUAL_EQUAL: {
         return Builder.CreateICmpEQ(function_call, zero_int32_value);
     }
-    case TokenKind::BangEqual: {
+    case TokenKind::TOKEN_BANG_EQUAL: {
         return Builder.CreateICmpNE(function_call, zero_int32_value);
     }
-    case TokenKind::Greater: {
+    case TokenKind::TOKEN_GREATER: {
         return Builder.CreateICmpSGT(function_call, zero_int32_value);
     }
-    case TokenKind::GreaterEqual: {
+    case TokenKind::TOKEN_GREATER_EQUAL: {
         return Builder.CreateICmpSGE(function_call, zero_int32_value);
     }
-    case TokenKind::Smaller: {
+    case TokenKind::TOKEN_SMALLER: {
         return Builder.CreateICmpSLT(function_call, zero_int32_value);
     }
-    case TokenKind::SmallerEqual: {
+    case TokenKind::TOKEN_SMALLER_EQUAL: {
         return Builder.CreateICmpSLE(function_call, zero_int32_value);
     }
     default: {
@@ -2298,7 +2318,7 @@ auto amun::LLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> 
     auto constants_one = llvm_number_value("1", number_type->number_kind);
 
     std::any right = nullptr;
-    if (operand->get_ast_node_type() == AstNodeType::DotExpr) {
+    if (operand->get_ast_node_type() == AstNodeType::AST_DOT) {
         auto dot_expression = std::dynamic_pointer_cast<DotExpression>(operand);
         right = access_struct_member_pointer(dot_expression.get());
     }
@@ -2308,7 +2328,8 @@ auto amun::LLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> 
 
     if (right.type() == typeid(llvm::LoadInst*)) {
         auto current_value = std::any_cast<llvm::LoadInst*>(right);
-        auto new_value = create_llvm_integers_bianry(TokenKind::Plus, current_value, constants_one);
+        auto new_value =
+            create_llvm_integers_bianry(TokenKind::TOKEN_PLUS, current_value, constants_one);
         Builder.CreateStore(new_value, current_value->getPointerOperand());
         return is_prefix ? new_value : current_value;
     }
@@ -2316,7 +2337,8 @@ auto amun::LLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> 
     if (right.type() == typeid(llvm::AllocaInst*)) {
         auto alloca = std::any_cast<llvm::AllocaInst*>(right);
         auto current_value = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
-        auto new_value = create_llvm_integers_bianry(TokenKind::Plus, current_value, constants_one);
+        auto new_value =
+            create_llvm_integers_bianry(TokenKind::TOKEN_PLUS, current_value, constants_one);
         Builder.CreateStore(new_value, alloca);
         return is_prefix ? new_value : current_value;
     }
@@ -2324,7 +2346,8 @@ auto amun::LLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> 
     if (right.type() == typeid(llvm::GlobalVariable*)) {
         auto global_variable = std::any_cast<llvm::GlobalVariable*>(right);
         auto current_value = Builder.CreateLoad(global_variable->getValueType(), global_variable);
-        auto new_value = create_llvm_integers_bianry(TokenKind::Plus, current_value, constants_one);
+        auto new_value =
+            create_llvm_integers_bianry(TokenKind::TOKEN_PLUS, current_value, constants_one);
         Builder.CreateStore(new_value, global_variable);
         return is_prefix ? new_value : current_value;
     }
@@ -2333,7 +2356,8 @@ auto amun::LLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> 
         auto current_value_ptr = std::any_cast<llvm::Value*>(right);
         auto number_llvm_type = llvm_type_from_amun_type(number_type);
         auto current_value = Builder.CreateLoad(number_llvm_type, current_value_ptr);
-        auto new_value = create_llvm_integers_bianry(TokenKind::Plus, current_value, constants_one);
+        auto new_value =
+            create_llvm_integers_bianry(TokenKind::TOKEN_PLUS, current_value, constants_one);
         Builder.CreateStore(new_value, current_value_ptr);
         return is_prefix ? new_value : current_value;
     }
@@ -2348,7 +2372,7 @@ auto amun::LLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> 
     auto constants_one = llvm_number_value("1", number_type->number_kind);
 
     std::any right = nullptr;
-    if (operand->get_ast_node_type() == AstNodeType::DotExpr) {
+    if (operand->get_ast_node_type() == AstNodeType::AST_DOT) {
         auto dot_expression = std::dynamic_pointer_cast<DotExpression>(operand);
         right = access_struct_member_pointer(dot_expression.get());
     }
@@ -2359,7 +2383,7 @@ auto amun::LLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> 
     if (right.type() == typeid(llvm::LoadInst*)) {
         auto current_value = std::any_cast<llvm::LoadInst*>(right);
         auto new_value =
-            create_llvm_integers_bianry(TokenKind::Minus, current_value, constants_one);
+            create_llvm_integers_bianry(TokenKind::TOKEN_MINUS, current_value, constants_one);
         Builder.CreateStore(new_value, current_value->getPointerOperand());
         return is_prefix ? new_value : current_value;
     }
@@ -2368,7 +2392,7 @@ auto amun::LLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> 
         auto alloca = std::any_cast<llvm::AllocaInst*>(right);
         auto current_value = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
         auto new_value =
-            create_llvm_integers_bianry(TokenKind::Minus, current_value, constants_one);
+            create_llvm_integers_bianry(TokenKind::TOKEN_MINUS, current_value, constants_one);
         Builder.CreateStore(new_value, alloca);
         return is_prefix ? new_value : current_value;
     }
@@ -2377,7 +2401,7 @@ auto amun::LLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> 
         auto global_variable = std::any_cast<llvm::GlobalVariable*>(right);
         auto current_value = Builder.CreateLoad(global_variable->getValueType(), global_variable);
         auto new_value =
-            create_llvm_integers_bianry(TokenKind::Minus, current_value, constants_one);
+            create_llvm_integers_bianry(TokenKind::TOKEN_MINUS, current_value, constants_one);
         Builder.CreateStore(new_value, global_variable);
         return is_prefix ? new_value : current_value;
     }
@@ -2387,7 +2411,7 @@ auto amun::LLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> 
         auto number_llvm_type = llvm_type_from_amun_type(number_type);
         auto current_value = Builder.CreateLoad(number_llvm_type, current_value_ptr);
         auto new_value =
-            create_llvm_integers_bianry(TokenKind::Minus, current_value, constants_one);
+            create_llvm_integers_bianry(TokenKind::TOKEN_MINUS, current_value, constants_one);
         Builder.CreateStore(new_value, current_value_ptr);
         return is_prefix ? new_value : current_value;
     }
@@ -2459,6 +2483,13 @@ auto amun::LLVMBackend::create_llvm_struct_type(std::string name,
     structures_types_map[name] = struct_llvm_type;
 
     return struct_llvm_type;
+}
+
+auto amun::LLVMBackend::create_overloading_function_call(std::string& name, llvm::Value* lhs,
+                                                         llvm::Value* rhs) -> llvm::Value*
+{
+    auto function = lookup_function(name);
+    return Builder.CreateCall(function, {lhs, rhs});
 }
 
 auto amun::LLVMBackend::access_struct_member_pointer(DotExpression* expression) -> llvm::Value*
@@ -2646,13 +2677,13 @@ auto amun::LLVMBackend::resolve_constant_expression(std::shared_ptr<Expression> 
     }
 
     // If right value is index expression resolve it and return constant value
-    if (value->get_ast_node_type() == AstNodeType::IndexExpr) {
+    if (value->get_ast_node_type() == AstNodeType::AST_INDEX) {
         auto index_expression = std::dynamic_pointer_cast<IndexExpression>(value);
         return resolve_constant_index_expression(index_expression);
     }
 
     // If right value is if expression, resolve it to constant value
-    if (value->get_ast_node_type() == AstNodeType::IfExpr) {
+    if (value->get_ast_node_type() == AstNodeType::AST_IF_EXPRESSION) {
         auto if_expression = std::dynamic_pointer_cast<IfExpression>(value);
         return resolve_constant_if_expression(if_expression);
     }
@@ -2846,15 +2877,16 @@ auto amun::LLVMBackend::create_switch_case_branch(llvm::SwitchInst* switch_inst,
 
     // If switch body is block, check if the last node is return statement or not,
     // if it not block, check if it return statement or not
-    if (branch_body->get_ast_node_type() == AstNodeType::Block) {
+    if (branch_body->get_ast_node_type() == AstNodeType::AST_BLOCK) {
         auto block = std::dynamic_pointer_cast<BlockStatement>(branch_body);
         auto nodes = block->get_nodes();
         if (not nodes.empty()) {
-            body_has_return_statement = nodes.back()->get_ast_node_type() == AstNodeType::Return;
+            body_has_return_statement =
+                nodes.back()->get_ast_node_type() == AstNodeType::AST_RETURN;
         }
     }
     else {
-        body_has_return_statement = branch_body->get_ast_node_type() == AstNodeType::Return;
+        body_has_return_statement = branch_body->get_ast_node_type() == AstNodeType::AST_RETURN;
     }
 
     // Visit the case branch in sub scope

@@ -6,6 +6,7 @@
 #include "../include/amun_type.hpp"
 
 #include <any>
+#include <assert.h>
 #include <limits>
 #include <memory>
 #include <string>
@@ -247,6 +248,33 @@ auto amun::TypeChecker::visit(FunctionDeclaration* node) -> std::any
     return function_type;
 }
 
+auto amun::TypeChecker::visit(OperatorFunctionDeclaraion* node) -> std::any
+{
+    auto prototype = node->function->prototype;
+    auto paramters = prototype->parameters;
+
+    // Check that there is at least one parameter of struct, tuple, array, enum
+    bool has_non_primitive_parameter = false;
+    for (const auto& parameter : paramters) {
+        const auto& type = parameter->type;
+        if (!(amun::is_number_type(type) || amun::is_enum_element_type(type))) {
+            has_non_primitive_parameter = true;
+            break;
+        }
+    }
+
+    if (!has_non_primitive_parameter) {
+        auto position = node->op.position;
+        context->diagnostics.report_error(
+            position,
+            "overloaded operator must have at least one parameter of struct, tuple, array, enum");
+        throw "Stop";
+    }
+
+    // One of paramters must be non primitives
+    return node->function->accept(this);
+}
+
 auto amun::TypeChecker::visit(StructDeclaration* node) -> std::any
 {
     auto struct_type = node->get_struct_type();
@@ -415,12 +443,12 @@ auto amun::TypeChecker::visit(SwitchStatement* node) -> std::any
         // Check each value of this case
         for (auto& value : values) {
             auto value_node_type = value->get_ast_node_type();
-            if (value_node_type == AstNodeType::NumberExpr or
-                value_node_type == AstNodeType::EnumElementExpr) {
+            if (value_node_type == AstNodeType::AST_NUMBER or
+                value_node_type == AstNodeType::AST_ENUM_ELEMENT) {
 
                 // No need to check if it enum element,
                 // but if it number we need to assert that it integer
-                if (value_node_type == AstNodeType::NumberExpr) {
+                if (value_node_type == AstNodeType::AST_NUMBER) {
                     auto value_type = node_amun_type(value->accept(this));
                     if (!amun::is_number_type(value_type)) {
                         context->diagnostics.report_error(
@@ -689,181 +717,192 @@ auto amun::TypeChecker::visit(AssignExpression* node) -> std::any
 
 auto amun::TypeChecker::visit(BinaryExpression* node) -> std::any
 {
-    auto left_type = node_amun_type(node->get_left()->accept(this));
-    auto right_type = node_amun_type(node->get_right()->accept(this));
+    auto lhs = node_amun_type(node->get_left()->accept(this));
+    auto rhs = node_amun_type(node->get_right()->accept(this));
+    auto op = node->get_operator_token();
+    auto position = op.position;
 
-    // Assert that right and left values are both numbers
-    bool is_left_number = amun::is_number_type(left_type);
-    bool is_right_number = amun::is_number_type(right_type);
-    bool is_the_same = amun::is_types_equals(left_type, right_type);
-    if (!is_the_same || !is_left_number || !is_right_number) {
-
-        if (!is_left_number) {
-            context->diagnostics.report_error(node->get_operator_token().position,
-                                              "Expected binary left to be number but got " +
-                                                  amun::get_type_literal(left_type));
-            throw "Stop";
+    // Check that types are numbers and no need for operator overloading
+    if (amun::is_number_type(lhs) && amun::is_number_type(rhs)) {
+        if (amun::is_types_equals(lhs, rhs)) {
+            return lhs;
         }
 
-        if (!is_right_number) {
-            context->diagnostics.report_error(node->get_operator_token().position,
-                                              "Expected binary right to be number but got " +
-                                                  amun::get_type_literal(left_type));
-            throw "Stop";
-        }
-
-        if (not is_the_same) {
-            context->diagnostics.report_error(node->get_operator_token().position,
-                                              "Binary Expression type missmatch " +
-                                                  amun::get_type_literal(left_type) + " and " +
-                                                  amun::get_type_literal(right_type));
-        }
-
+        context->diagnostics.report_error(
+            position, "Expect numbers types to be the same size but got " +
+                          amun::get_type_literal(lhs) + " and " + amun::get_type_literal(rhs));
         throw "Stop";
     }
 
-    return left_type;
+    // Check if those types has an operator overloading function
+    auto function_name = mangle_operator_function(op.kind, lhs, rhs);
+    if (types_table.is_defined(function_name)) {
+        auto function = types_table.lookup(function_name);
+        auto type = node_amun_type(function);
+        assert(type->type_kind == amun::TypeKind::FUNCTION);
+        auto function_type = std::static_pointer_cast<amun::FunctionType>(type);
+        return function_type->return_type;
+    }
+
+    // Report error that no operator overloading function to handle those types
+    auto op_literal = overloading_operator_literal[op.kind];
+    auto lhs_str = amun::get_type_literal(lhs);
+    auto rhs_str = amun::get_type_literal(rhs);
+    auto prototype = "operator " + op_literal + "(" + lhs_str + ", " + rhs_str + ")";
+    context->diagnostics.report_error(position, "Can't found operator overloading " + prototype);
+    throw "Stop";
 }
 
 auto amun::TypeChecker::visit(ShiftExpression* node) -> std::any
 {
-    const auto& lhs = node->get_left();
-    const auto& rhs = node->get_right();
+    auto lhs = node_amun_type(node->get_left()->accept(this));
+    auto rhs = node_amun_type(node->get_right()->accept(this));
+    auto op = node->get_operator_token();
+    auto position = op.position;
 
-    auto left_type = node_amun_type(lhs->accept(this));
-    auto right_type = node_amun_type(rhs->accept(this));
+    // Check that types are numbers and no need for operator overloading
+    if (amun::is_number_type(lhs) && amun::is_number_type(rhs)) {
+        if (amun::is_types_equals(lhs, rhs)) {
+            auto right = node->right;
+            auto right_node_type = right->get_ast_node_type();
 
-    bool is_left_number = amun::is_integer_type(left_type);
-    bool is_right_number = amun::is_integer_type(right_type);
-    bool is_the_same = amun::is_types_equals(left_type, right_type);
+            // Check for compile time integer overflow if possiable
+            if (right_node_type == AstNodeType::AST_NUMBER) {
+                auto crhs = std::dynamic_pointer_cast<NumberExpression>(right);
+                auto str_value = crhs->get_value().literal;
+                auto num = str_to_int(str_value.c_str());
+                auto number_kind = std::static_pointer_cast<amun::NumberType>(lhs)->number_kind;
+                auto first_operand_width = number_kind_width[number_kind];
+                if (num >= first_operand_width) {
+                    context->diagnostics.report_error(node->get_operator_token().position,
+                                                      "Shift Expressions second operand can't be "
+                                                      "bigger than or equal first operand bit "
+                                                      "width (" +
+                                                          std::to_string(first_operand_width) +
+                                                          ")");
+                    throw "Stop";
+                }
+            }
 
-    // Check that they are both the integers and with the same size
-    if (not is_left_number || not is_right_number || not is_the_same) {
-        if (not is_left_number) {
-            context->diagnostics.report_error(
-                node->get_operator_token().position,
-                "Shift Expressions Expected left to be integers but got " +
-                    amun::get_type_literal(left_type));
+            // Check that scond operand is a positive number
+            if (right_node_type == AstNodeType::AST_PREFIX_UNARY) {
+                auto unary = std::dynamic_pointer_cast<PrefixUnaryExpression>(right);
+                if (unary->get_operator_token().kind == TokenKind::TOKEN_MINUS &&
+                    unary->get_right()->get_ast_node_type() == AstNodeType::AST_NUMBER) {
+                    context->diagnostics.report_error(
+                        node->get_operator_token().position,
+                        "Shift Expressions second operand can't be a negative number");
+                    throw "Stop";
+                }
+            }
+            return lhs;
         }
 
-        if (not is_right_number) {
-            context->diagnostics.report_error(
-                node->get_operator_token().position,
-                "Shift Expressions Expected right to be integers but got " +
-                    amun::get_type_literal(left_type));
-        }
-
-        if (not is_the_same) {
-            context->diagnostics.report_error(node->get_operator_token().position,
-                                              "Shift Expression type missmatch " +
-                                                  amun::get_type_literal(left_type) + " and " +
-                                                  amun::get_type_literal(right_type));
-        }
-
+        context->diagnostics.report_error(
+            position, "Expect numbers types to be the same size but got " +
+                          amun::get_type_literal(lhs) + " and " + amun::get_type_literal(rhs));
         throw "Stop";
     }
 
-    // Check for compile time integer overflow if possiable
-    if (rhs->get_ast_node_type() == AstNodeType::NumberExpr) {
-        auto crhs = std::dynamic_pointer_cast<NumberExpression>(rhs);
-        auto str_value = crhs->get_value().literal;
-        auto num = str_to_int(str_value.c_str());
-        auto number_kind = std::static_pointer_cast<amun::NumberType>(left_type)->number_kind;
-        auto first_operand_width = number_kind_width[number_kind];
-        if (num >= first_operand_width) {
-            context->diagnostics.report_error(
-                node->get_operator_token().position,
-                "Shift Expressions second operand can't be bigger than or equal first operand bit "
-                "width (" +
-                    std::to_string(first_operand_width) + ")");
-            throw "Stop";
-        }
+    // Check if those types has an operator overloading function
+    auto function_name = mangle_operator_function(op.kind, lhs, rhs);
+    if (types_table.is_defined(function_name)) {
+        auto function = types_table.lookup(function_name);
+        auto type = node_amun_type(function);
+        assert(type->type_kind == amun::TypeKind::FUNCTION);
+        auto function_type = std::static_pointer_cast<amun::FunctionType>(type);
+        return function_type->return_type;
     }
 
-    // Check that scond operand is a positive number
-    if (rhs->get_ast_node_type() == AstNodeType::PrefixUnaryExpr) {
-        auto unary = std::dynamic_pointer_cast<PrefixUnaryExpression>(rhs);
-        if (unary->get_operator_token().kind == TokenKind::Minus &&
-            unary->get_right()->get_ast_node_type() == AstNodeType::NumberExpr) {
-            context->diagnostics.report_error(
-                node->get_operator_token().position,
-                "Shift Expressions second operand can't be a negative number");
-            throw "Stop";
-        }
-    }
-
-    return node_amun_type(node->get_type_node());
+    // Report error that no operator overloading function to handle those types
+    auto op_literal = overloading_operator_literal[op.kind];
+    auto lhs_str = amun::get_type_literal(lhs);
+    auto rhs_str = amun::get_type_literal(rhs);
+    auto prototype = "operator " + op_literal + "(" + lhs_str + ", " + rhs_str + ")";
+    context->diagnostics.report_error(position, "Can't found operator overloading " + prototype);
+    throw "Stop";
 }
 
 auto amun::TypeChecker::visit(ComparisonExpression* node) -> std::any
 {
-    const auto left_type = node_amun_type(node->get_left()->accept(this));
-    const auto right_type = node_amun_type(node->get_right()->accept(this));
-    const auto are_the_same = amun::is_types_equals(left_type, right_type);
+    auto lhs = node_amun_type(node->get_left()->accept(this));
+    auto rhs = node_amun_type(node->get_right()->accept(this));
+    auto are_types_equals = amun::is_types_equals(lhs, rhs);
+    auto op = node->get_operator_token();
+    auto position = op.position;
 
     // Numbers comparasions
-    if (amun::is_number_type(left_type) and amun::is_number_type(right_type)) {
-        if (are_the_same) {
-            return node_amun_type(node->get_type_node());
+    if (amun::is_number_type(lhs) && amun::is_number_type(rhs)) {
+        if (are_types_equals) {
+            return amun::i1_type;
         }
 
         context->diagnostics.report_error(
-            node->get_operator_token().position,
-            "You can't compare numbers with different size or types " +
-                amun::get_type_literal(left_type) + " and " + amun::get_type_literal(right_type));
+            position, "Expect numbers types to be the same size but got " +
+                          amun::get_type_literal(lhs) + " and " + amun::get_type_literal(rhs));
         throw "Stop";
     }
 
     // Enumerations elements comparasions
-    if (amun::is_enum_element_type(left_type) and amun::is_enum_element_type(right_type)) {
-        if (are_the_same) {
-            return node_amun_type(node->get_type_node());
+    if (amun::is_enum_element_type(lhs) and amun::is_enum_element_type(rhs)) {
+        if (are_types_equals) {
+            return amun::i1_type;
         }
 
-        context->diagnostics.report_error(node->get_operator_token().position,
-                                          "You can't compare elements from different enums " +
-                                              amun::get_type_literal(left_type) + " and " +
-                                              amun::get_type_literal(right_type));
+        context->diagnostics.report_error(
+            position, "You can't compare elements from different enums " +
+                          amun::get_type_literal(lhs) + " and " + amun::get_type_literal(rhs));
         throw "Stop";
     }
 
     // Pointers comparasions
-    if (amun::is_pointer_type(left_type) and amun::is_pointer_type(right_type)) {
-        if (are_the_same) {
-            return node_amun_type(node->get_type_node());
+    if (amun::is_pointer_type(lhs) and amun::is_pointer_type(rhs)) {
+        if (are_types_equals) {
+            return amun::i1_type;
         }
 
         context->diagnostics.report_error(node->get_operator_token().position,
                                           "You can't compare pointers to different types " +
-                                              amun::get_type_literal(left_type) + " and " +
-                                              amun::get_type_literal(right_type));
+                                              amun::get_type_literal(lhs) + " and " +
+                                              amun::get_type_literal(rhs));
         throw "Stop";
     }
 
     // Pointer vs null comparaisons and set null pointer base type
-    if (amun::is_pointer_type(left_type) and amun::is_null_type(right_type)) {
+    if (amun::is_pointer_type(lhs) and amun::is_null_type(rhs)) {
         auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->get_right());
-        null_expr->null_base_type = left_type;
-        return node_amun_type(node->get_type_node());
+        null_expr->null_base_type = lhs;
+        return amun::i1_type;
     }
 
     // Null vs Pointer comparaisons and set null pointer base type
-    if (amun::is_null_type(left_type) and amun::is_pointer_type(right_type)) {
+    if (amun::is_null_type(lhs) and amun::is_pointer_type(rhs)) {
         auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->get_left());
-        null_expr->null_base_type = right_type;
-        return node_amun_type(node->get_type_node());
+        null_expr->null_base_type = rhs;
+        return amun::i1_type;
     }
 
     // Null vs Null comparaisons, no need to set pointer base, use the default base
-    if (amun::is_null_type(left_type) and amun::is_null_type(right_type)) {
-        return node_amun_type(node->get_type_node());
+    if (amun::is_null_type(lhs) and amun::is_null_type(rhs)) {
+        return amun::i1_type;
     }
 
-    // Comparing different types together is invalid
-    context->diagnostics.report_error(node->get_operator_token().position,
-                                      "Can't compare thoese types together " +
-                                          amun::get_type_literal(left_type) + " and " +
-                                          amun::get_type_literal(right_type));
+    // Check if those types has an operator overloading function
+    auto function_name = mangle_operator_function(op.kind, lhs, rhs);
+    if (types_table.is_defined(function_name)) {
+        auto function = types_table.lookup(function_name);
+        auto type = node_amun_type(function);
+        assert(type->type_kind == amun::TypeKind::FUNCTION);
+        auto function_type = std::static_pointer_cast<amun::FunctionType>(type);
+        return function_type->return_type;
+    }
+
+    // Report error that no operator overloading function to handle those types
+    auto op_literal = overloading_operator_literal[op.kind];
+    auto lhs_str = amun::get_type_literal(lhs);
+    auto rhs_str = amun::get_type_literal(rhs);
+    auto prototype = "operator " + op_literal + "(" + lhs_str + ", " + rhs_str + ")";
+    context->diagnostics.report_error(position, "Can't found operator overloading " + prototype);
     throw "Stop";
 }
 
@@ -871,25 +910,31 @@ auto amun::TypeChecker::visit(LogicalExpression* node) -> std::any
 {
     auto lhs = node_amun_type(node->get_left()->accept(this));
     auto rhs = node_amun_type(node->get_right()->accept(this));
-    auto node_position = node->get_operator_token().position;
 
-    bool is_lhs_bool = amun::is_integer1_type(lhs);
-    bool is_rhs_bool = amun::is_integer1_type(rhs);
-    if (!is_lhs_bool || !is_rhs_bool) {
-        if (!is_lhs_bool) {
-            context->diagnostics.report_error(node_position, "expected `bool`, found " +
-                                                                 amun::get_type_literal(lhs));
-        }
-
-        if (!is_rhs_bool) {
-            context->diagnostics.report_error(node_position, "expected `bool`, found " +
-                                                                 amun::get_type_literal(rhs));
-        }
-
-        throw "Stop";
+    if (amun::is_integer1_type(lhs) && amun::is_integer1_type(rhs)) {
+        return lhs;
     }
 
-    return node_amun_type(node->get_type_node());
+    auto op = node->get_operator_token();
+
+    // Check if those types has an operator overloading function
+    auto function_name = mangle_operator_function(op.kind, lhs, rhs);
+    if (types_table.is_defined(function_name)) {
+        auto function = types_table.lookup(function_name);
+        auto type = node_amun_type(function);
+        assert(type->type_kind == amun::TypeKind::FUNCTION);
+        auto function_type = std::static_pointer_cast<amun::FunctionType>(type);
+        return function_type->return_type;
+    }
+
+    // Report error that no operator overloading function to handle those types
+    auto position = op.position;
+    auto op_literal = overloading_operator_literal[op.kind];
+    auto lhs_str = amun::get_type_literal(lhs);
+    auto rhs_str = amun::get_type_literal(rhs);
+    auto prototype = "operator " + op_literal + "(" + lhs_str + ", " + rhs_str + ")";
+    context->diagnostics.report_error(position, "Can't found operator overloading " + prototype);
+    throw "Stop";
 }
 
 auto amun::TypeChecker::visit(PrefixUnaryExpression* node) -> std::any
@@ -897,7 +942,7 @@ auto amun::TypeChecker::visit(PrefixUnaryExpression* node) -> std::any
     auto operand_type = node_amun_type(node->get_right()->accept(this));
     auto unary_operator = node->get_operator_token().kind;
 
-    if (unary_operator == TokenKind::Minus) {
+    if (unary_operator == TokenKind::TOKEN_MINUS) {
         if (amun::is_number_type(operand_type)) {
             node->set_type_node(operand_type);
             return operand_type;
@@ -909,7 +954,7 @@ auto amun::TypeChecker::visit(PrefixUnaryExpression* node) -> std::any
         throw "Stop";
     }
 
-    if (unary_operator == TokenKind::Bang) {
+    if (unary_operator == TokenKind::TOKEN_BANG) {
         if (amun::is_number_type(operand_type)) {
             node->set_type_node(operand_type);
             return operand_type;
@@ -921,7 +966,7 @@ auto amun::TypeChecker::visit(PrefixUnaryExpression* node) -> std::any
         throw "Stop";
     }
 
-    if (unary_operator == TokenKind::Not) {
+    if (unary_operator == TokenKind::TOKEN_NOT) {
         if (amun::is_number_type(operand_type)) {
             node->set_type_node(operand_type);
             return operand_type;
@@ -933,7 +978,7 @@ auto amun::TypeChecker::visit(PrefixUnaryExpression* node) -> std::any
         throw "Stop";
     }
 
-    if (unary_operator == TokenKind::Star) {
+    if (unary_operator == TokenKind::TOKEN_STAR) {
         if (operand_type->type_kind == amun::TypeKind::POINTER) {
             auto pointer_type = std::static_pointer_cast<amun::PointerType>(operand_type);
             auto type = pointer_type->base_type;
@@ -948,7 +993,7 @@ auto amun::TypeChecker::visit(PrefixUnaryExpression* node) -> std::any
         throw "Stop";
     }
 
-    if (unary_operator == TokenKind::And) {
+    if (unary_operator == TokenKind::TOKEN_AND) {
         auto pointer_type = std::make_shared<amun::PointerType>(operand_type);
         if (amun::is_function_pointer_type(pointer_type)) {
             auto function_type =
@@ -963,7 +1008,8 @@ auto amun::TypeChecker::visit(PrefixUnaryExpression* node) -> std::any
         return pointer_type;
     }
 
-    if (unary_operator == TokenKind::PlusPlus || unary_operator == TokenKind::MinusMinus) {
+    if (unary_operator == TokenKind::TOKEN_PLUS_PLUS ||
+        unary_operator == TokenKind::TOKEN_MINUS_MINUS) {
         if (operand_type->type_kind != amun::TypeKind::NUMBER) {
             context->diagnostics.report_error(
                 node->get_operator_token().position,
@@ -986,7 +1032,8 @@ auto amun::TypeChecker::visit(PostfixUnaryExpression* node) -> std::any
     auto operand_type = node_amun_type(node->get_right()->accept(this));
     auto unary_operator = node->get_operator_token().kind;
 
-    if (unary_operator == TokenKind::PlusPlus or unary_operator == TokenKind::MinusMinus) {
+    if (unary_operator == TokenKind::TOKEN_PLUS_PLUS or
+        unary_operator == TokenKind::TOKEN_MINUS_MINUS) {
         if (operand_type->type_kind != amun::TypeKind::NUMBER) {
             context->diagnostics.report_error(
                 node->get_operator_token().position,
@@ -1010,7 +1057,7 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
     auto callee_ast_node_type = node->get_callee()->get_ast_node_type();
 
     // Call function by name for example function();
-    if (callee_ast_node_type == AstNodeType::LiteralExpr) {
+    if (callee_ast_node_type == AstNodeType::AST_LITERAL) {
         auto literal = std::dynamic_pointer_cast<LiteralExpression>(callee);
         auto name = literal->get_name().literal;
         if (types_table.is_defined(name)) {
@@ -1121,7 +1168,7 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
     }
 
     // Call function pointer returned from call expression for example function()();
-    if (callee_ast_node_type == AstNodeType::CallExpr) {
+    if (callee_ast_node_type == AstNodeType::AST_CALL) {
         auto call = std::dynamic_pointer_cast<CallExpression>(callee);
         auto call_result = node_amun_type(call->accept(this));
         auto function_pointer_type = std::static_pointer_cast<amun::PointerType>(call_result);
@@ -1137,7 +1184,7 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
     }
 
     // Call lambda expression for example { () void -> return; } ()
-    if (callee_ast_node_type == AstNodeType::LambdaExpr) {
+    if (callee_ast_node_type == AstNodeType::AST_LAMBDA) {
         auto lambda = std::dynamic_pointer_cast<LambdaExpression>(node->get_callee());
         auto lambda_function_type = node_amun_type(lambda->accept(this));
         auto function_ptr_type = std::static_pointer_cast<amun::PointerType>(lambda_function_type);
@@ -1160,7 +1207,7 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
     }
 
     // Call struct field with function pointer for example type struct.field()
-    if (callee_ast_node_type == AstNodeType::DotExpr) {
+    if (callee_ast_node_type == AstNodeType::AST_DOT) {
         auto dot_expression = std::dynamic_pointer_cast<DotExpression>(node->get_callee());
         auto dot_function_type = node_amun_type(dot_expression->accept(this));
         auto function_ptr_type = std::static_pointer_cast<amun::PointerType>(dot_function_type);
@@ -1260,7 +1307,7 @@ auto amun::TypeChecker::visit(DotExpression* node) -> std::any
     if (callee_type_kind == amun::TypeKind::STRUCT) {
 
         // Assert that use access struct member only using field name
-        if (node->field_name.kind != TokenKind::Symbol) {
+        if (node->field_name.kind != TokenKind::TOKEN_IDENTIFIER) {
             context->diagnostics.report_error(
                 node_position, "Can't access struct member using index, only tuples can do this");
             throw "Stop";
@@ -1285,7 +1332,7 @@ auto amun::TypeChecker::visit(DotExpression* node) -> std::any
 
     if (callee_type_kind == amun::TypeKind::TUPLE) {
         // Assert that use access tuple using integer position only
-        if (node->field_name.kind != TokenKind::Integer) {
+        if (node->field_name.kind != TokenKind::TOKEN_INT) {
             context->diagnostics.report_error(node_position,
                                               "Tuple must be accessed using position only");
             throw "Stop";
@@ -1329,7 +1376,7 @@ auto amun::TypeChecker::visit(DotExpression* node) -> std::any
             auto literal = attribute_token.literal;
 
             if (literal == "count") {
-                node->is_constants_ = node->callee->get_ast_node_type() == AstNodeType::StringExpr;
+                node->is_constants_ = node->callee->get_ast_node_type() == AstNodeType::AST_STRING;
                 node->set_type_node(amun::i64_type);
                 return amun::i64_type;
             }
@@ -1430,7 +1477,7 @@ auto amun::TypeChecker::visit(IndexExpression* node) -> std::any
     }
 
     // Check if index is number expression to perform compile time checks
-    bool has_constant_index = index_expression->get_ast_node_type() == AstNodeType::NumberExpr;
+    bool has_constant_index = index_expression->get_ast_node_type() == AstNodeType::AST_NUMBER;
     size_t constant_index = -1;
 
     if (has_constant_index) {
@@ -1905,7 +1952,7 @@ auto amun::TypeChecker::resolve_generic_type(Shared<amun::Type> type,
 auto amun::TypeChecker::check_missing_return_statement(Shared<Statement> node) -> bool
 {
     // This case for single node function declaration
-    if (node->get_ast_node_type() == AstNodeType::Return) {
+    if (node->get_ast_node_type() == AstNodeType::AST_RETURN) {
         return true;
     }
 
@@ -1918,7 +1965,7 @@ auto amun::TypeChecker::check_missing_return_statement(Shared<Statement> node) -
     }
 
     // Check that last node is return statement
-    if (statements.back()->get_ast_node_type() == AstNodeType::Return) {
+    if (statements.back()->get_ast_node_type() == AstNodeType::AST_RETURN) {
         return true;
     }
 
@@ -1927,11 +1974,11 @@ auto amun::TypeChecker::check_missing_return_statement(Shared<Statement> node) -
         const auto& statement = *it;
 
         auto node_kind = statement->get_ast_node_type();
-        if (node_kind == AstNodeType::Block && check_missing_return_statement(statement)) {
+        if (node_kind == AstNodeType::AST_BLOCK && check_missing_return_statement(statement)) {
             return true;
         }
 
-        else if (node_kind == AstNodeType::If) {
+        else if (node_kind == AstNodeType::AST_IF_STATEMENT) {
             bool is_covered = false;
             auto if_statement = std::dynamic_pointer_cast<IfStatement>(statement);
             for (const auto& branch : if_statement->get_conditional_blocks()) {
@@ -1946,7 +1993,7 @@ auto amun::TypeChecker::check_missing_return_statement(Shared<Statement> node) -
             }
         }
 
-        else if (node_kind == AstNodeType::Switch) {
+        else if (node_kind == AstNodeType::AST_SWITCH_STATEMENT) {
             auto switch_statement = std::dynamic_pointer_cast<SwitchStatement>(statement);
             auto default_body = switch_statement->get_default_case();
             if (default_body == nullptr) {
@@ -1980,13 +2027,13 @@ auto amun::TypeChecker::check_valid_assignment_right_side(Shared<Expression> nod
     const auto left_node_type = node->get_ast_node_type();
 
     // Literal expression is a valid right hand side
-    if (left_node_type == AstNodeType::LiteralExpr) {
+    if (left_node_type == AstNodeType::AST_LITERAL) {
         return;
     }
 
     // Index expression is a valid right hand side but
     // Make sure to report error if use want to modify string literal using index expression
-    if (left_node_type == AstNodeType::IndexExpr) {
+    if (left_node_type == AstNodeType::AST_INDEX) {
         auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node);
         auto value_type = index_expression->get_value()->get_type_node();
         if (amun::get_type_literal(value_type) == "*Int8") {
@@ -2001,9 +2048,9 @@ auto amun::TypeChecker::check_valid_assignment_right_side(Shared<Expression> nod
     }
 
     // Prefix unary expression is a valid right hand side but only if token is *
-    if (left_node_type == AstNodeType::PrefixUnaryExpr) {
+    if (left_node_type == AstNodeType::AST_PREFIX_UNARY) {
         auto prefix_unary = std::static_pointer_cast<PrefixUnaryExpression>(node);
-        if (prefix_unary->operator_token.kind == TokenKind::Star) {
+        if (prefix_unary->operator_token.kind == TokenKind::TOKEN_STAR) {
             return;
         }
 
@@ -2012,42 +2059,42 @@ auto amun::TypeChecker::check_valid_assignment_right_side(Shared<Expression> nod
     }
 
     // Character literal can't be used as right hand side for assignment expression
-    if (left_node_type == AstNodeType::CharExpr) {
+    if (left_node_type == AstNodeType::AST_CHARACTER) {
         context->diagnostics.report_error(
             position, "char literal is invalid right hand side for assignment expression");
         throw "Stop";
     }
 
     // Boolean value can't be used as right hand side for assignment expression
-    if (left_node_type == AstNodeType::BoolExpr) {
+    if (left_node_type == AstNodeType::AST_BOOL) {
         context->diagnostics.report_error(
             position, "boolean value is invalid right hand side for assignment expression");
         throw "Stop";
     }
 
     // Number value can't be used as right hand side for assignment expression
-    if (left_node_type == AstNodeType::NumberExpr) {
+    if (left_node_type == AstNodeType::AST_NUMBER) {
         context->diagnostics.report_error(
             position, "number value is invalid right hand side for assignment expression");
         throw "Stop";
     }
 
     // String value can't be used as right hand side for assignment expression
-    if (left_node_type == AstNodeType::StringExpr) {
+    if (left_node_type == AstNodeType::AST_STRING) {
         context->diagnostics.report_error(
             position, "string literal is invalid right hand side for assignment expression");
         throw "Stop";
     }
 
     // Enum element can't be used as right hand side for assignment expression
-    if (left_node_type == AstNodeType::EnumElementExpr) {
+    if (left_node_type == AstNodeType::AST_ENUM_ELEMENT) {
         context->diagnostics.report_error(
             position, "Enum element is invalid right hand side for assignment expression");
         throw "Stop";
     }
 
     // Null literal can't be used as right hand side for assignment expression
-    if (left_node_type == AstNodeType::NullExpr) {
+    if (left_node_type == AstNodeType::AST_NULL) {
         context->diagnostics.report_error(
             position, "Null literal is invalid right hand side for assignment expression");
         throw "Stop";

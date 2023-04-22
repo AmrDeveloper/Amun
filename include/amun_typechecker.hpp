@@ -31,6 +31,8 @@ class TypeChecker : public TreeVisitor {
 
     auto visit(FunctionPrototype* node) -> std::any override;
 
+    auto visit(OperatorFunctionDeclaraion* node) -> std::any override;
+
     auto visit(IntrinsicPrototype* node) -> std::any override;
 
     auto visit(FunctionDeclaration* node) -> std::any override;

@@ -10,7 +10,7 @@ auto amun::Tokenizer::scan_all_tokens() -> std::vector<Token>
     while (is_source_available()) {
         tokens.push_back(scan_next_token());
     }
-    tokens.push_back(build_token(TokenKind::EndOfFile));
+    tokens.push_back(build_token(TokenKind::TOKEN_END_OF_FILE));
     return tokens;
 }
 
@@ -31,74 +31,78 @@ auto amun::Tokenizer::scan_next_token() -> Token
 
     switch (c) {
     // One character token
-    case '(': return build_token(TokenKind::OpenParen);
-    case ')': return build_token(TokenKind::CloseParen);
-    case '[': return build_token(TokenKind::OpenBracket);
-    case ']': return build_token(TokenKind::CloseBracket);
-    case '{': return build_token(TokenKind::OpenBrace);
-    case '}': return build_token(TokenKind::CloseBrace);
-    case ',': return build_token(TokenKind::Comma);
-    case ';': return build_token(TokenKind::Semicolon);
-    case '~': return build_token(TokenKind::Not);
+    case '(': return build_token(TokenKind::TOKEN_OPEN_PAREN);
+    case ')': return build_token(TokenKind::TOKEN_CLOSE_PAREN);
+    case '[': return build_token(TokenKind::TOKEN_OPEN_BRACKET);
+    case ']': return build_token(TokenKind::TOKEN_CLOSE_BRACKET);
+    case '{': return build_token(TokenKind::TOKEN_OPEN_BRACE);
+    case '}': return build_token(TokenKind::TOKEN_CLOSE_BRACE);
+    case ',': return build_token(TokenKind::TOKEN_COMMA);
+    case ';': return build_token(TokenKind::TOKEN_SEMICOLON);
+    case '~': return build_token(TokenKind::TOKEN_NOT);
 
     // One or Two character token
-    case '.': return build_token(match('.') ? TokenKind::DotDot : TokenKind::Dot);
-    case ':': return build_token(match(':') ? TokenKind::ColonColon : TokenKind::Colon);
-    case '|': return build_token(match('|') ? TokenKind::LogicalOr : TokenKind::Or);
-    case '&': return build_token(match('&') ? TokenKind::LogicalAnd : TokenKind::And);
-    case '=': return build_token(match('=') ? TokenKind::EqualEqual : TokenKind::Equal);
-    case '!': return build_token(match('=') ? TokenKind::BangEqual : TokenKind::Bang);
-    case '*': return build_token(match('=') ? TokenKind::StarEqual : TokenKind::Star);
-    case '/': return build_token(match('=') ? TokenKind::SlashEqual : TokenKind::Slash);
-    case '%': return build_token(match('=') ? TokenKind::PercentEqual : TokenKind::Percent);
-    case '#': return build_token(TokenKind::Hash);
+    case '.': return build_token(match('.') ? TokenKind::TOKEN_DOT_DOT : TokenKind::TOKEN_DOT);
+    case ':':
+        return build_token(match(':') ? TokenKind::TOKEN_COLON_COLON : TokenKind::TOKEN_COLON);
+    case '|': return build_token(match('|') ? TokenKind::TOKEN_OR_OR : TokenKind::TOKEN_OR);
+    case '&': return build_token(match('&') ? TokenKind::TOKEN_AND_AND : TokenKind::TOKEN_AND);
+    case '=':
+        return build_token(match('=') ? TokenKind::TOKEN_EQUAL_EQUAL : TokenKind::TOKEN_EQUAL);
+    case '!': return build_token(match('=') ? TokenKind::TOKEN_BANG_EQUAL : TokenKind::TOKEN_BANG);
+    case '*': return build_token(match('=') ? TokenKind::TOKEN_STAR_EQUAL : TokenKind::TOKEN_STAR);
+    case '/':
+        return build_token(match('=') ? TokenKind::TOKEN_SLASH_EQUAL : TokenKind::TOKEN_SLASH);
+    case '%':
+        return build_token(match('=') ? TokenKind::TOKEN_PARCENT_EQUAL : TokenKind::TOKEN_PERCENT);
+    case '#': return build_token(TokenKind::TOKEN_HASH);
 
     case '+': {
         if (match('=')) {
-            return build_token(TokenKind::PlusEqual);
+            return build_token(TokenKind::TOKEN_PLUS_EQUAL);
         }
 
         if (match('+')) {
-            return build_token(TokenKind::PlusPlus);
+            return build_token(TokenKind::TOKEN_PLUS_PLUS);
         }
 
-        return build_token(TokenKind::Plus);
+        return build_token(TokenKind::TOKEN_PLUS);
     }
 
     case '-': {
         if (match('=')) {
-            return build_token(TokenKind::MinusEqual);
+            return build_token(TokenKind::TOKEN_MINUS_EQUAL);
         }
 
         if (match('-')) {
-            return build_token(TokenKind::MinusMinus);
+            return build_token(TokenKind::TOKEN_MINUS_MINUS);
         }
 
         if (match('>')) {
-            return build_token(TokenKind::RightArrow);
+            return build_token(TokenKind::TOKEN_RIGHT_ARROW);
         }
 
-        return build_token(TokenKind::Minus);
+        return build_token(TokenKind::TOKEN_MINUS);
     }
 
     case '>': {
         if (match('=')) {
-            return build_token(TokenKind::GreaterEqual);
+            return build_token(TokenKind::TOKEN_GREATER_EQUAL);
         }
 
-        return build_token(TokenKind::Greater);
+        return build_token(TokenKind::TOKEN_GREATER);
     }
 
     case '<': {
         if (match('=')) {
-            return build_token(TokenKind::SmallerEqual);
+            return build_token(TokenKind::TOKEN_SMALLER_EQUAL);
         }
 
         if (match('<')) {
-            return build_token(TokenKind::LeftShift);
+            return build_token(TokenKind::TOKEN_LEFT_SHIFT);
         }
 
-        return build_token(TokenKind::Smaller);
+        return build_token(TokenKind::TOKEN_SMALLER);
     }
 
     case 'A':
@@ -181,8 +185,8 @@ auto amun::Tokenizer::scan_next_token() -> Token
     case '8':
     case '9': return consume_number();
 
-    case '\0': return build_token(TokenKind::EndOfFile);
-    default: return build_token(TokenKind::Invalid, "unexpected character");
+    case '\0': return build_token(TokenKind::TOKEN_END_OF_FILE);
+    default: return build_token(TokenKind::TOKEN_INVALID, "unexpected character");
     }
 }
 
@@ -193,19 +197,19 @@ auto amun::Tokenizer::consume_symbol() -> Token
     }
     size_t len = current_position - start_position + 1;
     auto literal = source_code.substr(start_position - 1, len);
-    auto kind = resolve_keyword_kind(literal.c_str());
+    auto kind = resolve_keyword_token_kind(literal.c_str());
     return build_token(kind, literal);
 }
 
 auto amun::Tokenizer::consume_number() -> Token
 {
-    auto kind = TokenKind::Integer;
+    auto kind = TokenKind::TOKEN_INT;
     while (is_digit(peek()) or is_underscore(peek())) {
         advance();
     }
 
     if (peek() == '.' && is_digit(peek_next())) {
-        kind = TokenKind::Float;
+        kind = TokenKind::TOKEN_FLOAT;
         advance();
         while (is_digit(peek()) or is_underscore(peek())) {
             advance();
@@ -217,57 +221,57 @@ auto amun::Tokenizer::consume_number() -> Token
     // Signed Integers types
     if (match('i')) {
         if (match('1')) {
-            kind = match('6') ? Integer16Type : Integer1Type;
+            kind = match('6') ? TokenKind::TOKEN_INT16 : TokenKind::TOKEN_INT1;
         }
         else if (match('8')) {
-            kind = Integer8Type;
+            kind = TokenKind::TOKEN_INT8;
         }
         else if (match('3') && match('2')) {
-            kind = Integer32Type;
+            kind = TokenKind::TOKEN_INT32;
         }
         else if (match('6') && match('4')) {
-            kind = Integer64Type;
+            kind = TokenKind::TOKEN_INT64;
         }
         else {
-            return build_token(TokenKind::Invalid,
+            return build_token(TokenKind::TOKEN_INVALID,
                                "invalid width for singed integer literal, expect 8, 16, 32 or 64");
         }
     }
     // Un Signed Integers types
     if (match('u')) {
         if (match('1') && match('6')) {
-            kind = UInteger16Type;
+            kind = TokenKind::TOKEN_UINT16;
         }
         else if (match('8')) {
-            kind = UInteger8Type;
+            kind = TokenKind::TOKEN_UINT8;
         }
         else if (match('3') && match('2')) {
-            kind = UInteger32Type;
+            kind = TokenKind::TOKEN_UINT32;
         }
         else if (match('6') && match('4')) {
-            kind = UInteger64Type;
+            kind = TokenKind::TOKEN_UINT64;
         }
         else {
             return build_token(
-                TokenKind::Invalid,
+                TokenKind::TOKEN_INVALID,
                 "invalid width for unsinged integer literal, expect 8, 16, 32 or 64");
         }
     }
     // Floating Pointers types
     else if (match('f')) {
         if (match('3') && match('2')) {
-            kind = Float32Type;
+            kind = TOKEN_FLOAT32;
         }
         else if (match('6') && match('4')) {
-            kind = Float64Type;
+            kind = TOKEN_FLOAT64;
         }
         else {
-            return build_token(TokenKind::Invalid,
+            return build_token(TokenKind::TOKEN_INVALID,
                                "invalid width for floating point literal, expect 32 or 64");
         }
     }
     else if (is_alpha(peek())) {
-        return build_token(TokenKind::Invalid,
+        return build_token(TokenKind::TOKEN_INVALID,
                            "invalid suffix for number literal, expect i, u or f");
     }
 
@@ -289,10 +293,10 @@ auto amun::Tokenizer::consume_hex_number() -> Token
     auto decimal_value = hex_to_decimal(literal);
 
     if (decimal_value == -1) {
-        return build_token(TokenKind::Invalid, "hex integer literal is too large");
+        return build_token(TokenKind::TOKEN_INVALID, "hex integer literal is too large");
     }
 
-    return build_token(TokenKind::Integer, std::to_string(decimal_value));
+    return build_token(TokenKind::TOKEN_INT, std::to_string(decimal_value));
 }
 
 auto amun::Tokenizer::consume_binary_number() -> Token
@@ -307,10 +311,10 @@ auto amun::Tokenizer::consume_binary_number() -> Token
     auto decimal_value = binary_to_decimal(literal);
 
     if (decimal_value == -1) {
-        return build_token(TokenKind::Invalid, "binary integer literal is too large");
+        return build_token(TokenKind::TOKEN_INVALID, "binary integer literal is too large");
     }
 
-    return build_token(TokenKind::Integer, std::to_string(decimal_value));
+    return build_token(TokenKind::TOKEN_INT, std::to_string(decimal_value));
 }
 
 auto amun::Tokenizer::consume_string() -> Token
@@ -319,34 +323,34 @@ auto amun::Tokenizer::consume_string() -> Token
     while (is_source_available() && peek() != '"') {
         char c = consume_one_character();
         if (c == -1) {
-            return build_token(TokenKind::Invalid, "invalid character");
+            return build_token(TokenKind::TOKEN_INVALID, "invalid character");
         }
 
         stream << c;
     }
 
     if (not is_source_available()) {
-        return build_token(TokenKind::Invalid, "unterminated double quote string");
+        return build_token(TokenKind::TOKEN_INVALID, "unterminated double quote string");
     }
 
     advance();
-    return build_token(TokenKind::String, stream.str());
+    return build_token(TokenKind::TOKEN_STRING, stream.str());
 }
 
 auto amun::Tokenizer::consume_character() -> Token
 {
     char c = consume_one_character();
     if (c == -1) {
-        return build_token(TokenKind::Invalid, "invalid character");
+        return build_token(TokenKind::TOKEN_INVALID, "invalid character");
     }
 
     if (peek() != '\'') {
-        return build_token(TokenKind::Invalid, "unterminated single quote character");
+        return build_token(TokenKind::TOKEN_INVALID, "unterminated single quote character");
     }
 
     advance();
 
-    return build_token(TokenKind::Character, std::string(1, c));
+    return build_token(TokenKind::TOKEN_CHARACTER, std::string(1, c));
 }
 
 auto amun::Tokenizer::consume_one_character() -> char
@@ -574,6 +578,135 @@ auto amun::Tokenizer::binary_to_decimal(const std::string& binary) -> int64_t
     }
     catch (...) {
         return -1;
+    }
+}
+
+auto amun::Tokenizer::resolve_keyword_token_kind(const char* keyword) -> TokenKind
+{
+    switch (strlen(keyword)) {
+    case 2: {
+        if (str2Equals("if", keyword)) {
+            return TokenKind::TOKEN_IF;
+        }
+        return TokenKind::TOKEN_IDENTIFIER;
+    }
+    case 3: {
+        if (str3Equals("fun", keyword)) {
+            return TokenKind::TOKEN_FUN;
+        }
+        if (str3Equals("var", keyword)) {
+            return TokenKind::TOKEN_VAR;
+        }
+        if (str3Equals("for", keyword)) {
+            return TokenKind::TOKEN_FOR;
+        }
+        return TokenKind::TOKEN_IDENTIFIER;
+    }
+    case 4: {
+        if (str4Equals("load", keyword)) {
+            return TokenKind::TOKEN_LOAD;
+        }
+        if (str4Equals("null", keyword)) {
+            return TokenKind::TOKEN_NULL;
+        }
+        if (str4Equals("true", keyword)) {
+            return TokenKind::TOKEN_TRUE;
+        }
+        if (str4Equals("cast", keyword)) {
+            return TokenKind::TOKEN_CAST;
+        }
+        if (str4Equals("else", keyword)) {
+            return TokenKind::TOKEN_ELSE;
+        }
+        if (str4Equals("enum", keyword)) {
+            return TokenKind::TOKEN_ENUM;
+        }
+        if (str4Equals("type", keyword)) {
+            return TokenKind::TOKEN_TYPE;
+        }
+        return TokenKind::TOKEN_IDENTIFIER;
+    }
+    case 5: {
+        if (str5Equals("while", keyword)) {
+            return TokenKind::TOKEN_WHILE;
+        }
+        if (str5Equals("defer", keyword)) {
+            return TokenKind::TOKEN_DEFER;
+        }
+        if (str5Equals("false", keyword)) {
+            return TokenKind::TOKEN_FALSE;
+        }
+        if (str5Equals("break", keyword)) {
+            return TokenKind::TOKEN_BREAK;
+        }
+        if (str5Equals("infix", keyword)) {
+            return TokenKind::TOKEN_INFIX;
+        }
+        if (str5Equals("const", keyword)) {
+            return TokenKind::TOKEN_CONST;
+        }
+        return TokenKind::TOKEN_IDENTIFIER;
+    }
+    case 6: {
+        if (str6Equals("import", keyword)) {
+            return TokenKind::TOKEN_IMPORT;
+        }
+        if (str6Equals("struct", keyword)) {
+            return TokenKind::TOKEN_STRUCT;
+        }
+        if (str6Equals("return", keyword)) {
+            return TokenKind::TOKEN_RETURN;
+        }
+        if (str6Equals("extern", keyword)) {
+            return TokenKind::TOKEN_EXTERN;
+        }
+        if (str6Equals("prefix", keyword)) {
+            return TokenKind::TOKEN_PREFIX;
+        }
+        if (str6Equals("switch", keyword)) {
+            return TokenKind::TOKEN_SWITCH;
+        }
+        if (str6Equals("packed", keyword)) {
+            return TokenKind::TOKEN_PACKED;
+        }
+        return TokenKind::TOKEN_IDENTIFIER;
+    }
+    case 7: {
+        if (str7Equals("postfix", keyword)) {
+            return TokenKind::TOKEN_POSTFIX;
+        }
+        if (str7Equals("varargs", keyword)) {
+            return TokenKind::TOKEN_VARARGS;
+        }
+        return TokenKind::TOKEN_IDENTIFIER;
+    }
+    case 8: {
+        if (str8Equals("continue", keyword)) {
+            return TokenKind::TOKEN_CONTINUE;
+        }
+        if (str8Equals("operator", keyword)) {
+            return TokenKind::TOKEN_OPERATOR;
+        }
+        return TokenKind::TOKEN_IDENTIFIER;
+    }
+    case 9: {
+        if (str9Equals("type_size", keyword)) {
+            return TokenKind::TOKEN_TYPE_SIZE;
+        }
+        if (str9Equals("intrinsic", keyword)) {
+            return TokenKind::TOKEN_INTRINSIC;
+        }
+        return TokenKind::TOKEN_IDENTIFIER;
+    }
+    case 10: {
+        if (str10Equals("value_size", keyword)) {
+            return TokenKind::TOKEN_VALUE_SIZE;
+        }
+        return TokenKind::TOKEN_IDENTIFIER;
+    }
+    default: {
+        return TokenKind::TOKEN_IDENTIFIER;
+    }
     }
 }
 

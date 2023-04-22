@@ -9,6 +9,7 @@ class ConstDeclaration;
 class FunctionPrototype;
 class IntrinsicPrototype;
 class FunctionDeclaration;
+class OperatorFunctionDeclaraion;
 class StructDeclaration;
 class EnumDeclaration;
 class IfStatement;
@@ -32,6 +33,8 @@ class StatementVisitor {
     virtual auto visit(ConstDeclaration* node) -> std::any = 0;
 
     virtual auto visit(FunctionPrototype* node) -> std::any = 0;
+
+    virtual auto visit(OperatorFunctionDeclaraion* node) -> std::any = 0;
 
     virtual auto visit(IntrinsicPrototype* node) -> std::any = 0;
 

@@ -8,58 +8,58 @@
 #include <memory>
 #include <vector>
 
-/*
- * This enum types will be very useful in the refactor
- * and make it easy to check for the type without castring
- */
 enum class AstNodeType {
-    Node,
-    Block,
-    Field,
-    Prototype,
-    Intrinsic,
-    Function,
-    Struct,
-    Enum,
-    If,
-    ForRange,
-    ForEach,
-    Forever,
-    While,
-    Switch,
-    Return,
-    Defer,
-    Break,
-    Continue,
-    Expression,
+    AST_NODE,
 
-    IfExpr,
-    SwitchExpr,
-    GroupExpr,
-    TupleExpr,
-    AssignExpr,
-    BinaryExpr,
-    ShiftExpr,
-    ComparisonExpr,
-    LogicalExpr,
-    PrefixUnaryExpr,
-    PostfixUnaryExpr,
-    CallExpr,
-    InitExpr,
-    LambdaExpr,
-    DotExpr,
-    CastExpr,
-    TypeSizeExpr,
-    ValueSizeExpr,
-    IndexExpr,
-    EnumElementExpr,
-    ArrayExpr,
-    StringExpr,
-    LiteralExpr,
-    NumberExpr,
-    CharExpr,
-    BoolExpr,
-    NullExpr
+    // Statements
+    AST_BLOCK,
+    AST_FIELD_DECLARAION,
+    AST_PROTOTYPE,
+    AST_INTRINSIC,
+    AST_FUNCTION,
+    AST_OPERATOR_FUNCTION,
+    AST_STRUCT,
+    AST_ENUM,
+    AST_IF_STATEMENT,
+    AST_SWITCH_STATEMENT,
+    AST_FOR_RANGE,
+    AST_FOR_EACH,
+    AST_FOR_EVER,
+    AST_WHILE,
+    AST_RETURN,
+    AST_DEFER,
+    AST_BREAK,
+    AST_CONTINUE,
+    AST_EXPRESSION_STATEMENT,
+
+    // Expressions
+    AST_IF_EXPRESSION,
+    AST_SWITCH_EXPRESSION,
+    AST_GROUP,
+    AST_TUPLE,
+    AST_ASSIGN,
+    AST_BINARY,
+    AST_SHIFT,
+    AST_COMPARISON,
+    AST_LOGICAL,
+    AST_PREFIX_UNARY,
+    AST_POSTFIX_UNARY,
+    AST_CALL,
+    AST_INIT,
+    AST_LAMBDA,
+    AST_DOT,
+    AST_CAST,
+    AST_TYPE_SIZE,
+    AST_VALUE_SIZE,
+    AST_INDEX,
+    AST_ENUM_ELEMENT,
+    AST_ARRAY,
+    AST_STRING,
+    AST_LITERAL,
+    AST_NUMBER,
+    AST_CHARACTER,
+    AST_BOOL,
+    AST_NULL
 };
 
 class AstNode {
@@ -70,7 +70,7 @@ class AstNode {
 class Statement : public AstNode {
   public:
     virtual std::any accept(StatementVisitor* visitor) = 0;
-    AstNodeType get_ast_node_type() { return AstNodeType::Node; }
+    AstNodeType get_ast_node_type() { return AstNodeType::AST_NODE; }
 };
 
 class Expression : public AstNode {
@@ -79,7 +79,7 @@ class Expression : public AstNode {
     virtual void set_type_node(Shared<amun::Type> new_type) = 0;
     virtual std::any accept(ExpressionVisitor* visitor) = 0;
     virtual bool is_constant() = 0;
-    AstNodeType get_ast_node_type() { return AstNodeType::Node; }
+    AstNodeType get_ast_node_type() { return AstNodeType::AST_NODE; }
 };
 
 class CompilationUnit {
@@ -99,14 +99,13 @@ class BlockStatement : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Block; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_BLOCK; }
 
     std::vector<Shared<Statement>> statements;
 };
 
 struct Parameter {
     Parameter(Token name, Shared<amun::Type> type) : name(std::move(name)), type(std::move(type)) {}
-
     Token name;
     Shared<amun::Type> type;
 };
@@ -131,7 +130,7 @@ class FieldDeclaration : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Field; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_FIELD_DECLARAION; }
 
     Token name;
     Shared<amun::Type> type;
@@ -148,7 +147,7 @@ class ConstDeclaration : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Field; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_FIELD_DECLARAION; }
 
     Token name;
     Shared<Expression> value;
@@ -157,8 +156,8 @@ class ConstDeclaration : public Statement {
 class FunctionPrototype : public Statement {
   public:
     FunctionPrototype(Token name, std::vector<Shared<Parameter>> parameters,
-                      Shared<amun::Type> return_type, bool external, bool varargs,
-                      Shared<amun::Type> varargs_type, bool is_generic = false,
+                      Shared<amun::Type> return_type, bool external = false, bool varargs = false,
+                      Shared<amun::Type> varargs_type = {}, bool is_generic = false,
                       std::vector<std::string> generic_parameters = {})
         : name(name), parameters(parameters), return_type(return_type), external(external),
           varargs(varargs), varargs_type(varargs_type), is_generic(is_generic),
@@ -180,7 +179,7 @@ class FunctionPrototype : public Statement {
 
     Shared<amun::Type> get_varargs_type() { return varargs_type; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Prototype; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_PROTOTYPE; }
 
     Token name;
     std::vector<Shared<Parameter>> parameters;
@@ -206,7 +205,7 @@ class IntrinsicPrototype : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Intrinsic; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_INTRINSIC; }
 
     Token name;
     std::string native_name;
@@ -230,10 +229,25 @@ class FunctionDeclaration : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Function; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_FUNCTION; }
 
     Shared<FunctionPrototype> prototype;
     Shared<Statement> body;
+};
+
+class OperatorFunctionDeclaraion : public Statement {
+  public:
+    OperatorFunctionDeclaraion(Token op, Shared<FunctionDeclaration> function)
+        : op(std::move(op)), function(std::move(function))
+    {
+    }
+
+    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
+
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_OPERATOR_FUNCTION; }
+
+    Token op;
+    Shared<FunctionDeclaration> function;
 };
 
 class StructDeclaration : public Statement {
@@ -244,7 +258,7 @@ class StructDeclaration : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Struct; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_STRUCT; }
 
     Shared<amun::StructType> struct_type;
 };
@@ -261,7 +275,7 @@ class EnumDeclaration : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Enum; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_ENUM; }
 
     Token name;
     Shared<amun::Type> enum_type;
@@ -296,7 +310,7 @@ class IfStatement : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::If; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_IF_STATEMENT; }
 
     bool has_else_branch() { return has_else; }
 
@@ -316,7 +330,7 @@ class ForRangeStatement : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::ForRange; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_FOR_RANGE; }
 
     Token position;
     std::string element_name;
@@ -337,7 +351,7 @@ class ForEachStatement : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::ForRange; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_FOR_RANGE; }
 
     Token position;
     std::string element_name;
@@ -355,7 +369,7 @@ class ForeverStatement : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Forever; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_FOR_EVER; }
 
     Token position;
     Shared<Statement> body;
@@ -376,7 +390,7 @@ class WhileStatement : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::While; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_WHILE; }
 
     Token position;
     Shared<Expression> condition;
@@ -419,7 +433,7 @@ class SwitchStatement : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Switch; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_SWITCH_STATEMENT; }
 
     Token position;
     Shared<Expression> argument;
@@ -442,7 +456,7 @@ class ReturnStatement : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Return; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_RETURN; }
 
     Token position;
     Shared<Expression> value;
@@ -459,7 +473,7 @@ class DeferStatement : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Defer; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_DEFER; }
 
     Token position;
     Shared<CallExpression> call;
@@ -480,7 +494,7 @@ class BreakStatement : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Break; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_BREAK; }
 
     Token break_token;
     bool has_times;
@@ -502,7 +516,7 @@ class ContinueStatement : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Continue; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_CONTINUE; }
 
     Token break_token;
     bool has_times;
@@ -518,7 +532,7 @@ class ExpressionStatement : public Statement {
 
     std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::Expression; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_EXPRESSION_STATEMENT; }
 
     Shared<Expression> expression;
 };
@@ -555,7 +569,7 @@ class IfExpression : public Expression {
                else_expression->is_constant();
     }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::IfExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_IF_EXPRESSION; }
 
     Token if_token;
     Token else_token;
@@ -611,7 +625,7 @@ class SwitchExpression : public Expression {
         return true;
     }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::SwitchExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_SWITCH_EXPRESSION; }
 
     Token switch_token;
     Shared<Expression> argument;
@@ -641,7 +655,7 @@ class GroupExpression : public Expression {
 
     bool is_constant() override { return expression->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::GroupExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_GROUP; }
 
     Token position;
     Shared<Expression> expression;
@@ -664,7 +678,7 @@ class TupleExpression : public Expression {
 
     bool is_constant() override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::TupleExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_TUPLE; }
 
     Token position;
     std::vector<Shared<Expression>> values;
@@ -693,7 +707,7 @@ class AssignExpression : public Expression {
 
     bool is_constant() override { return false; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AssignExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_ASSIGN; }
 
     Shared<Expression> left;
     Token operator_token;
@@ -723,7 +737,7 @@ class BinaryExpression : public Expression {
 
     bool is_constant() override { return left->is_constant() and right->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::BinaryExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_BINARY; }
 
     Shared<Expression> left;
     Token operator_token;
@@ -753,7 +767,7 @@ class ShiftExpression : public Expression {
 
     bool is_constant() override { return left->is_constant() and right->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::ShiftExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_SHIFT; }
 
     Shared<Expression> left;
     Token operator_token;
@@ -782,7 +796,7 @@ class ComparisonExpression : public Expression {
 
     bool is_constant() override { return left->is_constant() and right->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::ComparisonExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_COMPARISON; }
 
     Shared<Expression> left;
     Token operator_token;
@@ -811,7 +825,7 @@ class LogicalExpression : public Expression {
 
     bool is_constant() override { return left->is_constant() and right->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::LogicalExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_LOGICAL; }
 
     Shared<Expression> left;
     Token operator_token;
@@ -838,7 +852,7 @@ class PrefixUnaryExpression : public Expression {
 
     bool is_constant() override { return right->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::PrefixUnaryExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_PREFIX_UNARY; }
 
     Token operator_token;
     Shared<Expression> right;
@@ -864,7 +878,7 @@ class PostfixUnaryExpression : public Expression {
 
     bool is_constant() override { return right->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::PostfixUnaryExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_POSTFIX_UNARY; }
 
     Token operator_token;
     Shared<Expression> right;
@@ -895,7 +909,7 @@ class CallExpression : public Expression {
 
     bool is_constant() override { return false; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::CallExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_CALL; }
 
     Token position;
     Shared<Expression> callee;
@@ -928,7 +942,7 @@ class InitializeExpression : public Expression {
         return true;
     }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::InitExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_INIT; }
 
     Token position;
     Shared<amun::Type> type;
@@ -960,7 +974,7 @@ class LambdaExpression : public Expression {
 
     bool is_constant() override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::LambdaExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_LAMBDA; }
 
     Token position;
     std::vector<Shared<Parameter>> explicit_parameters;
@@ -990,7 +1004,7 @@ class DotExpression : public Expression {
 
     std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::DotExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_DOT; }
 
     bool is_constant() override { return is_constants_; }
 
@@ -1022,7 +1036,7 @@ class CastExpression : public Expression {
 
     bool is_constant() override { return value->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::CastExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_CAST; }
 
     Token position;
     Shared<amun::Type> type;
@@ -1048,7 +1062,7 @@ class TypeSizeExpression : public Expression {
 
     bool is_constant() override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::TypeSizeExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_TYPE_SIZE; }
 
     Token position;
     Shared<amun::Type> type;
@@ -1074,7 +1088,7 @@ class ValueSizeExpression : public Expression {
 
     bool is_constant() override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::ValueSizeExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_VALUE_SIZE; }
 
     Token position;
     Shared<Expression> value;
@@ -1107,7 +1121,7 @@ class IndexExpression : public Expression {
         return index->is_constant();
     }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::IndexExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_INDEX; }
 
     Token position;
     Shared<Expression> value;
@@ -1135,7 +1149,7 @@ class EnumAccessExpression : public Expression {
 
     bool is_constant() override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::EnumElementExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_ENUM_ELEMENT; }
 
     Token enum_name;
     Token element_name;
@@ -1173,7 +1187,7 @@ class ArrayExpression : public Expression {
 
     bool is_constant() override { return is_constants_array; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::ArrayExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_ARRAY; }
 
     Token position;
     std::vector<Shared<Expression>> values;
@@ -1195,7 +1209,7 @@ class StringExpression : public Expression {
 
     bool is_constant() override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::StringExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_STRING; }
 
     Token value;
     Shared<amun::Type> type;
@@ -1219,7 +1233,7 @@ class LiteralExpression : public Expression {
 
     bool is_constant() override { return constants; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::LiteralExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_LITERAL; }
 
     Token name;
     Shared<amun::Type> type;
@@ -1240,7 +1254,7 @@ class NumberExpression : public Expression {
 
     bool is_constant() override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::NumberExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_NUMBER; }
 
     Token value;
     Shared<amun::Type> type;
@@ -1260,7 +1274,7 @@ class CharacterExpression : public Expression {
 
     bool is_constant() override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::CharExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_CHARACTER; }
 
     Token value;
     Shared<amun::Type> type;
@@ -1280,7 +1294,7 @@ class BooleanExpression : public Expression {
 
     bool is_constant() override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::BoolExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_BOOL; }
 
     Token value;
     Shared<amun::Type> type;
@@ -1303,7 +1317,7 @@ class NullExpression : public Expression {
 
     bool is_constant() override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::NullExpr; }
+    AstNodeType get_ast_node_type() override { return AstNodeType::AST_NULL; }
 
     Token value;
     Shared<amun::Type> type;

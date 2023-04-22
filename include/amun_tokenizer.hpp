@@ -74,6 +74,8 @@ class Tokenizer {
 
     static auto binary_to_decimal(const std::string&) -> int64_t;
 
+    auto resolve_keyword_token_kind(const char* keyword) -> TokenKind;
+
     auto is_source_available() -> bool;
 
     std::string source_code;

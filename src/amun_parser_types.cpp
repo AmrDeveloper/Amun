@@ -8,17 +8,17 @@ auto amun::Parser::parse_type() -> Shared<amun::Type> { return parse_type_with_p
 auto amun::Parser::parse_type_with_prefix() -> Shared<amun::Type>
 {
     // Parse pointer type
-    if (is_current_kind(TokenKind::Star)) {
+    if (is_current_kind(TokenKind::TOKEN_STAR)) {
         return parse_pointer_to_type();
     }
 
     // Parse tuple type
-    if (is_current_kind(TokenKind::OpenParen)) {
+    if (is_current_kind(TokenKind::TOKEN_OPEN_PAREN)) {
         return parse_tuple_type();
     }
 
     // Parse Fixed size array type
-    if (is_current_kind(TokenKind::OpenBracket)) {
+    if (is_current_kind(TokenKind::TOKEN_OPEN_BRACKET)) {
         return parse_fixed_size_array_type();
     }
 
@@ -27,10 +27,10 @@ auto amun::Parser::parse_type_with_prefix() -> Shared<amun::Type>
 
 auto amun::Parser::parse_pointer_to_type() -> Shared<amun::Type>
 {
-    auto star_token = consume_kind(TokenKind::Star, "Pointer type must start with *");
+    auto star_token = consume_kind(TokenKind::TOKEN_STAR, "Pointer type must start with *");
 
     // Parse function pointer type
-    if (is_current_kind(TokenKind::OpenParen)) {
+    if (is_current_kind(TokenKind::TOKEN_OPEN_PAREN)) {
         auto function_type = parse_function_type();
         return std::make_shared<amun::PointerType>(function_type);
     }
@@ -41,33 +41,33 @@ auto amun::Parser::parse_pointer_to_type() -> Shared<amun::Type>
 
 auto amun::Parser::parse_function_type() -> Shared<amun::Type>
 {
-    auto paren = consume_kind(TokenKind::OpenParen, "Function type expect to start with (");
+    auto paren = consume_kind(TokenKind::TOKEN_OPEN_PAREN, "Function type expect to start with (");
 
     std::vector<Shared<amun::Type>> parameters_types;
-    while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
+    while (is_source_available() && not is_current_kind(TokenKind::TOKEN_CLOSE_PAREN)) {
         parameters_types.push_back(parse_type());
-        if (is_current_kind(TokenKind::Comma)) {
+        if (is_current_kind(TokenKind::TOKEN_COMMA)) {
             advanced_token();
         }
     }
-    assert_kind(TokenKind::CloseParen, "Expect ) after function type parameters");
+    assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after function type parameters");
     auto return_type = parse_type();
     return std::make_shared<amun::FunctionType>(paren, parameters_types, return_type);
 }
 
 auto amun::Parser::parse_tuple_type() -> Shared<amun::Type>
 {
-    auto paren = consume_kind(TokenKind::OpenParen, "tuple type expect to start with (");
+    auto paren = consume_kind(TokenKind::TOKEN_OPEN_PAREN, "tuple type expect to start with (");
 
     std::vector<Shared<amun::Type>> field_types;
-    while (is_source_available() && not is_current_kind(TokenKind::CloseParen)) {
+    while (is_source_available() && not is_current_kind(TokenKind::TOKEN_CLOSE_PAREN)) {
         field_types.push_back(parse_type());
-        if (is_current_kind(TokenKind::Comma)) {
+        if (is_current_kind(TokenKind::TOKEN_COMMA)) {
             advanced_token();
         }
     }
 
-    assert_kind(TokenKind::CloseParen, "Expect ) after tuple values");
+    assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after tuple values");
 
     if (field_types.size() < 2) {
         context->diagnostics.report_error(paren.position,
@@ -82,9 +82,10 @@ auto amun::Parser::parse_tuple_type() -> Shared<amun::Type>
 
 auto amun::Parser::parse_fixed_size_array_type() -> Shared<amun::Type>
 {
-    auto bracket = consume_kind(TokenKind::OpenBracket, "Expect [ for fixed size array type");
+    auto bracket =
+        consume_kind(TokenKind::TOKEN_OPEN_BRACKET, "Expect [ for fixed size array type");
 
-    if (is_current_kind(TokenKind::CloseBracket)) {
+    if (is_current_kind(TokenKind::TOKEN_CLOSE_BRACKET)) {
         context->diagnostics.report_error(peek_current().position,
                                           "Fixed array type must have implicit size [n]");
         throw "Stop";
@@ -98,7 +99,7 @@ auto amun::Parser::parse_fixed_size_array_type() -> Shared<amun::Type>
     }
 
     auto number_value = std::atoi(size->get_value().literal.c_str());
-    assert_kind(TokenKind::CloseBracket, "Expect ] after array size.");
+    assert_kind(TokenKind::TOKEN_CLOSE_BRACKET, "Expect ] after array size.");
     auto element_type = parse_type();
 
     // Check if array element type is not void
@@ -125,7 +126,7 @@ auto amun::Parser::parse_type_with_postfix() -> Shared<amun::Type>
     auto type = parse_generic_struct_type();
 
     // Report useful message when user create pointer type with prefix `*` like in C
-    if (is_current_kind(TokenKind::Star)) {
+    if (is_current_kind(TokenKind::TOKEN_STAR)) {
         context->diagnostics.report_error(peek_previous().position,
                                           "In pointer type `*` must be before the type like *" +
                                               amun::get_type_literal(type));
@@ -140,9 +141,10 @@ auto amun::Parser::parse_generic_struct_type() -> Shared<amun::Type>
     auto primary_type = parse_primary_type();
 
     // Parse generic struct type with types parameters
-    if (is_current_kind(TokenKind::Smaller)) {
+    if (is_current_kind(TokenKind::TOKEN_SMALLER)) {
         if (primary_type->type_kind == amun::TypeKind::STRUCT) {
-            auto smaller_token = consume_kind(TokenKind::Smaller, "Expect < after struct name");
+            auto smaller_token =
+                consume_kind(TokenKind::TOKEN_SMALLER, "Expect < after struct name");
             auto struct_type = std::static_pointer_cast<amun::StructType>(primary_type);
 
             // Prevent use non generic struct type with any type parameters
@@ -154,16 +156,16 @@ auto amun::Parser::parse_generic_struct_type() -> Shared<amun::Type>
             }
 
             std::vector<Shared<amun::Type>> generic_parameters;
-            while (is_source_available() && !is_current_kind(TokenKind::Greater)) {
+            while (is_source_available() && !is_current_kind(TokenKind::TOKEN_GREATER)) {
                 auto parameter = parse_type();
                 generic_parameters.push_back(parameter);
 
-                if (is_current_kind(TokenKind::Comma)) {
+                if (is_current_kind(TokenKind::TOKEN_COMMA)) {
                     advanced_token();
                 }
             }
 
-            assert_kind(TokenKind::Greater, "Expect > After generic types parameters");
+            assert_kind(TokenKind::TOKEN_GREATER, "Expect > After generic types parameters");
 
             // Make sure generic struct types is used with correct number of parameters
             if (struct_type->generic_parameters.size() != generic_parameters.size()) {
@@ -201,12 +203,12 @@ auto amun::Parser::parse_generic_struct_type() -> Shared<amun::Type>
 auto amun::Parser::parse_primary_type() -> Shared<amun::Type>
 {
     // Check if this type is an identifier
-    if (is_current_kind(TokenKind::Symbol)) {
+    if (is_current_kind(TokenKind::TOKEN_IDENTIFIER)) {
         return parse_identifier_type();
     }
 
     // Show helpful diagnostic error message for varargs case
-    if (is_current_kind(TokenKind::VarargsKeyword)) {
+    if (is_current_kind(TokenKind::TOKEN_VARARGS)) {
         context->diagnostics.report_error(peek_current().position,
                                           "Varargs not supported as function pointer parameter");
         throw "Stop";
@@ -218,7 +220,7 @@ auto amun::Parser::parse_primary_type() -> Shared<amun::Type>
 
 auto amun::Parser::parse_identifier_type() -> Shared<amun::Type>
 {
-    Token symbol_token = consume_kind(TokenKind::Symbol, "Expect identifier as type");
+    Token symbol_token = consume_kind(TokenKind::TOKEN_IDENTIFIER, "Expect identifier as type");
     std::string type_literal = symbol_token.literal;
 
     // Check if this time is primitive

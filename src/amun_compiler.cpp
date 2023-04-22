@@ -103,7 +103,7 @@ auto amun::Compiler::compile_source_code(const char* source_file) -> int
 
     // Link object file with optional libraries into executable
     auto result = external_linker.link(object_file_path);
-    std::cout << "Successfully compiled to executable\n";
+    std::cout << "Successfully compiled " << source_file << " to executable\n";
     return result;
 }
 
@@ -140,7 +140,8 @@ auto amun::Compiler::emit_llvm_ir_from_source_code(const char* source_file) -> i
     }
 
     llvm_ir_module->print(output_stream, nullptr);
-    std::cout << "Successfully compiled to " << context->options.llvm_ir_file_name << '\n';
+    std::cout << "Successfully compiled " << source_file << " to "
+              << context->options.llvm_ir_file_name << '\n';
     return EXIT_SUCCESS;
 }
 

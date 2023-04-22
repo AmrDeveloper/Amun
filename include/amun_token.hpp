@@ -8,240 +8,117 @@
 #include <unordered_set>
 
 enum TokenKind {
-    LoadKeyword,
-    ImportKeyword,
+    TOKEN_LOAD,
+    TOKEN_IMPORT,
 
-    VarKeyword,
-    ConstKeyword,
-    EnumKeyword,
-    TypeKeyword,
-    StructKeyword,
-    FunKeyword,
-    ReturnKeyword,
-    ExternKeyword,
-    IntrinsicKeyword,
-    IfKeyword,
-    ElseKeyword,
-    ForKeyword,
-    WhileKeyword,
-    SwitchKeyword,
-    CastKeyword,
-    DeferKeyword,
-    PackedKeyword,
+    TOKEN_VAR,
+    TOKEN_CONST,
+    TOKEN_ENUM,
+    TOKEN_TYPE,
+    TOKEN_STRUCT,
+    TOKEN_PACKED,
+    TOKEN_FUN,
+    TOKEN_OPERATOR,
+    TOKEN_RETURN,
+    TOKEN_EXTERN,
+    TOKEN_INTRINSIC,
+    TOKEN_IF,
+    TOKEN_ELSE,
+    TOKEN_FOR,
+    TOKEN_WHILE,
+    TOKEN_SWITCH,
+    TOKEN_CAST,
+    TOKEN_DEFER,
 
-    BreakKeyword,
-    ContinueKeyword,
+    TOKEN_BREAK,
+    TOKEN_CONTINUE,
 
-    PrefixKeyword,
-    InfixKeyword,
-    PostfixKeyword,
+    TOKEN_PREFIX,
+    TOKEN_INFIX,
+    TOKEN_POSTFIX,
 
-    TypeSizeKeyword,
-    ValueSizeKeyword,
+    TOKEN_TYPE_SIZE,
+    TOKEN_VALUE_SIZE,
 
-    TrueKeyword,
-    FalseKeyword,
-    NullKeyword,
+    TOKEN_TRUE,
+    TOKEN_FALSE,
+    TOKEN_NULL,
 
-    VarargsKeyword,
+    TOKEN_VARARGS,
 
-    Dot,
-    DotDot,
-    Comma,
-    Colon,
-    ColonColon,
-    Semicolon,
-    Hash,
+    TOKEN_DOT,
+    TOKEN_DOT_DOT,
+    TOKEN_COMMA,
+    TOKEN_COLON,
+    TOKEN_COLON_COLON,
+    TOKEN_SEMICOLON,
+    TOKEN_HASH,
 
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Percent,
+    TOKEN_PLUS,
+    TOKEN_MINUS,
+    TOKEN_STAR,
+    TOKEN_SLASH,
+    TOKEN_PERCENT,
 
-    Or,
-    LogicalOr,
-    And,
-    LogicalAnd,
+    TOKEN_OR,
+    TOKEN_OR_OR,
+    TOKEN_AND,
+    TOKEN_AND_AND,
 
-    Not,
+    TOKEN_NOT,
 
-    Equal,
-    EqualEqual,
-    Bang,
-    BangEqual,
-    Greater,
-    GreaterEqual,
-    Smaller,
-    SmallerEqual,
+    TOKEN_EQUAL,
+    TOKEN_EQUAL_EQUAL,
+    TOKEN_BANG,
+    TOKEN_BANG_EQUAL,
+    TOKEN_GREATER,
+    TOKEN_GREATER_EQUAL,
+    TOKEN_SMALLER,
+    TOKEN_SMALLER_EQUAL,
 
-    RightShift,
-    LeftShift,
+    TOKEN_RIGHT_SHIFT,
+    TOKEN_LEFT_SHIFT,
 
-    PlusEqual,
-    MinusEqual,
-    StarEqual,
-    SlashEqual,
-    PercentEqual,
+    TOKEN_PLUS_EQUAL,
+    TOKEN_MINUS_EQUAL,
+    TOKEN_STAR_EQUAL,
+    TOKEN_SLASH_EQUAL,
+    TOKEN_PARCENT_EQUAL,
 
-    PlusPlus,
-    MinusMinus,
+    TOKEN_PLUS_PLUS,
+    TOKEN_MINUS_MINUS,
 
-    RightArrow,
+    TOKEN_RIGHT_ARROW,
 
-    OpenParen,
-    CloseParen,
-    OpenBracket,
-    CloseBracket,
-    OpenBrace,
-    CloseBrace,
+    TOKEN_OPEN_PAREN,
+    TOKEN_CLOSE_PAREN,
+    TOKEN_OPEN_BRACKET,
+    TOKEN_CLOSE_BRACKET,
+    TOKEN_OPEN_BRACE,
+    TOKEN_CLOSE_BRACE,
 
-    Symbol,
-    String,
-    Character,
+    TOKEN_IDENTIFIER,
+    TOKEN_STRING,
+    TOKEN_CHARACTER,
 
-    Integer,
-    Integer1Type,
-    Integer8Type,
-    Integer16Type,
-    Integer32Type,
-    Integer64Type,
-    UInteger8Type,
-    UInteger16Type,
-    UInteger32Type,
-    UInteger64Type,
-    Float,
-    Float32Type,
-    Float64Type,
+    TOKEN_INT,
+    TOKEN_INT1,
+    TOKEN_INT8,
+    TOKEN_INT16,
+    TOKEN_INT32,
+    TOKEN_INT64,
 
-    Invalid,
-    EndOfFile,
-};
+    TOKEN_UINT8,
+    TOKEN_UINT16,
+    TOKEN_UINT32,
+    TOKEN_UINT64,
 
-// Used for error messages and debugging
-static std::unordered_map<TokenKind, const char*> token_kind_literal = {
-    {TokenKind::LoadKeyword, "load"},
-    {TokenKind::ImportKeyword, "import"},
-    {TokenKind::VarKeyword, "var"},
-    {TokenKind::ConstKeyword, "const"},
-    {TokenKind::FunKeyword, "fun"},
-    {TokenKind::EnumKeyword, "enum"},
-    {TokenKind::TypeKeyword, "type"},
-    {TokenKind::StructKeyword, "struct"},
-    {TokenKind::ReturnKeyword, "return"},
-    {TokenKind::IntrinsicKeyword, "intrinsic"},
-    {TokenKind::ExternKeyword, "extern"},
-    {TokenKind::IfKeyword, "if"},
-    {TokenKind::ElseKeyword, "else"},
-    {TokenKind::ForKeyword, "for"},
-    {TokenKind::WhileKeyword, "while"},
-    {TokenKind::SwitchKeyword, "switch"},
-    {TokenKind::CastKeyword, "cast"},
-    {TokenKind::DeferKeyword, "defer"},
-    {TokenKind::PackedKeyword, "packed"},
+    TOKEN_FLOAT,
+    TOKEN_FLOAT32,
+    TOKEN_FLOAT64,
 
-    {TokenKind::TrueKeyword, "true"},
-    {TokenKind::FalseKeyword, "false"},
-    {TokenKind::NullKeyword, "null"},
-
-    {TokenKind::BreakKeyword, "break"},
-    {TokenKind::ContinueKeyword, "continue"},
-
-    {TokenKind::PrefixKeyword, "prefix"},
-    {TokenKind::InfixKeyword, "infix"},
-    {TokenKind::PostfixKeyword, "postfix"},
-
-    {TokenKind::TypeSizeKeyword, "type_size"},
-    {TokenKind::ValueSizeKeyword, "value_size"},
-
-    {TokenKind::VarargsKeyword, "varargs"},
-
-    {TokenKind::Dot, "."},
-    {TokenKind::DotDot, ".."},
-    {TokenKind::Comma, ","},
-    {TokenKind::Colon, ":"},
-    {TokenKind::ColonColon, "::"},
-    {TokenKind::Semicolon, ";"},
-    {TokenKind::Hash, "#"},
-
-    {TokenKind::Plus, "+"},
-    {TokenKind::Minus, "-"},
-    {TokenKind::Star, "*"},
-    {TokenKind::Slash, "/"},
-    {TokenKind::Percent, "%"},
-
-    {TokenKind::And, "&"},
-    {TokenKind::LogicalAnd, "&&"},
-    {TokenKind::Or, "|"},
-    {TokenKind::LogicalOr, "||"},
-
-    {TokenKind::Not, "~"},
-
-    {TokenKind::Equal, "="},
-    {TokenKind::EqualEqual, "=="},
-    {TokenKind::Bang, "!"},
-    {TokenKind::BangEqual, "!="},
-
-    {TokenKind::Greater, ">"},
-    {TokenKind::GreaterEqual, ">="},
-    {TokenKind::Smaller, "<"},
-    {TokenKind::SmallerEqual, "<="},
-
-    {TokenKind::RightShift, ">>"},
-    {TokenKind::LeftShift, "<<"},
-
-    {TokenKind::PlusEqual, "+="},
-    {TokenKind::MinusEqual, "-="},
-    {TokenKind::StarEqual, "*="},
-    {TokenKind::SlashEqual, "/="},
-    {TokenKind::PercentEqual, "%="},
-
-    {TokenKind::PlusPlus, "++"},
-    {TokenKind::MinusMinus, "--"},
-
-    {TokenKind::RightArrow, "->"},
-
-    {TokenKind::OpenParen, "("},
-    {TokenKind::CloseParen, ")"},
-    {TokenKind::OpenBracket, "["},
-    {TokenKind::CloseBracket, "]"},
-    {TokenKind::OpenBrace, "{"},
-    {TokenKind::CloseBrace, "}"},
-
-    {TokenKind::Symbol, "symbol"},
-    {TokenKind::String, "string"},
-    {TokenKind::Character, "char"},
-    {TokenKind::Integer, "int"},
-    {TokenKind::Integer1Type, "int1"},
-    {TokenKind::Integer8Type, "int8"},
-    {TokenKind::Integer16Type, "int16"},
-    {TokenKind::Integer32Type, "int32"},
-    {TokenKind::Integer64Type, "int64"},
-    {TokenKind::UInteger8Type, "uint8"},
-    {TokenKind::UInteger16Type, "uint16"},
-    {TokenKind::UInteger32Type, "uint32"},
-    {TokenKind::UInteger64Type, "uint64"},
-    {TokenKind::Float, "float"},
-    {TokenKind::Float32Type, "float32"},
-    {TokenKind::Float64Type, "float64"},
-
-    {TokenKind::Invalid, "Invalid"},
-    {TokenKind::EndOfFile, "End of the file"},
-};
-
-static std::unordered_set<TokenKind> unary_operators{
-    TokenKind::Minus, TokenKind::Bang, TokenKind::Star, TokenKind::And, TokenKind::Not,
-};
-
-static std::unordered_set<TokenKind> assignments_operators{
-    TokenKind::Equal,     TokenKind::PlusEqual,  TokenKind::MinusEqual,
-    TokenKind::StarEqual, TokenKind::SlashEqual, TokenKind::PercentEqual,
-};
-
-static std::unordered_map<TokenKind, TokenKind> assignments_binary_operators{
-    {TokenKind::PlusEqual, TokenKind::Plus},       {TokenKind::MinusEqual, TokenKind::Minus},
-    {TokenKind::StarEqual, TokenKind::Star},       {TokenKind::SlashEqual, TokenKind::Slash},
-    {TokenKind::PercentEqual, TokenKind::Percent},
+    TOKEN_INVALID,
+    TOKEN_END_OF_FILE,
 };
 
 struct TokenSpan {
@@ -257,135 +134,168 @@ struct Token {
     std::string literal;
 };
 
-static auto resolve_keyword_kind(const char* keyword) -> TokenKind
-{
-    switch (strlen(keyword)) {
-    case 2: {
-        if (str2Equals("if", keyword)) {
-            return TokenKind::IfKeyword;
-        }
-        return TokenKind::Symbol;
-    }
-    case 3: {
-        if (str3Equals("fun", keyword)) {
-            return TokenKind::FunKeyword;
-        }
-        if (str3Equals("var", keyword)) {
-            return TokenKind::VarKeyword;
-        }
-        if (str3Equals("for", keyword)) {
-            return TokenKind::ForKeyword;
-        }
-        return TokenKind::Symbol;
-    }
-    case 4: {
-        if (str4Equals("load", keyword)) {
-            return TokenKind::LoadKeyword;
-        }
-        if (str4Equals("null", keyword)) {
-            return TokenKind::NullKeyword;
-        }
-        if (str4Equals("true", keyword)) {
-            return TokenKind::TrueKeyword;
-        }
-        if (str4Equals("cast", keyword)) {
-            return TokenKind::CastKeyword;
-        }
-        if (str4Equals("else", keyword)) {
-            return TokenKind::ElseKeyword;
-        }
-        if (str4Equals("enum", keyword)) {
-            return TokenKind::EnumKeyword;
-        }
-        if (str4Equals("type", keyword)) {
-            return TokenKind::TypeKeyword;
-        }
-        return TokenKind::Symbol;
-    }
-    case 5: {
-        if (str5Equals("while", keyword)) {
-            return TokenKind::WhileKeyword;
-        }
-        if (str5Equals("defer", keyword)) {
-            return TokenKind::DeferKeyword;
-        }
-        if (str5Equals("false", keyword)) {
-            return TokenKind::FalseKeyword;
-        }
-        if (str5Equals("break", keyword)) {
-            return TokenKind::BreakKeyword;
-        }
-        if (str5Equals("infix", keyword)) {
-            return TokenKind::InfixKeyword;
-        }
-        if (str5Equals("const", keyword)) {
-            return TokenKind::ConstKeyword;
-        }
-        return TokenKind::Symbol;
-    }
-    case 6: {
-        if (str6Equals("import", keyword)) {
-            return TokenKind::ImportKeyword;
-        }
-        if (str6Equals("struct", keyword)) {
-            return TokenKind::StructKeyword;
-        }
-        if (str6Equals("return", keyword)) {
-            return TokenKind::ReturnKeyword;
-        }
-        if (str6Equals("extern", keyword)) {
-            return TokenKind::ExternKeyword;
-        }
-        if (str6Equals("prefix", keyword)) {
-            return TokenKind::PrefixKeyword;
-        }
-        if (str6Equals("switch", keyword)) {
-            return TokenKind::SwitchKeyword;
-        }
-        if (str6Equals("packed", keyword)) {
-            return TokenKind::PackedKeyword;
-        }
-        return TokenKind::Symbol;
-    }
-    case 7: {
-        if (str7Equals("postfix", keyword)) {
-            return TokenKind::PostfixKeyword;
-        }
-        if (str7Equals("varargs", keyword)) {
-            return TokenKind::VarargsKeyword;
-        }
-        return TokenKind::Symbol;
-    }
-    case 8: {
-        if (str8Equals("continue", keyword)) {
-            return TokenKind::ContinueKeyword;
-        }
-        return TokenKind::Symbol;
-    }
-    case 9: {
-        if (str9Equals("type_size", keyword)) {
-            return TokenKind::TypeSizeKeyword;
-        }
-        if (str9Equals("intrinsic", keyword)) {
-            return TokenKind::IntrinsicKeyword;
-        }
-        return TokenKind::Symbol;
-    }
-    case 10: {
-        if (str10Equals("value_size", keyword)) {
-            return TokenKind::ValueSizeKeyword;
-        }
-        return TokenKind::Symbol;
-    }
-    default: {
-        return TokenKind::Symbol;
-    }
-    }
-}
+// Used for error messages and debugging
+static std::unordered_map<TokenKind, const char*> token_kind_literal = {
+    {TokenKind::TOKEN_LOAD, "load"},
+    {TokenKind::TOKEN_IMPORT, "import"},
+    {TokenKind::TOKEN_VAR, "var"},
+    {TokenKind::TOKEN_CONST, "const"},
+    {TokenKind::TOKEN_FUN, "fun"},
+    {TokenKind::TOKEN_OPERATOR, "operator"},
+    {TokenKind::TOKEN_ENUM, "enum"},
+    {TokenKind::TOKEN_TYPE, "type"},
+    {TokenKind::TOKEN_STRUCT, "struct"},
+    {TokenKind::TOKEN_RETURN, "return"},
+    {TokenKind::TOKEN_INTRINSIC, "intrinsic"},
+    {TokenKind::TOKEN_EXTERN, "extern"},
+    {TokenKind::TOKEN_IF, "if"},
+    {TokenKind::TOKEN_ELSE, "else"},
+    {TokenKind::TOKEN_FOR, "for"},
+    {TokenKind::TOKEN_WHILE, "while"},
+    {TokenKind::TOKEN_SWITCH, "switch"},
+    {TokenKind::TOKEN_CAST, "cast"},
+    {TokenKind::TOKEN_DEFER, "defer"},
+    {TokenKind::TOKEN_PACKED, "packed"},
 
-inline auto get_token_kind_literal(TokenKind kind) -> const char*
+    {TokenKind::TOKEN_TRUE, "true"},
+    {TokenKind::TOKEN_FALSE, "false"},
+    {TokenKind::TOKEN_NULL, "null"},
+
+    {TokenKind::TOKEN_BREAK, "break"},
+    {TokenKind::TOKEN_CONTINUE, "continue"},
+
+    {TokenKind::TOKEN_PREFIX, "prefix"},
+    {TokenKind::TOKEN_INFIX, "infix"},
+    {TokenKind::TOKEN_POSTFIX, "postfix"},
+
+    {TokenKind::TOKEN_TYPE_SIZE, "type_size"},
+    {TokenKind::TOKEN_VALUE_SIZE, "value_size"},
+
+    {TokenKind::TOKEN_VARARGS, "varargs"},
+
+    {TokenKind::TOKEN_DOT, "."},
+    {TokenKind::TOKEN_DOT_DOT, ".."},
+    {TokenKind::TOKEN_COMMA, ","},
+    {TokenKind::TOKEN_COLON, ":"},
+    {TokenKind::TOKEN_COLON_COLON, "::"},
+    {TokenKind::TOKEN_SEMICOLON, ";"},
+    {TokenKind::TOKEN_HASH, "#"},
+
+    {TokenKind::TOKEN_PLUS, "+"},
+    {TokenKind::TOKEN_MINUS, "-"},
+    {TokenKind::TOKEN_STAR, "*"},
+    {TokenKind::TOKEN_SLASH, "/"},
+    {TokenKind::TOKEN_PERCENT, "%"},
+
+    {TokenKind::TOKEN_AND, "&"},
+    {TokenKind::TOKEN_AND_AND, "&&"},
+    {TokenKind::TOKEN_OR, "|"},
+    {TokenKind::TOKEN_OR_OR, "||"},
+
+    {TokenKind::TOKEN_NOT, "~"},
+
+    {TokenKind::TOKEN_EQUAL, "="},
+    {TokenKind::TOKEN_EQUAL_EQUAL, "=="},
+    {TokenKind::TOKEN_BANG, "!"},
+    {TokenKind::TOKEN_BANG_EQUAL, "!="},
+
+    {TokenKind::TOKEN_GREATER, ">"},
+    {TokenKind::TOKEN_GREATER_EQUAL, ">="},
+    {TokenKind::TOKEN_SMALLER, "<"},
+    {TokenKind::TOKEN_SMALLER_EQUAL, "<="},
+
+    {TokenKind::TOKEN_RIGHT_SHIFT, ">>"},
+    {TokenKind::TOKEN_LEFT_SHIFT, "<<"},
+
+    {TokenKind::TOKEN_PLUS_EQUAL, "+="},
+    {TokenKind::TOKEN_MINUS_EQUAL, "-="},
+    {TokenKind::TOKEN_STAR_EQUAL, "*="},
+    {TokenKind::TOKEN_SLASH_EQUAL, "/="},
+    {TokenKind::TOKEN_PARCENT_EQUAL, "%="},
+
+    {TokenKind::TOKEN_PLUS_PLUS, "++"},
+    {TokenKind::TOKEN_MINUS_MINUS, "--"},
+
+    {TokenKind::TOKEN_RIGHT_ARROW, "->"},
+
+    {TokenKind::TOKEN_OPEN_PAREN, "("},
+    {TokenKind::TOKEN_CLOSE_PAREN, ")"},
+    {TokenKind::TOKEN_OPEN_BRACKET, "["},
+    {TokenKind::TOKEN_CLOSE_BRACKET, "]"},
+    {TokenKind::TOKEN_OPEN_BRACE, "{"},
+    {TokenKind::TOKEN_CLOSE_BRACE, "}"},
+
+    {TokenKind::TOKEN_IDENTIFIER, "symbol"},
+    {TokenKind::TOKEN_STRING, "string"},
+    {TokenKind::TOKEN_CHARACTER, "char"},
+    {TokenKind::TOKEN_INT, "int"},
+    {TokenKind::TOKEN_INT1, "int1"},
+    {TokenKind::TOKEN_INT8, "int8"},
+    {TokenKind::TOKEN_INT16, "int16"},
+    {TokenKind::TOKEN_INT32, "int32"},
+    {TokenKind::TOKEN_INT64, "int64"},
+    {TokenKind::TOKEN_UINT8, "uint8"},
+    {TokenKind::TOKEN_UINT16, "uint16"},
+    {TokenKind::TOKEN_UINT32, "uint32"},
+    {TokenKind::TOKEN_UINT64, "uint64"},
+    {TokenKind::TOKEN_FLOAT, "float"},
+    {TokenKind::TOKEN_FLOAT32, "float32"},
+    {TokenKind::TOKEN_FLOAT64, "float64"},
+
+    {TokenKind::TOKEN_INVALID, "Invalid"},
+    {TokenKind::TOKEN_END_OF_FILE, "End of the file"},
+};
+
+static std::unordered_set<TokenKind> unary_operators = {
+    TokenKind::TOKEN_MINUS, TokenKind::TOKEN_BANG, TokenKind::TOKEN_STAR,
+    TokenKind::TOKEN_AND,   TokenKind::TOKEN_NOT,
+};
+
+static std::unordered_set<TokenKind> assignments_operators = {
+    TokenKind::TOKEN_EQUAL,      TokenKind::TOKEN_PLUS_EQUAL,  TokenKind::TOKEN_MINUS_EQUAL,
+    TokenKind::TOKEN_STAR_EQUAL, TokenKind::TOKEN_SLASH_EQUAL, TokenKind::TOKEN_PARCENT_EQUAL,
+};
+
+static std::unordered_map<TokenKind, TokenKind> assignments_binary_operators = {
+    {TokenKind::TOKEN_PLUS_EQUAL, TokenKind::TOKEN_PLUS},
+    {TokenKind::TOKEN_MINUS_EQUAL, TokenKind::TOKEN_MINUS},
+    {TokenKind::TOKEN_STAR_EQUAL, TokenKind::TOKEN_STAR},
+    {TokenKind::TOKEN_SLASH_EQUAL, TokenKind::TOKEN_SLASH},
+    {TokenKind::TOKEN_PARCENT_EQUAL, TokenKind::TOKEN_PERCENT},
+};
+
+static std::unordered_map<TokenKind, std::string> overloading_operator_literal = {
+    // +, -, *, /, %
+    {TokenKind::TOKEN_PLUS, "plus"},
+    {TokenKind::TOKEN_MINUS, "minus"},
+    {TokenKind::TOKEN_STAR, "star"},
+    {TokenKind::TOKEN_SLASH, "slash"},
+    {TokenKind::TOKEN_PERCENT, "percent"},
+
+    // ==, !=, >, >=, <, <=
+    {TokenKind::TOKEN_EQUAL_EQUAL, "eq_eq"},
+    {TokenKind::TOKEN_BANG_EQUAL, "not_eq"},
+    {TokenKind::TOKEN_GREATER, "gt"},
+    {TokenKind::TOKEN_GREATER_EQUAL, "gt_eq"},
+    {TokenKind::TOKEN_SMALLER, "lt"},
+    {TokenKind::TOKEN_SMALLER_EQUAL, "lt_eq"},
+
+    // &, |
+    {TokenKind::TOKEN_AND, "and"},
+    {TokenKind::TOKEN_OR, "or"},
+
+    // &&, ||
+    {TokenKind::TOKEN_AND_AND, "logic_and"},
+    {TokenKind::TOKEN_OR_OR, "logic_or"},
+
+    // <<, >>
+    {TokenKind::TOKEN_RIGHT_SHIFT, "rsh"},
+    {TokenKind::TOKEN_LEFT_SHIFT, "lsh"},
+};
+
+static auto is_supported_overloading_operator(TokenKind kind) -> bool
 {
-    return token_kind_literal[kind];
+    return overloading_operator_literal.contains(kind);
 }
 
 inline auto is_assignments_operator_token(Token token) -> bool
@@ -401,6 +311,11 @@ inline auto is_unary_operator_token(Token token) -> bool
 inline auto is_float_number_token(Token token) -> bool
 {
     const auto token_kind = token.kind;
-    return token_kind == TokenKind::Float or token_kind == TokenKind::Float32Type or
-           token_kind == TokenKind::Float64Type;
+    return token_kind == TokenKind::TOKEN_FLOAT or token_kind == TokenKind::TOKEN_FLOAT32 or
+           token_kind == TokenKind::TOKEN_FLOAT64;
+}
+
+inline auto get_token_kind_literal(TokenKind kind) -> const char*
+{
+    return token_kind_literal[kind];
 }

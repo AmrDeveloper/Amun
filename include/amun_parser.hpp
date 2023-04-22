@@ -73,6 +73,8 @@ class Parser {
 
     auto parse_function_declaration(amun::FunctionKind kind) -> Shared<FunctionDeclaration>;
 
+    auto parse_operator_function_declaraion() -> Shared<OperatorFunctionDeclaraion>;
+
     auto parse_structure_declaration(bool is_packed) -> Shared<StructDeclaration>;
 
     auto parse_enum_declaration() -> Shared<EnumDeclaration>;
