@@ -1,0 +1,15 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+struct Long { value bool; }
+    
+operator || (f Long, s Long) bool = f.value || s.value;
+
+operator && (f Long, s Long) bool = f.value && s.value;
+
+fun main() {
+    var l1 = Long(true);
+    var l2 = Long(false);
+
+    printf("Long `||` Long = %d\n", l1 || l2);
+    printf("Long `&&` Long = %d\n", l1 && l2);
+}

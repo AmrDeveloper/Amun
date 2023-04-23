@@ -1,0 +1,24 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+struct Long { value int64; }
+    
+operator == (f Long, s Long) bool = f.value == s.value;
+
+operator > (f Long, s Long) bool = f.value > s.value;
+
+operator >= (f Long, s Long) bool = f.value >= s.value;
+
+operator < (f Long, s Long) bool = f.value < s.value;
+
+operator <= (f Long, s Long) bool = f.value <= s.value;
+
+fun main() {
+    var l1 = Long(10);
+    var l2 = Long(2);
+
+    printf("Long `==` Long = %d\n", l1 == l2);
+    printf("Long `> ` Long = %d\n", l1 > l2);
+    printf("Long `>=` Long = %d\n", l1 >= l2);
+    printf("Long `< ` Long = %d\n", l1 < l2);
+    printf("Long `<=` Long = %d\n", l1 <= l2);
+}
