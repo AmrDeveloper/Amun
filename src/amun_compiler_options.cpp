@@ -24,7 +24,7 @@ auto amun::parse_compiler_options(amun::CompilerOptions* options, int argc, char
             i += 1;
 
             // TODO: check that the new name is valid
-            options->executable_name = argv[i];
+            options->output_file_name = argv[i];
             received_options[0] = true;
             continue;
         }

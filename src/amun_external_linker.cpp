@@ -17,6 +17,10 @@ auto amun::ExternalLinker::link(std::string object_file_path) -> int
     // Append object field path
     linker_command_builder << " " + object_file_path;
 
+    // Set name for executable file to be the same name of oject file but removing .o extension
+    linker_command_builder << " -o ";
+    linker_command_builder << object_file_path.erase(object_file_path.size() - 2);
+
     // Build the full linker command
     const std::string linker_coomand = linker_command_builder.str();
 

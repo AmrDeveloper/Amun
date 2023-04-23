@@ -15,8 +15,7 @@ namespace amun {
 
 // Set of configurations for the Compiler
 struct CompilerOptions {
-    const char* executable_name = "output.o";
-    const char* llvm_ir_file_name = "output.ll";
+    std::string output_file_name = "output";
 
     bool should_report_warns = false;
     bool convert_warns_to_errors = false;

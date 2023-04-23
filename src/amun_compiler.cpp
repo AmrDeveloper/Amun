@@ -63,7 +63,7 @@ auto amun::Compiler::compile_source_code(const char* source_file) -> int
     llvm::InitializeNativeTargetAsmParser();
     llvm::InitializeNativeTargetAsmPrinter();
 
-    auto object_file_path = context->options.executable_name;
+    std::string object_file_path = context->options.output_file_name + ".o";
 
     std::error_code object_file_error;
     auto flags = llvm::sys::fs::OF_None;
@@ -132,16 +132,17 @@ auto amun::Compiler::emit_llvm_ir_from_source_code(const char* source_file) -> i
     amun::LLVMBackend llvm_backend;
     auto llvm_ir_module = llvm_backend.compile(source_file, compilation_unit);
 
+    std::string ir_file_name = context->options.output_file_name + ".ll";
+
     std::error_code error_code;
-    llvm::raw_fd_ostream output_stream(context->options.llvm_ir_file_name, error_code);
+    llvm::raw_fd_ostream output_stream(ir_file_name, error_code);
     if (error_code.message() != "Success") {
         std::cout << "Can't create output file " << error_code.message() << '\n';
         return EXIT_FAILURE;
     }
 
     llvm_ir_module->print(output_stream, nullptr);
-    std::cout << "Successfully compiled " << source_file << " to "
-              << context->options.llvm_ir_file_name << '\n';
+    std::cout << "Successfully compiled " << source_file << " to " << ir_file_name << '\n';
     return EXIT_SUCCESS;
 }
 
