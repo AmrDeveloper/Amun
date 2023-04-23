@@ -62,6 +62,8 @@ class Parser {
 
     auto parse_declaration_statement() -> Shared<Statement>;
 
+    auto parse_declaraions_directive() -> Shared<Statement>;
+
     auto parse_statement() -> Shared<Statement>;
 
     auto parse_field_declaration(bool is_global) -> Shared<FieldDeclaration>;
@@ -100,6 +102,8 @@ class Parser {
     auto parse_block_statement() -> Shared<BlockStatement>;
 
     auto parse_expression_statement() -> Shared<ExpressionStatement>;
+
+    auto parse_statements_directive() -> Shared<Statement>;
 
     auto parse_expression() -> Shared<Expression>;
 
@@ -161,7 +165,7 @@ class Parser {
 
     auto parse_value_size_expression() -> Shared<ValueSizeExpression>;
 
-    auto parse_directive_expression() -> Shared<Expression>;
+    auto parse_expressions_directive() -> Shared<Expression>;
 
     auto parse_type() -> Shared<amun::Type>;
 

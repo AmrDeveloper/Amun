@@ -42,20 +42,36 @@ auto amun::Tokenizer::scan_next_token() -> Token
     case '~': return build_token(TokenKind::TOKEN_NOT);
 
     // One or Two character token
-    case '.': return build_token(match('.') ? TokenKind::TOKEN_DOT_DOT : TokenKind::TOKEN_DOT);
-    case ':':
+    case '.': {
+        return build_token(match('.') ? TokenKind::TOKEN_DOT_DOT : TokenKind::TOKEN_DOT);
+    }
+    case ':': {
         return build_token(match(':') ? TokenKind::TOKEN_COLON_COLON : TokenKind::TOKEN_COLON);
-    case '|': return build_token(match('|') ? TokenKind::TOKEN_OR_OR : TokenKind::TOKEN_OR);
-    case '&': return build_token(match('&') ? TokenKind::TOKEN_AND_AND : TokenKind::TOKEN_AND);
-    case '=':
+    }
+    case '|': {
+        return build_token(match('|') ? TokenKind::TOKEN_OR_OR : TokenKind::TOKEN_OR);
+    }
+    case '&': {
+        return build_token(match('&') ? TokenKind::TOKEN_AND_AND : TokenKind::TOKEN_AND);
+    }
+    case '=': {
         return build_token(match('=') ? TokenKind::TOKEN_EQUAL_EQUAL : TokenKind::TOKEN_EQUAL);
-    case '!': return build_token(match('=') ? TokenKind::TOKEN_BANG_EQUAL : TokenKind::TOKEN_BANG);
-    case '*': return build_token(match('=') ? TokenKind::TOKEN_STAR_EQUAL : TokenKind::TOKEN_STAR);
-    case '/':
+    }
+    case '!': {
+        return build_token(match('=') ? TokenKind::TOKEN_BANG_EQUAL : TokenKind::TOKEN_BANG);
+    }
+    case '*': {
+        return build_token(match('=') ? TokenKind::TOKEN_STAR_EQUAL : TokenKind::TOKEN_STAR);
+    }
+    case '/': {
         return build_token(match('=') ? TokenKind::TOKEN_SLASH_EQUAL : TokenKind::TOKEN_SLASH);
-    case '%':
+    }
+    case '%': {
         return build_token(match('=') ? TokenKind::TOKEN_PARCENT_EQUAL : TokenKind::TOKEN_PERCENT);
-    case '#': return build_token(TokenKind::TOKEN_HASH);
+    }
+    case '@': {
+        return build_token(TokenKind::TOKEN_AT);
+    }
 
     case '+': {
         if (match('=')) {
@@ -639,9 +655,6 @@ auto amun::Tokenizer::resolve_keyword_token_kind(const char* keyword) -> TokenKi
         if (str5Equals("break", keyword)) {
             return TokenKind::TOKEN_BREAK;
         }
-        if (str5Equals("infix", keyword)) {
-            return TokenKind::TOKEN_INFIX;
-        }
         if (str5Equals("const", keyword)) {
             return TokenKind::TOKEN_CONST;
         }
@@ -657,24 +670,12 @@ auto amun::Tokenizer::resolve_keyword_token_kind(const char* keyword) -> TokenKi
         if (str6Equals("return", keyword)) {
             return TokenKind::TOKEN_RETURN;
         }
-        if (str6Equals("extern", keyword)) {
-            return TokenKind::TOKEN_EXTERN;
-        }
-        if (str6Equals("prefix", keyword)) {
-            return TokenKind::TOKEN_PREFIX;
-        }
         if (str6Equals("switch", keyword)) {
             return TokenKind::TOKEN_SWITCH;
-        }
-        if (str6Equals("packed", keyword)) {
-            return TokenKind::TOKEN_PACKED;
         }
         return TokenKind::TOKEN_IDENTIFIER;
     }
     case 7: {
-        if (str7Equals("postfix", keyword)) {
-            return TokenKind::TOKEN_POSTFIX;
-        }
         if (str7Equals("varargs", keyword)) {
             return TokenKind::TOKEN_VARARGS;
         }
@@ -692,9 +693,6 @@ auto amun::Tokenizer::resolve_keyword_token_kind(const char* keyword) -> TokenKi
     case 9: {
         if (str9Equals("type_size", keyword)) {
             return TokenKind::TOKEN_TYPE_SIZE;
-        }
-        if (str9Equals("intrinsic", keyword)) {
-            return TokenKind::TOKEN_INTRINSIC;
         }
         return TokenKind::TOKEN_IDENTIFIER;
     }

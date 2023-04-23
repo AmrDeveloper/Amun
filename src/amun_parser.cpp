@@ -219,35 +219,6 @@ auto amun::Parser::parse_single_source_file(std::string& path) -> std::vector<Sh
 auto amun::Parser::parse_declaration_statement() -> Shared<Statement>
 {
     switch (peek_current().kind) {
-    case TokenKind::TOKEN_PREFIX:
-    case TokenKind::TOKEN_INFIX:
-    case TokenKind::TOKEN_POSTFIX: {
-        auto call_kind = amun::FunctionKind::PREFIX_FUNCTION;
-        if (peek_current().kind == TokenKind::TOKEN_INFIX) {
-            call_kind = amun::FunctionKind::INFIX_FUNCTION;
-        }
-        else if (peek_current().kind == TokenKind::TOKEN_POSTFIX) {
-            call_kind = amun::FunctionKind::POSTFIX_FUNCTION;
-        }
-        advanced_token();
-
-        if (is_current_kind(TokenKind::TOKEN_EXTERN)) {
-            return parse_function_prototype(call_kind, true);
-        }
-        else if (is_current_kind(TokenKind::TOKEN_FUN)) {
-            return parse_function_declaration(call_kind);
-        }
-
-        context->diagnostics.report_error(
-            peek_current().position, "Prefix, Infix, postfix keyword used only with functions");
-        throw "Stop";
-    }
-    case TokenKind::TOKEN_EXTERN: {
-        return parse_function_prototype(amun::FunctionKind::NORMAL_FUNCTION, true);
-    }
-    case TokenKind::TOKEN_INTRINSIC: {
-        return parse_intrinsic_prototype();
-    }
     case TokenKind::TOKEN_FUN: {
         return parse_function_declaration(amun::FunctionKind::NORMAL_FUNCTION);
     }
@@ -263,12 +234,11 @@ auto amun::Parser::parse_declaration_statement() -> Shared<Statement>
     case TokenKind::TOKEN_STRUCT: {
         return parse_structure_declaration(false);
     }
-    case TokenKind::TOKEN_PACKED: {
-        advanced_token();
-        return parse_structure_declaration(true);
-    }
     case TokenKind::TOKEN_ENUM: {
         return parse_enum_declaration();
+    }
+    case TokenKind::TOKEN_AT: {
+        return parse_declaraions_directive();
     }
     default: {
         context->diagnostics.report_error(peek_current().position,
@@ -314,6 +284,9 @@ auto amun::Parser::parse_statement() -> Shared<Statement>
     case TokenKind::TOKEN_OPEN_BRACE: {
         return parse_block_statement();
     }
+    case TokenKind::TOKEN_AT: {
+        return parse_statements_directive();
+    }
     default: {
         return parse_expression_statement();
     }
@@ -345,7 +318,7 @@ auto amun::Parser::parse_field_declaration(bool is_global) -> Shared<FieldDeclar
 
 auto amun::Parser::parse_intrinsic_prototype() -> Shared<IntrinsicPrototype>
 {
-    auto intrinsic_keyword = consume_kind(TokenKind::TOKEN_INTRINSIC, "Expect intrinsic keyword");
+    auto intrinsic_keyword = consume_kind(TokenKind::TOKEN_IDENTIFIER, "Expect intrinsic keyword");
 
     std::string intrinsic_name;
     if (is_current_kind(TokenKind::TOKEN_OPEN_PAREN)) {
@@ -439,7 +412,7 @@ auto amun::Parser::parse_function_prototype(amun::FunctionKind kind, bool is_ext
     -> Shared<FunctionPrototype>
 {
     if (is_external) {
-        assert_kind(TokenKind::TOKEN_EXTERN, "Expect external keyword");
+        assert_kind(TokenKind::TOKEN_IDENTIFIER, "Expect external keyword");
     }
 
     assert_kind(TokenKind::TOKEN_FUN, "Expect function keyword.");
@@ -1797,8 +1770,8 @@ auto amun::Parser::parse_primary_expression() -> Shared<Expression>
     case TokenKind::TOKEN_VALUE_SIZE: {
         return parse_value_size_expression();
     }
-    case TokenKind::TOKEN_HASH: {
-        return parse_directive_expression();
+    case TokenKind::TOKEN_AT: {
+        return parse_expressions_directive();
     }
     default: {
         unexpected_token_error();
@@ -2038,48 +2011,6 @@ auto amun::Parser::parse_value_size_expression() -> Shared<ValueSizeExpression>
     auto value = parse_expression();
     assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect `)` after value_size type");
     return std::make_shared<ValueSizeExpression>(token, value);
-}
-
-auto amun::Parser::parse_directive_expression() -> Shared<Expression>
-{
-    auto hash_token = consume_kind(TokenKind::TOKEN_HASH, "Expect `#` before directive name");
-    auto directive_name =
-        consume_kind(TokenKind::TOKEN_IDENTIFIER, "Expect symbol as directive name");
-    auto directive_name_literal = directive_name.literal;
-
-    if (directive_name_literal == "line") {
-        auto posiiton = directive_name.position;
-        auto current_line = posiiton.line_number;
-        Token directive_token;
-        directive_token.kind = TokenKind::TOKEN_INT64;
-        directive_token.position = posiiton;
-        directive_token.literal = std::to_string(current_line);
-        return std::make_shared<NumberExpression>(directive_token, amun::i64_type);
-    }
-
-    if (directive_name_literal == "column") {
-        auto posiiton = directive_name.position;
-        auto current_column = posiiton.column_start;
-        Token directive_token;
-        directive_token.kind = TokenKind::TOKEN_INT64;
-        directive_token.position = posiiton;
-        directive_token.literal = std::to_string(current_column);
-        return std::make_shared<NumberExpression>(directive_token, amun::i64_type);
-    }
-
-    if (directive_name_literal == "filepath") {
-        auto posiiton = directive_name.position;
-        auto current_filepath = context->source_manager.resolve_source_path(posiiton.file_id);
-        Token directive_token;
-        directive_token.kind = TokenKind::TOKEN_STRING;
-        directive_token.position = posiiton;
-        directive_token.literal = current_filepath;
-        return std::make_shared<StringExpression>(directive_token);
-    }
-
-    context->diagnostics.report_error(directive_name.position,
-                                      "No directive with name " + directive_name_literal);
-    throw "Stop";
 }
 
 auto amun::Parser::check_generic_parameter_name(Token name) -> void

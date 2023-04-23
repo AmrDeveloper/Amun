@@ -16,12 +16,9 @@ enum TokenKind {
     TOKEN_ENUM,
     TOKEN_TYPE,
     TOKEN_STRUCT,
-    TOKEN_PACKED,
     TOKEN_FUN,
     TOKEN_OPERATOR,
     TOKEN_RETURN,
-    TOKEN_EXTERN,
-    TOKEN_INTRINSIC,
     TOKEN_IF,
     TOKEN_ELSE,
     TOKEN_FOR,
@@ -32,10 +29,6 @@ enum TokenKind {
 
     TOKEN_BREAK,
     TOKEN_CONTINUE,
-
-    TOKEN_PREFIX,
-    TOKEN_INFIX,
-    TOKEN_POSTFIX,
 
     TOKEN_TYPE_SIZE,
     TOKEN_VALUE_SIZE,
@@ -52,7 +45,7 @@ enum TokenKind {
     TOKEN_COLON,
     TOKEN_COLON_COLON,
     TOKEN_SEMICOLON,
-    TOKEN_HASH,
+    TOKEN_AT,
 
     TOKEN_PLUS,
     TOKEN_MINUS,
@@ -146,8 +139,6 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::TOKEN_TYPE, "type"},
     {TokenKind::TOKEN_STRUCT, "struct"},
     {TokenKind::TOKEN_RETURN, "return"},
-    {TokenKind::TOKEN_INTRINSIC, "intrinsic"},
-    {TokenKind::TOKEN_EXTERN, "extern"},
     {TokenKind::TOKEN_IF, "if"},
     {TokenKind::TOKEN_ELSE, "else"},
     {TokenKind::TOKEN_FOR, "for"},
@@ -155,7 +146,6 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::TOKEN_SWITCH, "switch"},
     {TokenKind::TOKEN_CAST, "cast"},
     {TokenKind::TOKEN_DEFER, "defer"},
-    {TokenKind::TOKEN_PACKED, "packed"},
 
     {TokenKind::TOKEN_TRUE, "true"},
     {TokenKind::TOKEN_FALSE, "false"},
@@ -163,10 +153,6 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
 
     {TokenKind::TOKEN_BREAK, "break"},
     {TokenKind::TOKEN_CONTINUE, "continue"},
-
-    {TokenKind::TOKEN_PREFIX, "prefix"},
-    {TokenKind::TOKEN_INFIX, "infix"},
-    {TokenKind::TOKEN_POSTFIX, "postfix"},
 
     {TokenKind::TOKEN_TYPE_SIZE, "type_size"},
     {TokenKind::TOKEN_VALUE_SIZE, "value_size"},
@@ -179,7 +165,7 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::TOKEN_COLON, ":"},
     {TokenKind::TOKEN_COLON_COLON, "::"},
     {TokenKind::TOKEN_SEMICOLON, ";"},
-    {TokenKind::TOKEN_HASH, "#"},
+    {TokenKind::TOKEN_AT, "@"},
 
     {TokenKind::TOKEN_PLUS, "+"},
     {TokenKind::TOKEN_MINUS, "-"},
@@ -225,7 +211,7 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::TOKEN_OPEN_BRACE, "{"},
     {TokenKind::TOKEN_CLOSE_BRACE, "}"},
 
-    {TokenKind::TOKEN_IDENTIFIER, "symbol"},
+    {TokenKind::TOKEN_IDENTIFIER, "identifier"},
     {TokenKind::TOKEN_STRING, "string"},
     {TokenKind::TOKEN_CHARACTER, "char"},
     {TokenKind::TOKEN_INT, "int"},
