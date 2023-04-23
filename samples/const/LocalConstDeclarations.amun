@@ -1,0 +1,8 @@
+extern fun printf(format *char, varargs Any) int64;
+
+fun main() void {
+    const ONE = 1;
+    const TWO = 2;
+    printf("%d\n", ONE);
+    printf("%d\n", TWO);
+}
