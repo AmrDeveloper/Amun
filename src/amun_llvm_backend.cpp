@@ -2774,6 +2774,13 @@ auto amun::LLVMBackend::resolve_constant_string_expression(const std::string& li
         return constants_string_pool[literal];
     }
 
+    // Handle empty string literal
+    if (literal.empty()) {
+        auto str = Builder.CreateGlobalStringPtr("");
+        constants_string_pool[""] = str;
+        return str;
+    }
+
     auto size = literal.size();
     auto length = size + 1;
     std::vector<llvm::Constant*> characters(length);
