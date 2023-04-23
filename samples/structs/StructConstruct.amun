@@ -1,8 +1,8 @@
-extern fun printf(format *char, varargs Any) int64;
+@extern fun printf(format *char, varargs Any) int64;
 
-extern fun malloc(size int64) *void;
+@extern fun malloc(size int64) *void;
 
-extern fun free(ptr *void) void;
+@extern fun free(ptr *void) void;
 
 struct Point {
     x int64;

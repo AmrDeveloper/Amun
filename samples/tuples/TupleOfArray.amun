@@ -1,4 +1,4 @@
-extern fun printf(format *char, varargs Any) int64;
+@extern fun printf(format *char, varargs Any) int64;
 
 fun main() int64 {
     var tuple = ([1, 2, 3], ["a", "b", "c"]);

@@ -1,4 +1,4 @@
-extern fun printf(format *char, varargs Any) int64;
+@extern fun printf(format *char, varargs Any) int64;
 
 fun make_fixed_array<T>() [5]T {
     return [1, 2, 3, 4, 5];

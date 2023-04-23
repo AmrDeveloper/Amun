@@ -1,6 +1,6 @@
-extern fun printf(format *char, value int64) int64;
+@extern fun printf(format *char, value int64) int64;
 
-postfix fun increse(x int64) int64 = x + 1;
+@postfix fun increse(x int64) int64 = x + 1;
 
 fun main() int64 {
     var result : int64 = 10 increse;

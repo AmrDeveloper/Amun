@@ -1,6 +1,6 @@
-extern fun printf(format *char, value int64) int64;
+@extern fun printf(format *char, value int64) int64;
 
-extern fun puts(s *char) int64;
+@extern fun puts(s *char) int64;
 
 fun plus(x int64, y int64) int64 {
     return x + y;

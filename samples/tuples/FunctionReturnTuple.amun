@@ -1,4 +1,4 @@
-extern fun printf(format *char, varargs Any) int64;
+@extern fun printf(format *char, varargs Any) int64;
 
 fun count_even_odd(array [10]int64) (int64, int64) {
     var even_count = 0;

@@ -1,5 +1,5 @@
-extern fun puts(s *char) int64;
-extern fun putchar(c int8) int32;
+@extern fun puts(s *char) int64;
+@extern fun putchar(c int8) int32;
 
 var numbers = ["One", "Two"];
 var one = numbers[0];

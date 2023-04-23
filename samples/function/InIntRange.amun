@@ -1,18 +1,18 @@
-extern fun printf(format *char, varargs Any) int64;
+@extern fun printf(format *char, varargs Any) int64;
 
 struct IntRange {
     start int64;
     end int64;
 }
 
-infix fun to(s int64, e int64) IntRange {
+@infix fun to(s int64, e int64) IntRange {
     var range : IntRange;
     range.start = s;
     range.end = e;
     return range;
 }
 
-infix fun in(value int64, range IntRange) bool {
+@infix fun in(value int64, range IntRange) bool {
    return value >= range.start && value <= range.end;
 }
 

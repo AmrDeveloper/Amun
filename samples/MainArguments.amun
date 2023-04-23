@@ -1,6 +1,6 @@
-extern fun printf(format *char, value *char) int64;
+@extern fun printf(format *char, value *char) int64;
 
-extern fun puts(s *char) int64;
+@extern fun puts(s *char) int64;
 
 fun main(argc int64, argv **char) int64 {
     var i = 0;

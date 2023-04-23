@@ -1,4 +1,4 @@
-extern fun putchar(c int8) int32;
+@extern fun putchar(c int8) int32;
 
 fun main() int64 {
     var hello : *char = "Hello, World!";

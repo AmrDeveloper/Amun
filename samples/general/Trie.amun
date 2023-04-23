@@ -1,10 +1,10 @@
-extern fun printf(format *char, varargs Any) int64;
+@extern fun printf(format *char, varargs Any) int64;
 
-extern fun malloc(size int64) *void;
+@extern fun malloc(size int64) *void;
 
-extern fun free(ptr *void) void;
+@extern fun free(ptr *void) void;
 
-extern fun strlen(str *char) int64;
+@extern fun strlen(str *char) int64;
 
 struct TrieNode {
     children [26]*TrieNode;

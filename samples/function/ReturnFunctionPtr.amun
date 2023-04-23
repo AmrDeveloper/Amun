@@ -1,4 +1,4 @@
-extern fun printf(format *char, value int64) int64;
+@extern fun printf(format *char, value int64) int64;
 
 fun function() int64 {
     printf("Hello Function", 0);

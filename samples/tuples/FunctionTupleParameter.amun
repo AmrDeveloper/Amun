@@ -1,4 +1,4 @@
-extern fun printf(format *char, varargs Any) int64;
+@extern fun printf(format *char, varargs Any) int64;
 
 fun print_tuple(tuple (int64, int64)) {
     printf("%d\n", tuple.0);

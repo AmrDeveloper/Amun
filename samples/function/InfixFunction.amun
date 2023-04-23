@@ -1,6 +1,6 @@
-extern fun printf(format *char, value int64) int64;
+@extern fun printf(format *char, value int64) int64;
 
-infix fun plus(x int64, y int64) int64 = x + y;
+@infix fun plus(x int64, y int64) int64 = x + y;
 
 fun main() int64 {
     var result : int64 = 50 plus 10;

@@ -1,21 +1,22 @@
-extern fun printf(format *char, varargs Any) int64;
+@extern fun printf(format *char, varargs Any) int64;
 
 // Size = 12 bytes
-struct UnPackedStruct {
+@packed
+struct PackedStruct {
     a int8;     // 1 + (3 padding) bytes
     b int32;    // 4 bytes
     c int8;     // 1 + (3 padding) bytes
 }
 
 // Size = 6 bytes
-packed struct PackedStruct {
+struct UnPackedStruct {
     a int8;     // 1 byte
     b int32;    // 4 bytes
     c int8;     // 1 byte
 }
 
 fun main() int64 {
-    printf("Size of unpacked struct : %d bytes\n", type_size(UnPackedStruct));
-    printf("Size of packed struct   : %d bytes\n", type_size(PackedStruct));
+    printf("Size of un packed struct : %d bytes\n", type_size(PackedStruct));
+    printf("Size of  packed struct   : %d bytes\n", type_size(UnPackedStruct));
     return 0;
 }

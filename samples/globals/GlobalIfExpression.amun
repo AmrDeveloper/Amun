@@ -1,4 +1,4 @@
-extern fun printf(format *char, value int64) int64;
+@extern fun printf(format *char, value int64) int64;
 
 // Resolve Constants If Expression at Compile time
 var ten = 10;

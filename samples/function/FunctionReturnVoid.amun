@@ -1,4 +1,4 @@
-extern fun puts(s *char) int64;
+@extern fun puts(s *char) int64;
 
 fun function_return_void() void {
     puts("Hello, World");

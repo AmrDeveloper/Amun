@@ -1,4 +1,4 @@
-extern fun printf(format *char, value int64) int64;
+@extern fun printf(format *char, value int64) int64;
 
 // Those Global Variables values are calculated at compile time
 var a = 10;

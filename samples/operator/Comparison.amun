@@ -1,4 +1,4 @@
-extern fun printf(format *char, value bool) int64;
+@extern fun printf(format *char, value bool) int64;
 
 fun main() int64 {
     var v1 : bool = 1 > 1;

@@ -1,4 +1,4 @@
-extern fun printf(format *char, value int64) int64;
+@extern fun printf(format *char, value int64) int64;
 
 fun print(x int64) int64 {
     printf("%d\n", x);

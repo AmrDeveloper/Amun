@@ -1,4 +1,4 @@
-extern fun printf(format *char, value int64) int64;
+@extern fun printf(format *char, value int64) int64;
 
 fun main() int64 {
     var value : int64 = if (true) 10 else 20;

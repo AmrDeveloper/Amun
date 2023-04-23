@@ -1,4 +1,4 @@
-extern fun printf(format *char, varargs Any) int64;
+@extern fun printf(format *char, varargs Any) int64;
 
 fun main() int64 {
     var sumOfThree = { (x int64, y int64, z int64) int64 ->

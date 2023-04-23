@@ -12,7 +12,7 @@ struct Point {
 ```
 ## Packed Struct Declaration
 
-To declare struct with no padding between fields you need to use `packed` keyword
+To declare struct with no padding between fields you need to use `#packed` directive
 
 ```
 // 1 (with 3 padding) + 4 + 1 (with 3 padding) = 12 bytes
@@ -23,7 +23,7 @@ struct UnPackedStruct {
 }
 
 // 1 + 4 + 1 = 6 bytes
-packed struct PackedStruct {
+@packed struct PackedStruct {
     a int8;
     b int32;
     c int8;
