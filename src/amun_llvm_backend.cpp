@@ -546,11 +546,17 @@ auto amun::LLVMBackend::visit(ForEachStatement* node) -> std::any
     auto collection = llvm_resolve_value(collection_value);
     auto collection_type = collection->getType();
 
+    // If collection type is fixed size array with zero length, no need to generate for each
+    if (collection_type->isArrayTy() && collection_type->getArrayNumElements() == 0) {
+        return 0;
+    }
+
     auto is_foreach_string = amun::is_types_equals(collection_exp_type, amun::i8_ptr_type);
 
     auto zero_value = create_llvm_int64(-1, true);
     auto step = create_llvm_int64(1, true);
 
+    // Get length of collections depending on type
     auto length = is_foreach_string
                       ? create_llvm_string_length(collection)
                       : create_llvm_int64(collection_type->getArrayNumElements(), true);
