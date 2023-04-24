@@ -1,7 +1,7 @@
 @extern fun printf(format *char, varargs Any) int64;
 
 struct Long { value bool; }
-    
+
 operator || (f Long, s Long) bool = f.value || s.value;
 
 operator && (f Long, s Long) bool = f.value && s.value;

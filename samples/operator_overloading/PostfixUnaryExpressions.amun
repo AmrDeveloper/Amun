@@ -1,0 +1,35 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+@extern fun malloc(size int64) *void;
+
+@extern fun free(ptr *void) void;
+
+struct Long {
+    value int64;
+}
+
+@postfix operator ++ (f *Long) int64 {
+    var value = f.value++;
+    return value;
+}
+
+@postfix operator -- (f *Long) int64 {
+    var value = f.value--;
+    return value;
+}
+
+fun main() {
+    var long = cast(*Long) malloc(type_size(Long));
+    defer free(cast(*void) long);
+
+    long.value = 0;
+    printf("%d\n", long++);
+    printf("%d\n", long++);
+    printf("%d\n", long++);
+    printf("%d\n", long++);
+
+    printf("%d\n", long--);
+    printf("%d\n", long--);
+    printf("%d\n", long--);
+    printf("%d\n", long--);
+}

@@ -1,0 +1,14 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+struct Long {
+    value int64;
+}
+
+@prefix operator ~ (f Long) int64 {
+    return ~f.value;
+}
+
+fun main() {
+    var long = Long(0);
+    printf("%d\n", ~long);
+}

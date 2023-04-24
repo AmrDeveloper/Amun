@@ -1,7 +1,7 @@
 @extern fun printf(format *char, varargs Any) int64;
 
 struct Long { value int64; }
-    
+
 operator + (f Long, s Long) int64 = f.value + s.value;
 
 operator - (f Long, s Long) int64 = f.value - s.value;

@@ -6,6 +6,8 @@
 
 fun main() int64 {
     var ptr = cast(*int64) malloc(type_size(int64));
+    defer free(cast(*void) ptr);
+
     *ptr = 10;
 
     var value = *ptr;
