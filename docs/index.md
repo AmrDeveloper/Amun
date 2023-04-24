@@ -7,15 +7,8 @@ A Statically typed, compiled general purpose low level programming language buil
 ```
 import "cstdio"
 
-struct Container <T> {
-   value T;
-}
-
-fun main() int64 {
-    var scon = Container<*char> ("Hello World");
-    var icon = Container<int64> (2023);
-    printf("%s on %d", scon.value, icon.value);
-    return 0;
+fun main() {
+    printf("Hello, World!\n");
 }
 ```
 
