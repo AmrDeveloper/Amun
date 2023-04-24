@@ -735,7 +735,7 @@ auto amun::TypeChecker::visit(BinaryExpression* node) -> std::any
     }
 
     // Check if those types has an operator overloading function
-    auto function_name = mangle_operator_function(op.kind, lhs, rhs);
+    auto function_name = mangle_operator_function(op.kind, {lhs, rhs});
     if (types_table.is_defined(function_name)) {
         auto function = types_table.lookup(function_name);
         auto type = node_amun_type(function);
@@ -805,7 +805,7 @@ auto amun::TypeChecker::visit(ShiftExpression* node) -> std::any
     }
 
     // Check if those types has an operator overloading function
-    auto function_name = mangle_operator_function(op.kind, lhs, rhs);
+    auto function_name = mangle_operator_function(op.kind, {lhs, rhs});
     if (types_table.is_defined(function_name)) {
         auto function = types_table.lookup(function_name);
         auto type = node_amun_type(function);
@@ -888,7 +888,7 @@ auto amun::TypeChecker::visit(ComparisonExpression* node) -> std::any
     }
 
     // Check if those types has an operator overloading function
-    auto function_name = mangle_operator_function(op.kind, lhs, rhs);
+    auto function_name = mangle_operator_function(op.kind, {lhs, rhs});
     if (types_table.is_defined(function_name)) {
         auto function = types_table.lookup(function_name);
         auto type = node_amun_type(function);
@@ -918,7 +918,7 @@ auto amun::TypeChecker::visit(LogicalExpression* node) -> std::any
     auto op = node->get_operator_token();
 
     // Check if those types has an operator overloading function
-    auto function_name = mangle_operator_function(op.kind, lhs, rhs);
+    auto function_name = mangle_operator_function(op.kind, {lhs, rhs});
     if (types_table.is_defined(function_name)) {
         auto function = types_table.lookup(function_name);
         auto type = node_amun_type(function);
@@ -939,48 +939,79 @@ auto amun::TypeChecker::visit(LogicalExpression* node) -> std::any
 
 auto amun::TypeChecker::visit(PrefixUnaryExpression* node) -> std::any
 {
-    auto operand_type = node_amun_type(node->get_right()->accept(this));
-    auto unary_operator = node->get_operator_token().kind;
+    auto rhs = node_amun_type(node->get_right()->accept(this));
+    auto op_kind = node->get_operator_token().kind;
 
-    if (unary_operator == TokenKind::TOKEN_MINUS) {
-        if (amun::is_number_type(operand_type)) {
-            node->set_type_node(operand_type);
-            return operand_type;
+    if (op_kind == TokenKind::TOKEN_MINUS) {
+        if (amun::is_number_type(rhs)) {
+            node->set_type_node(rhs);
+            return rhs;
         }
+
+        // Check if those types has an operator overloading function
+        auto function_name = "_prefix" + mangle_operator_function(op_kind, {rhs});
+        if (types_table.is_defined(function_name)) {
+            auto function = types_table.lookup(function_name);
+            auto type = node_amun_type(function);
+            assert(type->type_kind == amun::TypeKind::FUNCTION);
+            auto function_type = std::static_pointer_cast<amun::FunctionType>(type);
+            return function_type->return_type;
+        }
+
         context->diagnostics.report_error(
             node->get_operator_token().position,
-            "Unary - operator require number as an right operand but got " +
-                amun::get_type_literal(operand_type));
+            "Unary Minus `-` expect numbers or to override operators " +
+                amun::get_type_literal(rhs));
         throw "Stop";
     }
 
-    if (unary_operator == TokenKind::TOKEN_BANG) {
-        if (amun::is_number_type(operand_type)) {
-            node->set_type_node(operand_type);
-            return operand_type;
+    if (op_kind == TokenKind::TOKEN_BANG) {
+        if (amun::is_number_type(rhs)) {
+            node->set_type_node(rhs);
+            return rhs;
         }
-        context->diagnostics.report_error(
-            node->get_operator_token().position,
-            "Unary - operator require boolean as an right operand but got " +
-                amun::get_type_literal(operand_type));
+
+        // Check if those types has an operator overloading function
+        auto function_name = "_prefix" + mangle_operator_function(op_kind, {rhs});
+        if (types_table.is_defined(function_name)) {
+            auto function = types_table.lookup(function_name);
+            auto type = node_amun_type(function);
+            assert(type->type_kind == amun::TypeKind::FUNCTION);
+            auto function_type = std::static_pointer_cast<amun::FunctionType>(type);
+            return function_type->return_type;
+        }
+
+        context->diagnostics.report_error(node->get_operator_token().position,
+                                          "Bang `!` expect numbers or to override operators " +
+                                              amun::get_type_literal(rhs));
         throw "Stop";
     }
 
-    if (unary_operator == TokenKind::TOKEN_NOT) {
-        if (amun::is_number_type(operand_type)) {
-            node->set_type_node(operand_type);
-            return operand_type;
+    if (op_kind == TokenKind::TOKEN_NOT) {
+        if (amun::is_number_type(rhs)) {
+            node->set_type_node(rhs);
+            return rhs;
         }
-        context->diagnostics.report_error(
-            node->get_operator_token().position,
-            "Unary ~ operator require number as an right operand but got " +
-                amun::get_type_literal(operand_type));
+
+        // Check if those types has an operator overloading function
+        auto function_name = "_prefix" + mangle_operator_function(op_kind, {rhs});
+        if (types_table.is_defined(function_name)) {
+            auto function = types_table.lookup(function_name);
+            auto type = node_amun_type(function);
+            assert(type->type_kind == amun::TypeKind::FUNCTION);
+            auto function_type = std::static_pointer_cast<amun::FunctionType>(type);
+            return function_type->return_type;
+        }
+
+        context->diagnostics.report_error(node->get_operator_token().position,
+                                          "Not `~` expect numbers or to override operators " +
+                                              amun::get_type_literal(rhs));
         throw "Stop";
     }
 
-    if (unary_operator == TokenKind::TOKEN_STAR) {
-        if (operand_type->type_kind == amun::TypeKind::POINTER) {
-            auto pointer_type = std::static_pointer_cast<amun::PointerType>(operand_type);
+    if (op_kind == TokenKind::TOKEN_STAR) {
+        if (rhs->type_kind == amun::TypeKind::POINTER) {
+            auto pointer_type = std::static_pointer_cast<amun::PointerType>(rhs);
             auto type = pointer_type->base_type;
             node->set_type_node(type);
             return type;
@@ -989,12 +1020,12 @@ auto amun::TypeChecker::visit(PrefixUnaryExpression* node) -> std::any
         context->diagnostics.report_error(
             node->get_operator_token().position,
             "Derefernse operator require pointer as an right operand but got " +
-                amun::get_type_literal(operand_type));
+                amun::get_type_literal(rhs));
         throw "Stop";
     }
 
-    if (unary_operator == TokenKind::TOKEN_AND) {
-        auto pointer_type = std::make_shared<amun::PointerType>(operand_type);
+    if (op_kind == TokenKind::TOKEN_AND) {
+        auto pointer_type = std::make_shared<amun::PointerType>(rhs);
         if (amun::is_function_pointer_type(pointer_type)) {
             auto function_type =
                 std::static_pointer_cast<amun::FunctionType>(pointer_type->base_type);
@@ -1008,46 +1039,65 @@ auto amun::TypeChecker::visit(PrefixUnaryExpression* node) -> std::any
         return pointer_type;
     }
 
-    if (unary_operator == TokenKind::TOKEN_PLUS_PLUS ||
-        unary_operator == TokenKind::TOKEN_MINUS_MINUS) {
-        if (operand_type->type_kind != amun::TypeKind::NUMBER) {
-            context->diagnostics.report_error(
-                node->get_operator_token().position,
-                "Unary ++ or -- expression expect variable to be number ttype but got " +
-                    amun::get_type_literal(operand_type));
-            throw "Stop";
+    if (op_kind == TokenKind::TOKEN_PLUS_PLUS || op_kind == TokenKind::TOKEN_MINUS_MINUS) {
+        if (rhs->type_kind == amun::TypeKind::NUMBER) {
+            node->set_type_node(rhs);
+            return rhs;
         }
-        node->set_type_node(operand_type);
-        return operand_type;
+
+        // Check if those types has an operator overloading function
+        auto function_name = "_prefix" + mangle_operator_function(op_kind, {rhs});
+        if (types_table.is_defined(function_name)) {
+            auto function = types_table.lookup(function_name);
+            auto type = node_amun_type(function);
+            assert(type->type_kind == amun::TypeKind::FUNCTION);
+            auto function_type = std::static_pointer_cast<amun::FunctionType>(type);
+            return function_type->return_type;
+        }
+
+        context->diagnostics.report_error(
+            node->get_operator_token().position,
+            "Unary ++ or -- expect numbers or to override operators " +
+                amun::get_type_literal(rhs));
+        throw "Stop";
     }
 
     context->diagnostics.report_error(node->get_operator_token().position,
                                       "Unsupported unary expression " +
-                                          amun::get_type_literal(operand_type));
+                                          amun::get_type_literal(rhs));
     throw "Stop";
 }
 
 auto amun::TypeChecker::visit(PostfixUnaryExpression* node) -> std::any
 {
-    auto operand_type = node_amun_type(node->get_right()->accept(this));
-    auto unary_operator = node->get_operator_token().kind;
+    auto rhs = node_amun_type(node->get_right()->accept(this));
+    auto op_kind = node->get_operator_token().kind;
+    auto position = node->get_operator_token().position;
 
-    if (unary_operator == TokenKind::TOKEN_PLUS_PLUS or
-        unary_operator == TokenKind::TOKEN_MINUS_MINUS) {
-        if (operand_type->type_kind != amun::TypeKind::NUMBER) {
-            context->diagnostics.report_error(
-                node->get_operator_token().position,
-                "Unary ++ or -- expression expect variable to be number ttype but got " +
-                    amun::get_type_literal(operand_type));
-            throw "Stop";
+    if (op_kind == TokenKind::TOKEN_PLUS_PLUS or op_kind == TokenKind::TOKEN_MINUS_MINUS) {
+        if (rhs->type_kind == amun::TypeKind::NUMBER) {
+            node->set_type_node(rhs);
+            return rhs;
         }
-        node->set_type_node(operand_type);
-        return operand_type;
+
+        // Check if those types has an operator overloading function
+        auto function_name = "_postfix" + mangle_operator_function(op_kind, {rhs});
+        if (types_table.is_defined(function_name)) {
+            auto function = types_table.lookup(function_name);
+            auto type = node_amun_type(function);
+            assert(type->type_kind == amun::TypeKind::FUNCTION);
+            auto function_type = std::static_pointer_cast<amun::FunctionType>(type);
+            return function_type->return_type;
+        }
+
+        context->diagnostics.report_error(
+            position, "Unary ++ or -- expect numbers or to override operators " +
+                          amun::get_type_literal(rhs));
+        throw "Stop";
     }
 
-    context->diagnostics.report_error(node->get_operator_token().position,
-                                      "Unsupported unary expression " +
-                                          amun::get_type_literal(operand_type));
+    context->diagnostics.report_error(position, "Unsupported unary expression " +
+                                                    amun::get_type_literal(rhs));
     throw "Stop";
 }
 

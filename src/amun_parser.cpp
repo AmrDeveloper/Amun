@@ -223,7 +223,7 @@ auto amun::Parser::parse_declaration_statement() -> Shared<Statement>
         return parse_function_declaration(amun::FunctionKind::NORMAL_FUNCTION);
     }
     case TokenKind::TOKEN_OPERATOR: {
-        return parse_operator_function_declaraion();
+        return parse_operator_function_declaraion(amun::FunctionKind::NORMAL_FUNCTION);
     }
     case TokenKind::TOKEN_VAR: {
         return parse_field_declaration(true);
@@ -475,24 +475,7 @@ auto amun::Parser::parse_function_prototype(amun::FunctionKind kind, bool is_ext
     }
 
     auto parameters_size = parameters.size();
-
-    if (kind == amun::FunctionKind::PREFIX_FUNCTION && parameters_size != 1) {
-        context->diagnostics.report_error(name.position,
-                                          "Prefix function must have exactly one parameter");
-        throw "Stop";
-    }
-
-    if (kind == amun::FunctionKind::INFIX_FUNCTION && parameters_size != 2) {
-        context->diagnostics.report_error(name.position,
-                                          "Infix function must have exactly Two parameter");
-        throw "Stop";
-    }
-
-    if (kind == amun::FunctionKind::POSTFIX_FUNCTION && parameters_size != 1) {
-        context->diagnostics.report_error(name.position,
-                                          "Postfix function must have exactly one parameter");
-        throw "Stop";
-    }
+    check_function_kind_paramters_count(kind, parameters_size, name.position);
 
     // Register current function declaration kind
     context->functions[name.literal] = kind;
@@ -590,31 +573,26 @@ auto amun::Parser::parse_function_declaration(amun::FunctionKind kind)
     throw "Stop";
 }
 
-auto amun::Parser::parse_operator_function_declaraion() -> Shared<OperatorFunctionDeclaraion>
+auto amun::Parser::parse_operator_function_declaraion(amun::FunctionKind kind)
+    -> Shared<OperatorFunctionDeclaraion>
 {
     auto parent_node_scope = current_ast_scope;
     current_ast_scope = amun::AstNodeScope::FUNCTION_SCOPE;
     context->constants_table_map.push_new_scope();
 
     auto operator_keyword = peek_and_advance_token();
-    auto operator_token = peek_and_advance_token();
-    if (is_previous_kind(TokenKind::TOKEN_GREATER) && is_current_kind(TokenKind::TOKEN_GREATER)) {
-        advanced_token();
-        operator_token.kind = TokenKind::TOKEN_RIGHT_SHIFT;
-    }
+    auto position = operator_keyword.position;
 
-    if (!is_supported_overloading_operator(operator_token.kind)) {
-        context->diagnostics.report_error(operator_keyword.position,
-                                          "Unsupported Operator for operator overloading function");
-        throw "Stop";
-    }
+    auto operator_token = parse_operator_function_operator(kind);
 
     std::vector<Shared<Parameter>> parameters;
-    parameters.reserve(2);
+    std::vector<Shared<amun::Type>> parameters_types;
     if (is_current_kind(TokenKind::TOKEN_OPEN_PAREN)) {
         advanced_token();
         while (is_source_available() && not is_current_kind(TokenKind::TOKEN_CLOSE_PAREN)) {
-            parameters.push_back(parse_parameter());
+            auto parameter = parse_parameter();
+            parameters.push_back(parameter);
+            parameters_types.push_back(parameter->type);
             if (is_current_kind(TokenKind::TOKEN_COMMA)) {
                 advanced_token();
             }
@@ -622,15 +600,17 @@ auto amun::Parser::parse_operator_function_declaraion() -> Shared<OperatorFuncti
         assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after function parameters.");
     }
 
-    if (parameters.size() != 2) {
-        context->diagnostics.report_error(operator_keyword.position,
-                                          "Invalid number of parameters, expect 2");
-        throw "Stop";
+    check_function_kind_paramters_count(FunctionKind::NORMAL_FUNCTION, parameters.size(), position);
+
+    const auto* prefix = "";
+    if (kind == FunctionKind::PREFIX_FUNCTION) {
+        prefix = "_prefix";
+    }
+    if (kind == FunctionKind::POSTFIX_FUNCTION) {
+        prefix = "_postfix";
     }
 
-    auto left_type = parameters[0]->type;
-    auto right_type = parameters[1]->type;
-    auto mangled_name = mangle_operator_function(operator_token.kind, left_type, right_type);
+    auto mangled_name = prefix + mangle_operator_function(operator_token.kind, parameters_types);
     Token name = {TokenKind::TOKEN_IDENTIFIER, operator_token.position, mangled_name};
 
     Shared<amun::Type> return_type;
@@ -679,10 +659,48 @@ auto amun::Parser::parse_operator_function_declaraion() -> Shared<OperatorFuncti
         return std::make_shared<OperatorFunctionDeclaraion>(operator_token, declaration);
     }
 
-    auto posiiton = operator_keyword.position;
     context->diagnostics.report_error(
-        posiiton, "operator function declaration without a body: `{ <body> }` or `= <value>;`");
+        position, "operator function declaration without a body: `{ <body> }` or `= <value>;`");
     throw "Stop";
+}
+
+auto amun::Parser::parse_operator_function_operator(amun::FunctionKind kind) -> Token
+{
+    auto op = peek_and_advance_token();
+    if (is_previous_kind(TokenKind::TOKEN_GREATER) && is_current_kind(TokenKind::TOKEN_GREATER)) {
+        advanced_token();
+        op.kind = TokenKind::TOKEN_RIGHT_SHIFT;
+    }
+
+    // Check if it overloading operator
+    if (!is_supported_overloading_operator(op.kind)) {
+        context->diagnostics.report_error(op.position,
+                                          "Unsupported Operator for operator overloading function");
+        throw "Stop";
+    }
+
+    auto op_kind = op.kind;
+
+    // Check if current operator match function kind
+    if (kind == amun::FunctionKind::PREFIX_FUNCTION && !is_overloading_prefix_operator(op_kind)) {
+        context->diagnostics.report_error(op.position,
+                                          "this operator can't be used as prefix operator");
+        throw "Stop";
+    }
+
+    if (kind == amun::FunctionKind::INFIX_FUNCTION && !is_overloading_infix_operator(op_kind)) {
+        context->diagnostics.report_error(op.position,
+                                          "this operator can't be used as infix operator");
+        throw "Stop";
+    }
+
+    if (kind == amun::FunctionKind::POSTFIX_FUNCTION && !is_overloading_postfix_operator(op_kind)) {
+        context->diagnostics.report_error(op.position,
+                                          "this operator can't be used as postfix operator");
+        throw "Stop";
+    }
+
+    return op;
 }
 
 auto amun::Parser::parse_structure_declaration(bool is_packed) -> Shared<StructDeclaration>
@@ -1434,16 +1452,7 @@ auto amun::Parser::parse_prefix_expression() -> Shared<Expression>
         is_current_kind(TokenKind::TOKEN_MINUS_MINUS)) {
         auto token = peek_and_advance_token();
         auto right = parse_prefix_expression();
-        auto ast_node_type = right->get_ast_node_type();
-        if ((ast_node_type == AstNodeType::AST_LITERAL) or
-            (ast_node_type == AstNodeType::AST_INDEX) or (ast_node_type == AstNodeType::AST_DOT)) {
-            return std::make_shared<PrefixUnaryExpression>(token, right);
-        }
-
-        context->diagnostics.report_error(
-            token.position,
-            "Unary ++ or -- expect right expression to be variable or index expression");
-        throw "Stop";
+        return std::make_shared<PrefixUnaryExpression>(token, right);
     }
 
     return parse_prefix_call_expression();
@@ -1470,15 +1479,7 @@ auto amun::Parser::parse_postfix_increment_or_decrement() -> Shared<Expression>
     if (is_current_kind(TokenKind::TOKEN_PLUS_PLUS) or
         is_current_kind(TokenKind::TOKEN_MINUS_MINUS)) {
         auto token = peek_and_advance_token();
-        auto ast_node_type = expression->get_ast_node_type();
-        if ((ast_node_type == AstNodeType::AST_LITERAL) or
-            (ast_node_type == AstNodeType::AST_INDEX) or (ast_node_type == AstNodeType::AST_DOT)) {
-            return std::make_shared<PostfixUnaryExpression>(token, expression);
-        }
-        context->diagnostics.report_error(
-            token.position,
-            "Unary ++ or -- expect left expression to be variable or index expression");
-        throw "Stop";
+        return std::make_shared<PostfixUnaryExpression>(token, expression);
     }
 
     return expression;
@@ -2050,6 +2051,25 @@ auto amun::Parser::check_generic_parameter_name(Token name) -> void
     if (!generic_parameters_names.insert(literal).second) {
         context->diagnostics.report_error(
             position, "You already declared generic parameter with name " + literal);
+        throw "Stop";
+    }
+}
+
+auto amun::Parser::check_function_kind_paramters_count(FunctionKind kind, int count, TokenSpan span)
+    -> void
+{
+    if (kind == amun::FunctionKind::PREFIX_FUNCTION && count != 1) {
+        context->diagnostics.report_error(span, "Prefix function must have exactly one parameter");
+        throw "Stop";
+    }
+
+    if (kind == amun::FunctionKind::INFIX_FUNCTION && count != 2) {
+        context->diagnostics.report_error(span, "Infix function must have exactly Two parameter");
+        throw "Stop";
+    }
+
+    if (kind == amun::FunctionKind::POSTFIX_FUNCTION && count != 1) {
+        context->diagnostics.report_error(span, "Postfix function must have exactly one parameter");
         throw "Stop";
     }
 }

@@ -75,7 +75,10 @@ class Parser {
 
     auto parse_function_declaration(amun::FunctionKind kind) -> Shared<FunctionDeclaration>;
 
-    auto parse_operator_function_declaraion() -> Shared<OperatorFunctionDeclaraion>;
+    auto parse_operator_function_declaraion(amun::FunctionKind kind)
+        -> Shared<OperatorFunctionDeclaraion>;
+
+    auto parse_operator_function_operator(amun::FunctionKind kind) -> Token;
 
     auto parse_structure_declaration(bool is_packed) -> Shared<StructDeclaration>;
 
@@ -186,6 +189,8 @@ class Parser {
     auto parse_primary_type() -> Shared<amun::Type>;
 
     auto parse_identifier_type() -> Shared<amun::Type>;
+
+    auto check_function_kind_paramters_count(FunctionKind kind, int count, TokenSpan span) -> void;
 
     auto check_generic_parameter_name(Token name) -> void;
 

@@ -258,6 +258,10 @@ static std::unordered_map<TokenKind, std::string> overloading_operator_literal =
     {TokenKind::TOKEN_SLASH, "slash"},
     {TokenKind::TOKEN_PERCENT, "percent"},
 
+    // !, ~
+    {TokenKind::TOKEN_BANG, "bang"},
+    {TokenKind::TOKEN_NOT, "not"},
+
     // ==, !=, >, >=, <, <=
     {TokenKind::TOKEN_EQUAL_EQUAL, "eq_eq"},
     {TokenKind::TOKEN_BANG_EQUAL, "not_eq"},
@@ -271,17 +275,74 @@ static std::unordered_map<TokenKind, std::string> overloading_operator_literal =
     {TokenKind::TOKEN_OR, "or"},
 
     // &&, ||
-    {TokenKind::TOKEN_AND_AND, "logic_and"},
-    {TokenKind::TOKEN_OR_OR, "logic_or"},
+    {TokenKind::TOKEN_AND_AND, "and_and"},
+    {TokenKind::TOKEN_OR_OR, "or_or"},
 
     // <<, >>
     {TokenKind::TOKEN_RIGHT_SHIFT, "rsh"},
     {TokenKind::TOKEN_LEFT_SHIFT, "lsh"},
+
+    {TokenKind::TOKEN_PLUS_PLUS, "plus_plus"},
+    {TokenKind::TOKEN_MINUS_MINUS, "minus_minus"},
 };
 
-static auto is_supported_overloading_operator(TokenKind kind) -> bool
+static std::unordered_set<TokenKind> overloading_prefix_operators = {
+    TokenKind::TOKEN_NOT,       TokenKind::TOKEN_BANG,        TokenKind::TOKEN_MINUS,
+    TokenKind::TOKEN_PLUS_PLUS, TokenKind::TOKEN_MINUS_MINUS,
+};
+
+static std::unordered_set<TokenKind> overloading_infix_operators = {
+    // +, -, *, /, %
+    TokenKind::TOKEN_PLUS,
+    TokenKind::TOKEN_MINUS,
+    TokenKind::TOKEN_STAR,
+    TokenKind::TOKEN_SLASH,
+    TokenKind::TOKEN_PERCENT,
+
+    // ==, !=, >, >=, <, <=
+    TokenKind::TOKEN_EQUAL_EQUAL,
+    TokenKind::TOKEN_BANG_EQUAL,
+    TokenKind::TOKEN_GREATER,
+    TokenKind::TOKEN_GREATER_EQUAL,
+    TokenKind::TOKEN_SMALLER,
+    TokenKind::TOKEN_SMALLER_EQUAL,
+
+    // &, |
+    TokenKind::TOKEN_AND,
+    TokenKind::TOKEN_OR,
+
+    // &&, ||
+    TokenKind::TOKEN_AND_AND,
+    TokenKind::TOKEN_OR_OR,
+
+    // <<, >>
+    TokenKind::TOKEN_RIGHT_SHIFT,
+    TokenKind::TOKEN_LEFT_SHIFT,
+};
+
+static std::unordered_set<TokenKind> overloading_postfix_operators = {
+    TokenKind::TOKEN_PLUS_PLUS,
+    TokenKind::TOKEN_MINUS_MINUS,
+};
+
+inline auto is_supported_overloading_operator(TokenKind kind) -> bool
 {
     return overloading_operator_literal.contains(kind);
+}
+
+inline auto is_overloading_prefix_operator(TokenKind kind) -> bool
+{
+    return overloading_prefix_operators.contains(kind);
+}
+
+inline auto is_overloading_infix_operator(TokenKind kind) -> bool
+{
+    return overloading_infix_operators.contains(kind);
+}
+
+inline auto is_overloading_postfix_operator(TokenKind kind) -> bool
+{
+    return overloading_postfix_operators.contains(kind);
 }
 
 inline auto is_assignments_operator_token(Token token) -> bool

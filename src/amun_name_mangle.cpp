@@ -56,14 +56,14 @@ auto mangle_tuple_type(Shared<amun::TupleType> type) -> std::string
     return "_tuple_" + mangle_types(type->fields_types);
 }
 
-auto mangle_operator_function(TokenKind kind, Shared<amun::Type> left, Shared<amun::Type> right)
+auto mangle_operator_function(TokenKind op, std::vector<Shared<amun::Type>> parameters)
     -> std::string
 {
-    auto operator_literal = overloading_operator_literal[kind];
-    auto first_paramter = mangle_type(left);
-    auto other_paramter = mangle_type(right);
-    std::string paramters_literal = "_" + first_paramter + "_" + other_paramter;
-    std::string operator_function_name = "_operator_" + operator_literal + paramters_literal;
+    auto operator_literal = overloading_operator_literal[op];
+    std::string operator_function_name = "_operator_" + operator_literal;
+    for (const auto& parameter : parameters) {
+        operator_function_name += mangle_type(parameter);
+    }
     return operator_function_name;
 }
 

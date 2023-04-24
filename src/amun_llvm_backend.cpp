@@ -1198,8 +1198,8 @@ auto amun::LLVMBackend::visit(BinaryExpression* node) -> std::any
     // No need for extra checks after type checker pass
     auto lhs_type = node->left->get_type_node();
     auto rhs_type = node->right->get_type_node();
-    auto name = mangle_operator_function(op, lhs_type, rhs_type);
-    return create_overloading_function_call(name, lhs, rhs);
+    auto name = mangle_operator_function(op, {lhs_type, rhs_type});
+    return create_overloading_function_call(name, {lhs, rhs});
 }
 
 auto amun::LLVMBackend::visit(ShiftExpression* node) -> std::any
@@ -1223,8 +1223,8 @@ auto amun::LLVMBackend::visit(ShiftExpression* node) -> std::any
 
     // Perform overloading function call
     // No need for extra checks after type checker pass
-    auto name = mangle_operator_function(op, lhs_type, rhs_type);
-    return create_overloading_function_call(name, lhs, rhs);
+    auto name = mangle_operator_function(op, {lhs_type, rhs_type});
+    return create_overloading_function_call(name, {lhs, rhs});
 }
 
 auto amun::LLVMBackend::visit(ComparisonExpression* node) -> std::any
@@ -1273,8 +1273,8 @@ auto amun::LLVMBackend::visit(ComparisonExpression* node) -> std::any
     // No need for extra checks after type checker pass
     auto lhs_type = node->left->get_type_node();
     auto rhs_type = node->right->get_type_node();
-    auto name = mangle_operator_function(op, lhs_type, rhs_type);
-    return create_overloading_function_call(name, lhs, rhs);
+    auto name = mangle_operator_function(op, {lhs_type, rhs_type});
+    return create_overloading_function_call(name, {lhs, rhs});
 }
 
 auto amun::LLVMBackend::visit(LogicalExpression* node) -> std::any
@@ -1298,8 +1298,8 @@ auto amun::LLVMBackend::visit(LogicalExpression* node) -> std::any
 
     // Perform overloading function call
     // No need for extra checks after type checker pass
-    auto name = mangle_operator_function(op, lhs_type, rhs_type);
-    return create_overloading_function_call(name, lhs, rhs);
+    auto name = mangle_operator_function(op, {lhs_type, rhs_type});
+    return create_overloading_function_call(name, {lhs, rhs});
 }
 
 auto amun::LLVMBackend::visit(PrefixUnaryExpression* node) -> std::any
@@ -1309,17 +1309,27 @@ auto amun::LLVMBackend::visit(PrefixUnaryExpression* node) -> std::any
 
     // Unary - minus operator
     if (operator_kind == TokenKind::TOKEN_MINUS) {
-        auto right = llvm_resolve_value(operand->accept(this));
-        if (right->getType()->isFloatingPointTy()) {
-            return Builder.CreateFNeg(right);
+        auto rhs = llvm_resolve_value(operand->accept(this));
+        if (rhs->getType()->isFloatingPointTy()) {
+            return Builder.CreateFNeg(rhs);
         }
-        return Builder.CreateNeg(right);
+        if (rhs->getType()->isIntegerTy()) {
+            return Builder.CreateNeg(rhs);
+        }
+
+        auto name = "_prefix" + mangle_operator_function(operator_kind, {operand->get_type_node()});
+        return create_overloading_function_call(name, {rhs});
     }
 
     // Bang can be implemented as (value == false)
     if (operator_kind == TokenKind::TOKEN_BANG) {
-        auto right = llvm_resolve_value(operand->accept(this));
-        return Builder.CreateICmpEQ(right, false_value);
+        auto rhs = llvm_resolve_value(operand->accept(this));
+        if (rhs->getType() == llvm_int1_type) {
+            return Builder.CreateICmpEQ(rhs, false_value);
+        }
+
+        auto name = "_prefix" + mangle_operator_function(operator_kind, {operand->get_type_node()});
+        return create_overloading_function_call(name, {rhs});
     }
 
     // Pointer * Dereference operator
@@ -1344,18 +1354,34 @@ auto amun::LLVMBackend::visit(PrefixUnaryExpression* node) -> std::any
 
     // Unary ~ not operator
     if (operator_kind == TokenKind::TOKEN_NOT) {
-        auto right = llvm_resolve_value(operand->accept(this));
-        return Builder.CreateNot(right);
+        auto rhs = llvm_resolve_value(operand->accept(this));
+
+        if (operand->get_type_node()->type_kind == TypeKind::NUMBER) {
+            return Builder.CreateNot(rhs);
+        }
+
+        auto name = "_prefix" + mangle_operator_function(operator_kind, {operand->get_type_node()});
+        return create_overloading_function_call(name, {rhs});
     }
 
     // Unary prefix ++ operator, example (++x)
     if (operator_kind == TokenKind::TOKEN_PLUS_PLUS) {
-        return create_llvm_value_increment(operand, true);
+        if (operand->get_type_node()->type_kind == TypeKind::NUMBER) {
+            return create_llvm_value_increment(operand, true);
+        }
+        auto name = "_prefix" + mangle_operator_function(operator_kind, {operand->get_type_node()});
+        auto llvm_rhs = llvm_resolve_value(operand->accept(this));
+        return create_overloading_function_call(name, {llvm_rhs});
     }
 
     // Unary prefix -- operator, example (--x)
     if (operator_kind == TokenKind::TOKEN_MINUS_MINUS) {
-        return create_llvm_value_decrement(operand, true);
+        if (operand->get_type_node()->type_kind == TypeKind::NUMBER) {
+            return create_llvm_value_decrement(operand, true);
+        }
+        auto name = "_prefix" + mangle_operator_function(operator_kind, {operand->get_type_node()});
+        auto llvm_rhs = llvm_resolve_value(operand->accept(this));
+        return create_overloading_function_call(name, {llvm_rhs});
     }
 
     internal_compiler_error("Invalid Prefix Unary operator");
@@ -1368,12 +1394,24 @@ auto amun::LLVMBackend::visit(PostfixUnaryExpression* node) -> std::any
 
     // Unary postfix ++ operator, example (x++)
     if (operator_kind == TokenKind::TOKEN_PLUS_PLUS) {
-        return create_llvm_value_increment(operand, false);
+        if (operand->get_type_node()->type_kind == TypeKind::NUMBER) {
+            return create_llvm_value_increment(operand, false);
+        }
+        auto name =
+            "_postfix" + mangle_operator_function(operator_kind, {operand->get_type_node()});
+        auto llvm_rhs = llvm_resolve_value(operand->accept(this));
+        return create_overloading_function_call(name, {llvm_rhs});
     }
 
     // Unary postfix -- operator, example (x--)
     if (operator_kind == TokenKind::TOKEN_MINUS_MINUS) {
-        return create_llvm_value_decrement(operand, false);
+        if (operand->get_type_node()->type_kind == TypeKind::NUMBER) {
+            return create_llvm_value_decrement(operand, false);
+        }
+        auto name =
+            "_postfix" + mangle_operator_function(operator_kind, {operand->get_type_node()});
+        auto llvm_rhs = llvm_resolve_value(operand->accept(this));
+        return create_overloading_function_call(name, {llvm_rhs});
     }
 
     internal_compiler_error("Invalid Postfix Unary operator");
@@ -1733,7 +1771,8 @@ auto amun::LLVMBackend::visit(DotExpression* node) -> std::any
 
             auto string_ptr = llvm_node_value(callee->accept(this));
 
-            // Check if it **int8 that mean the string is store in variable and should dereferneceed
+            // Check if it **int8 that mean the string is store in variable and should
+            // dereferneceed
             if (string_ptr->getType() != llvm_int8_ptr_type) {
                 string_ptr = derefernecs_llvm_pointer(string_ptr);
             }
@@ -2485,11 +2524,12 @@ auto amun::LLVMBackend::create_llvm_struct_type(std::string name,
     return struct_llvm_type;
 }
 
-auto amun::LLVMBackend::create_overloading_function_call(std::string& name, llvm::Value* lhs,
-                                                         llvm::Value* rhs) -> llvm::Value*
+auto amun::LLVMBackend::create_overloading_function_call(std::string& name,
+                                                         std::vector<llvm::Value*> args)
+    -> llvm::Value*
 {
     auto function = lookup_function(name);
-    return Builder.CreateCall(function, {lhs, rhs});
+    return Builder.CreateCall(function, args);
 }
 
 auto amun::LLVMBackend::access_struct_member_pointer(DotExpression* expression) -> llvm::Value*
