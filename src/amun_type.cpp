@@ -48,7 +48,7 @@ auto amun::is_types_equals(const Shared<amun::Type>& type, const Shared<amun::Ty
         other->type_kind == amun::TypeKind::ENUM_ELEMENT) {
         auto type_element = std::static_pointer_cast<amun::EnumElementType>(type);
         auto other_element = std::static_pointer_cast<amun::EnumElementType>(other);
-        return type_element->name == other_element->name;
+        return type_element->enum_name == other_element->enum_name;
     }
 
     if (type_kind == amun::TypeKind::GENERIC_STRUCT &&
@@ -198,7 +198,7 @@ auto amun::get_type_literal(const Shared<amun::Type>& type) -> std::string
 
     if (type_kind == amun::TypeKind::ENUM_ELEMENT) {
         auto enum_element = std::static_pointer_cast<amun::EnumElementType>(type);
-        return enum_element->name;
+        return enum_element->enum_name;
     }
 
     if (type_kind == amun::TypeKind::GENERIC_STRUCT) {

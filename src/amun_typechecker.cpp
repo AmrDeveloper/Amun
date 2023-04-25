@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -31,8 +32,9 @@ auto amun::TypeChecker::visit(BlockStatement* node) -> std::any
     push_new_scope();
     for (auto& statement : node->get_nodes()) {
         statement->accept(this);
-        // Here we can report warn for unreachable code after return, continue or break keyword
-        // We can make it error after return, must modify the diagnostics engine first
+        // Here we can report warn for unreachable code after return, continue
+        // or break keyword We can make it error after return, must modify the
+        // diagnostics engine first
     }
     pop_current_scope();
     return 0;
@@ -51,8 +53,9 @@ auto amun::TypeChecker::visit(FieldDeclaration* node) -> std::any
 
     bool should_update_node_type = true;
 
-    // If field has initalizer, check that initalizer type is matching the declaration type
-    // If declaration type is null, infier it using the rvalue type
+    // If field has initalizer, check that initalizer type is matching the
+    // declaration type If declaration type is null, infier it using the rvalue
+    // type
     if (right_value != nullptr) {
         auto origin_right_value_type = right_value->get_type_node();
         auto right_type = node_amun_type(right_value->accept(this));
@@ -91,16 +94,17 @@ auto amun::TypeChecker::visit(FieldDeclaration* node) -> std::any
         bool is_right_null_type = amun::is_null_type(right_type);
 
         if (is_left_none_type and is_right_none_type) {
-            context->diagnostics.report_error(
-                node->get_name().position,
-                "Can't resolve field type when both rvalue and lvalue are unkown");
+            context->diagnostics.report_error(node->get_name().position,
+                                              "Can't resolve field type when both "
+                                              "rvalue and lvalue are unkown");
             throw "Stop";
         }
 
         if (is_left_none_type and is_right_null_type) {
             context->diagnostics.report_error(
                 node->get_name().position,
-                "Can't resolve field type rvalue is null, please add type to the varaible");
+                "Can't resolve field type rvalue is null, please add type to "
+                "the varaible");
             throw "Stop";
         }
 
@@ -236,12 +240,14 @@ auto amun::TypeChecker::visit(FunctionDeclaration* node) -> std::any
 
     return_types_stack.pop();
 
-    // If Function return type is not void, should check for missing return statement
+    // If Function return type is not void, should check for missing return
+    // statement
     if (!amun::is_void_type(function->return_type) &&
         !check_missing_return_statement(function_body)) {
         const auto& span = node->get_prototype()->get_name().position;
         context->diagnostics.report_error(
-            span, "A 'return' statement required in a function with a block body ('{...}')");
+            span, "A 'return' statement required in a function with a block "
+                  "body ('{...}')");
         throw "Stop";
     }
 
@@ -265,9 +271,9 @@ auto amun::TypeChecker::visit(OperatorFunctionDeclaraion* node) -> std::any
 
     if (!has_non_primitive_parameter) {
         auto position = node->op.position;
-        context->diagnostics.report_error(
-            position,
-            "overloaded operator must have at least one parameter of struct, tuple, array, enum");
+        context->diagnostics.report_error(position,
+                                          "overloaded operator must have at least one parameter of "
+                                          "struct, tuple, array, enum");
         throw "Stop";
     }
 
@@ -344,7 +350,8 @@ auto amun::TypeChecker::visit(ForRangeStatement* node) -> std::any
             if (!amun::is_types_equals(step_type, start_type)) {
                 context->diagnostics.report_error(
                     node->position.position,
-                    "For range declared step must be the same type as range start and end");
+                    "For range declared step must be the same type as range "
+                    "start and end");
                 throw "Stop";
             }
         }
@@ -427,66 +434,87 @@ auto amun::TypeChecker::visit(SwitchStatement* node) -> std::any
 {
     // Check that switch argument is integer type
     auto argument = node_amun_type(node->get_argument()->accept(this));
-    if ((not amun::is_integer_type(argument)) and (not amun::is_enum_element_type(argument))) {
+    auto position = node->get_position().position;
+
+    bool is_argment_enum_type = amun::is_enum_element_type(argument);
+    bool is_argument_num_type = amun::is_integer_type(argument);
+    if (!is_argument_num_type && !is_argment_enum_type) {
         context->diagnostics.report_error(
-            node->get_position().position,
-            "Switch argument type must be integer or enum element but found " +
-                amun::get_type_literal(argument));
+            position, "Switch argument type must be integer or enum element but found " +
+                          amun::get_type_literal(argument));
         throw "Stop";
     }
 
-    // Check that all cases values are integers or enum element, and no duplication
-    // TODO: Optimize set by replacing std::string by integers for fast comparing
+    // Check that all cases values are integers or enum element, and no
+    // duplication
     std::unordered_set<std::string> cases_values;
     for (auto& branch : node->get_cases()) {
         auto values = branch->get_values();
+        auto branch_position = branch->get_position().position;
+
         // Check each value of this case
         for (auto& value : values) {
             auto value_node_type = value->get_ast_node_type();
-            if (value_node_type == AstNodeType::AST_NUMBER or
-                value_node_type == AstNodeType::AST_ENUM_ELEMENT) {
+            if (value_node_type == AstNodeType::AST_ENUM_ELEMENT) {
+                if (is_argment_enum_type) {
+                    auto enum_access = std::dynamic_pointer_cast<EnumAccessExpression>(value);
+                    auto enum_element = std::static_pointer_cast<amun::EnumElementType>(argument);
+                    if (enum_access->enum_name.literal != enum_element->enum_name) {
+                        context->diagnostics.report_error(
+                            branch_position, "Switch argument and case are elements of "
+                                             "different enums " +
+                                                 enum_element->enum_name + " and " +
+                                                 enum_access->enum_name.literal);
+                        throw "Stop";
+                    }
 
-                // No need to check if it enum element,
-                // but if it number we need to assert that it integer
-                if (value_node_type == AstNodeType::AST_NUMBER) {
+                    auto enum_index_string = std::to_string(enum_access->get_enum_element_index());
+                    if (!cases_values.insert(enum_index_string).second) {
+                        context->diagnostics.report_error(branch_position,
+                                                          "Switch can't has more than case "
+                                                          "with the same constants value");
+                        throw "Stop";
+                    }
+
+                    continue;
+                }
+
+                context->diagnostics.report_error(
+                    branch_position, "Switch argument is enum type and expect all cases to "
+                                     "be the same type");
+                throw "Stop";
+            }
+
+            if (value_node_type == AstNodeType::AST_NUMBER) {
+                if (is_argument_num_type) {
+                    // If it a number type we must check that it integer
                     auto value_type = node_amun_type(value->accept(this));
                     if (!amun::is_number_type(value_type)) {
                         context->diagnostics.report_error(
-                            branch->get_position().position,
-                            "Switch case value must be an integer but found " +
-                                amun::get_type_literal(value_type));
+                            branch_position, "Switch case value must be an integer but found " +
+                                                 amun::get_type_literal(value_type));
                         throw "Stop";
                     }
-                }
 
-                // Check that all cases values are uniques
-                if (auto number = std::dynamic_pointer_cast<NumberExpression>(value)) {
+                    auto number = std::dynamic_pointer_cast<NumberExpression>(value);
                     if (!cases_values.insert(number->get_value().literal).second) {
-                        context->diagnostics.report_error(
-                            branch->get_position().position,
-                            "Switch can't has more than case with the same constants value");
+                        context->diagnostics.report_error(branch_position,
+                                                          "Switch can't has more than case "
+                                                          "with the same constants value");
                         throw "Stop";
                     }
-                }
-                else if (auto enum_element =
-                             std::dynamic_pointer_cast<EnumAccessExpression>(value)) {
-                    auto enum_index_string = std::to_string(enum_element->get_enum_element_index());
-                    if (not cases_values.insert(enum_index_string).second) {
-                        context->diagnostics.report_error(
-                            branch->get_position().position,
-                            "Switch can't has more than case with the same constants value");
-                        throw "Stop";
-                    }
+
+                    continue;
                 }
 
-                // This value is valid, so continue to the next one
-                continue;
+                context->diagnostics.report_error(
+                    branch_position, "Switch argument is integer type and expect all cases "
+                                     "to be the same type");
+                throw "Stop";
             }
 
-            // Report Error if value is not number or enum element
-            context->diagnostics.report_error(
-                branch->get_position().position,
-                "Switch case value must be an integer but found non constants integer type");
+            context->diagnostics.report_error(branch_position,
+                                              "Switch case type must be integer or enum element");
             throw "Stop";
         }
 
@@ -497,11 +525,23 @@ auto amun::TypeChecker::visit(SwitchStatement* node) -> std::any
     }
 
     // Check default branch body if exists inside new scope
-    auto default_branch = node->get_default_case();
-    if (default_branch) {
+    bool has_else_branch = false;
+    auto else_branch = node->get_default_case();
+    if (else_branch) {
         push_new_scope();
-        default_branch->get_body()->accept(this);
+        else_branch->get_body()->accept(this);
         pop_current_scope();
+        has_else_branch = true;
+    }
+
+    // If argument and cases types are enum elements and switch has @complete
+    // note Should provide complete check to make sure all cases are covered or
+    // there is else branch
+    if (node->should_perform_complete_check && amun::is_enum_element_type(argument)) {
+        auto enum_element = std::static_pointer_cast<amun::EnumElementType>(argument);
+        auto enum_name = enum_element->enum_name;
+        auto enum_type = context->enumerations[enum_element->enum_name];
+        check_complete_switch_cases(enum_type, cases_values, has_else_branch, position);
     }
 
     return 0;
@@ -556,7 +596,8 @@ auto amun::TypeChecker::visit(ReturnStatement* node) -> std::any
                 return_fun->implicit_parameters_count) {
                 context->diagnostics.report_error(
                     node->get_position().position,
-                    "Can't return lambda that implicit capture values from function");
+                    "Can't return lambda that implicit capture values from "
+                    "function");
                 throw "Stop";
             }
         }
@@ -658,7 +699,8 @@ auto amun::TypeChecker::visit(SwitchExpression* node) -> std::any
     if (!amun::is_types_equals(expected_type, default_value_type)) {
         context->diagnostics.report_error(
             node->get_position().position,
-            "Switch case default values must be the same type of other cases expect " +
+            "Switch case default values must be the same type of other cases "
+            "expect " +
                 amun::get_type_literal(expected_type) + " but got " +
                 amun::get_type_literal(default_value_type));
         throw "Stop";
@@ -696,7 +738,8 @@ auto amun::TypeChecker::visit(AssignExpression* node) -> std::any
 
     auto right_type = node_amun_type(node->get_right()->accept(this));
 
-    // if Variable type is pointer and rvalue is null, change null base type to lvalue type
+    // if Variable type is pointer and rvalue is null, change null base type to
+    // lvalue type
     if (amun::is_pointer_type(left_type) and amun::is_null_type(right_type)) {
         auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->get_right());
         null_expr->null_base_type = left_type;
@@ -791,7 +834,8 @@ auto amun::TypeChecker::visit(ShiftExpression* node) -> std::any
                     unary->get_right()->get_ast_node_type() == AstNodeType::AST_NUMBER) {
                     context->diagnostics.report_error(
                         node->get_operator_token().position,
-                        "Shift Expressions second operand can't be a negative number");
+                        "Shift Expressions second operand can't be a negative "
+                        "number");
                     throw "Stop";
                 }
             }
@@ -882,7 +926,8 @@ auto amun::TypeChecker::visit(ComparisonExpression* node) -> std::any
         return amun::i1_type;
     }
 
-    // Null vs Null comparaisons, no need to set pointer base, use the default base
+    // Null vs Null comparaisons, no need to set pointer base, use the default
+    // base
     if (amun::is_null_type(lhs) and amun::is_null_type(rhs)) {
         return amun::i1_type;
     }
@@ -1148,7 +1193,8 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
             if (generic_parameters.empty()) {
                 context->diagnostics.report_error(
                     node->get_position().position,
-                    name + " is a generic function and must be called with generic paramters <..>");
+                    name + " is a generic function and must be called with "
+                           "generic paramters <..>");
                 throw "Stop";
             }
 
@@ -1217,7 +1263,8 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
         }
     }
 
-    // Call function pointer returned from call expression for example function()();
+    // Call function pointer returned from call expression for example
+    // function()();
     if (callee_ast_node_type == AstNodeType::AST_CALL) {
         auto call = std::dynamic_pointer_cast<CallExpression>(callee);
         auto call_result = node_amun_type(call->accept(this));
@@ -1358,8 +1405,9 @@ auto amun::TypeChecker::visit(DotExpression* node) -> std::any
 
         // Assert that use access struct member only using field name
         if (node->field_name.kind != TokenKind::TOKEN_IDENTIFIER) {
-            context->diagnostics.report_error(
-                node_position, "Can't access struct member using index, only tuples can do this");
+            context->diagnostics.report_error(node_position,
+                                              "Can't access struct member using index, only "
+                                              "tuples can do this");
             throw "Stop";
         }
 
@@ -1436,8 +1484,9 @@ auto amun::TypeChecker::visit(DotExpression* node) -> std::any
             throw "Stop";
         }
 
-        context->diagnostics.report_error(
-            node_position, "Dot expression expect calling member from struct or pointer to struct");
+        context->diagnostics.report_error(node_position,
+                                          "Dot expression expect calling member from struct "
+                                          "or pointer to struct");
         throw "Stop";
     }
 
@@ -1600,7 +1649,8 @@ auto amun::TypeChecker::visit(LiteralExpression* node) -> std::any
 
             value = outer_variable_pair.first;
 
-            // Check if it not global variable, need to perform implicit capture for this variable
+            // Check if it not global variable, need to perform implicit capture
+            // for this variable
             if (declared_scope_level != 0 && declared_scope_level < types_table.size() - 2) {
                 auto type = node_amun_type(value);
                 types_table.define(name, type);
@@ -1636,7 +1686,8 @@ auto amun::TypeChecker::visit(NumberExpression* node) -> std::any
     bool is_valid_range = check_number_limits(number_literal.c_str(), number_kind);
     if (not is_valid_range) {
         // TODO: Diagnostic message can be improved and provide more information
-        // for example `value x must be in range s .. e or you should change the type to y`
+        // for example `value x must be in range s .. e or you should change the
+        // type to y`
         context->diagnostics.report_error(node->get_value().position,
                                           "Number Value " + number_literal +
                                               " Can't be represented using type " +
@@ -1727,169 +1778,10 @@ auto amun::TypeChecker::node_amun_type(std::any any_type) -> Shared<amun::Type>
     return std::any_cast<Shared<amun::Type>>(any_type);
 }
 
-auto amun::TypeChecker::check_parameters_types(TokenSpan location,
-                                               std::vector<Shared<Expression>>& arguments,
-                                               std::vector<Shared<amun::Type>>& parameters,
-                                               bool has_varargs, Shared<amun::Type> varargs_type,
-                                               int implicit_parameters_count) -> void
-{
-
-    const auto arguments_size = arguments.size();
-    const auto all_arguments_size = arguments_size + implicit_parameters_count;
-    const auto parameters_size = parameters.size();
-
-    // If hasent varargs, parameters and arguments must be the same size
-    if (not has_varargs && all_arguments_size != parameters_size) {
-        context->diagnostics.report_error(
-            location, "Invalid number of arguments, expect " + std::to_string(parameters_size) +
-                          " but got " + std::to_string(all_arguments_size));
-        throw "Stop";
-    }
-
-    // If it has varargs, number of parameters must be bigger than arguments
-    if (has_varargs && parameters_size > all_arguments_size) {
-        context->diagnostics.report_error(location, "Invalid number of arguments, expect at last" +
-                                                        std::to_string(parameters_size) +
-                                                        " but got " +
-                                                        std::to_string(all_arguments_size));
-        throw "Stop";
-    }
-
-    // Resolve Arguments types
-    std::vector<Shared<amun::Type>> arguments_types;
-    arguments_types.reserve(arguments.size());
-
-    // Resolve Arguments
-    for (auto& argument : arguments) {
-        auto argument_type = node_amun_type(argument->accept(this));
-        if (argument_type->type_kind == amun::TypeKind::GENERIC_STRUCT) {
-            arguments_types.push_back(resolve_generic_type(argument_type));
-        }
-        else {
-            arguments_types.push_back(argument_type);
-        }
-    }
-
-    // Resolve Generic parameters
-    for (size_t i = 0; i < parameters_size; i++) {
-        if (parameters[i]->type_kind == amun::TypeKind::GENERIC_STRUCT) {
-            parameters[i] = resolve_generic_type(parameters[i]);
-        }
-    }
-
-    auto count = parameters_size > arguments_size ? arguments_size : parameters_size;
-
-    // Check non varargs parameters vs arguments
-    for (size_t i = 0; i < count; i++) {
-        size_t p = i + implicit_parameters_count;
-
-        if (!amun::is_types_equals(parameters[p], arguments_types[i])) {
-
-            // if Parameter is pointer type and null pointer passed as argument
-            // Change null pointer base type to parameter type
-            if (amun::is_pointer_type(parameters[p]) and amun::is_null_type(arguments_types[i])) {
-                auto null_expr = std::dynamic_pointer_cast<NullExpression>(arguments[i]);
-                null_expr->null_base_type = parameters[p];
-                continue;
-            }
-
-            context->diagnostics.report_error(location,
-                                              "Argument type didn't match parameter type expect " +
-                                                  amun::get_type_literal(parameters[p]) + " got " +
-                                                  amun::get_type_literal(arguments_types[i]));
-            throw "Stop";
-        }
-    }
-
-    // If varargs type is Any, no need for type checking
-    if (varargs_type == nullptr) {
-        return;
-    }
-
-    // Check extra varargs types
-    for (size_t i = parameters_size; i < arguments_size; i++) {
-        if (!amun::is_types_equals(arguments_types[i], varargs_type)) {
-            context->diagnostics.report_error(location,
-                                              "Argument type didn't match varargs type expect " +
-                                                  amun::get_type_literal(varargs_type) + " got " +
-                                                  amun::get_type_literal(arguments_types[i]));
-            throw "Stop";
-        }
-    }
-}
-
 auto amun::TypeChecker::is_same_type(const Shared<amun::Type>& left,
                                      const Shared<amun::Type>& right) -> bool
 {
     return left->type_kind == right->type_kind;
-}
-
-auto amun::TypeChecker::check_number_limits(const char* literal, amun::NumberKind kind) -> bool
-{
-    switch (kind) {
-    case amun::NumberKind::INTEGER_1: {
-        auto value = str_to_int(literal);
-        return value == 0 or value == 1;
-    }
-    case amun::NumberKind::INTEGER_8: {
-        auto value = str_to_int(literal);
-        ;
-        return value >= std::numeric_limits<int8_t>::min() and
-               value <= std::numeric_limits<int8_t>::max();
-    }
-    case amun::NumberKind::U_INTEGER_8: {
-        auto value = str_to_int(literal);
-        ;
-        return value >= std::numeric_limits<uint8_t>::min() and
-               value <= std::numeric_limits<uint8_t>::max();
-    }
-    case amun::NumberKind::INTEGER_16: {
-        auto value = str_to_int(literal);
-        ;
-        return value >= std::numeric_limits<int16_t>::min() and
-               value <= std::numeric_limits<int16_t>::max();
-    }
-    case amun::NumberKind::U_INTEGER_16: {
-        auto value = str_to_int(literal);
-        ;
-        return value >= std::numeric_limits<uint16_t>::min() and
-               value <= std::numeric_limits<uint16_t>::max();
-    }
-    case amun::NumberKind::INTEGER_32: {
-        auto value = str_to_int(literal);
-        ;
-        return value >= std::numeric_limits<int32_t>::min() and
-               value <= std::numeric_limits<int32_t>::max();
-    }
-    case amun::NumberKind::U_INTEGER_32: {
-        auto value = str_to_int(literal);
-        ;
-        return value >= std::numeric_limits<uint32_t>::min() and
-               value <= std::numeric_limits<uint32_t>::max();
-    }
-    case amun::NumberKind::INTEGER_64: {
-        auto value = str_to_int(literal);
-        ;
-        return value >= std::numeric_limits<int64_t>::min() and
-               value <= std::numeric_limits<int64_t>::max();
-    }
-    case amun::NumberKind::U_INTEGER_64: {
-        auto value = str_to_int(literal);
-        ;
-        return value >= std::numeric_limits<uint64_t>::min() and
-               value <= std::numeric_limits<uint64_t>::max();
-    }
-    case amun::NumberKind::FLOAT_32: {
-        auto value = str_to_float(literal);
-        return value >= -std::numeric_limits<float>::max() and
-               value <= std::numeric_limits<float>::max();
-    }
-    case amun::NumberKind::FLOAT_64: {
-        auto value = str_to_float(literal);
-        return value >= -std::numeric_limits<double>::max() and
-               value <= std::numeric_limits<double>::max();
-    }
-    }
 }
 
 auto amun::TypeChecker::resolve_generic_type(Shared<amun::Type> type,
@@ -1999,6 +1891,198 @@ auto amun::TypeChecker::resolve_generic_type(Shared<amun::Type> type,
     return type;
 }
 
+auto amun::TypeChecker::check_complete_switch_cases(Shared<amun::EnumType> enum_type,
+                                                    std::unordered_set<std::string> cases_values,
+                                                    bool has_else_branch, TokenSpan span) -> void
+{
+    auto enum_name = enum_type->name;
+    auto enum_members_map = enum_type->values;
+    auto enum_members_size = enum_members_map.size();
+
+    auto switch_cases_size = cases_values.size();
+    auto missing_cases_count = enum_members_size - switch_cases_size;
+
+    // Complete or has else branch
+    if (has_else_branch || missing_cases_count == 0) {
+        return;
+    }
+
+    // Build helpful error message for missing cases
+    std::stringstream string_stream;
+    string_stream << "Incomplete switch, missing ";
+    string_stream << missing_cases_count << " cases\n\n";
+    string_stream << "You forget to cover the following cases:\n";
+
+    for (const auto& member : enum_members_map) {
+        if (!cases_values.contains(std::to_string(member.second))) {
+            auto enum_element_name = enum_name.literal + "::" + member.first;
+            string_stream << "- " << enum_element_name << "\n";
+        }
+    }
+
+    context->diagnostics.report_error(span, string_stream.str());
+    throw "Stop";
+}
+
+auto amun::TypeChecker::check_parameters_types(TokenSpan location,
+                                               std::vector<Shared<Expression>>& arguments,
+                                               std::vector<Shared<amun::Type>>& parameters,
+                                               bool has_varargs, Shared<amun::Type> varargs_type,
+                                               int implicit_parameters_count) -> void
+{
+
+    const auto arguments_size = arguments.size();
+    const auto all_arguments_size = arguments_size + implicit_parameters_count;
+    const auto parameters_size = parameters.size();
+
+    // If hasent varargs, parameters and arguments must be the same size
+    if (not has_varargs && all_arguments_size != parameters_size) {
+        context->diagnostics.report_error(
+            location, "Invalid number of arguments, expect " + std::to_string(parameters_size) +
+                          " but got " + std::to_string(all_arguments_size));
+        throw "Stop";
+    }
+
+    // If it has varargs, number of parameters must be bigger than arguments
+    if (has_varargs && parameters_size > all_arguments_size) {
+        context->diagnostics.report_error(location, "Invalid number of arguments, expect at last" +
+                                                        std::to_string(parameters_size) +
+                                                        " but got " +
+                                                        std::to_string(all_arguments_size));
+        throw "Stop";
+    }
+
+    // Resolve Arguments types
+    std::vector<Shared<amun::Type>> arguments_types;
+    arguments_types.reserve(arguments.size());
+
+    // Resolve Arguments
+    for (auto& argument : arguments) {
+        auto argument_type = node_amun_type(argument->accept(this));
+        if (argument_type->type_kind == amun::TypeKind::GENERIC_STRUCT) {
+            arguments_types.push_back(resolve_generic_type(argument_type));
+        }
+        else {
+            arguments_types.push_back(argument_type);
+        }
+    }
+
+    // Resolve Generic parameters
+    for (size_t i = 0; i < parameters_size; i++) {
+        if (parameters[i]->type_kind == amun::TypeKind::GENERIC_STRUCT) {
+            parameters[i] = resolve_generic_type(parameters[i]);
+        }
+    }
+
+    auto count = parameters_size > arguments_size ? arguments_size : parameters_size;
+
+    // Check non varargs parameters vs arguments
+    for (size_t i = 0; i < count; i++) {
+        size_t p = i + implicit_parameters_count;
+
+        if (!amun::is_types_equals(parameters[p], arguments_types[i])) {
+
+            // if Parameter is pointer type and null pointer passed as argument
+            // Change null pointer base type to parameter type
+            if (amun::is_pointer_type(parameters[p]) and amun::is_null_type(arguments_types[i])) {
+                auto null_expr = std::dynamic_pointer_cast<NullExpression>(arguments[i]);
+                null_expr->null_base_type = parameters[p];
+                continue;
+            }
+
+            context->diagnostics.report_error(location,
+                                              "Argument type didn't match parameter type expect " +
+                                                  amun::get_type_literal(parameters[p]) + " got " +
+                                                  amun::get_type_literal(arguments_types[i]));
+            throw "Stop";
+        }
+    }
+
+    // If varargs type is Any, no need for type checking
+    if (varargs_type == nullptr) {
+        return;
+    }
+
+    // Check extra varargs types
+    for (size_t i = parameters_size; i < arguments_size; i++) {
+        if (!amun::is_types_equals(arguments_types[i], varargs_type)) {
+            context->diagnostics.report_error(location,
+                                              "Argument type didn't match varargs type expect " +
+                                                  amun::get_type_literal(varargs_type) + " got " +
+                                                  amun::get_type_literal(arguments_types[i]));
+            throw "Stop";
+        }
+    }
+}
+
+auto amun::TypeChecker::check_number_limits(const char* literal, amun::NumberKind kind) -> bool
+{
+    switch (kind) {
+    case amun::NumberKind::INTEGER_1: {
+        auto value = str_to_int(literal);
+        return value == 0 or value == 1;
+    }
+    case amun::NumberKind::INTEGER_8: {
+        auto value = str_to_int(literal);
+        ;
+        return value >= std::numeric_limits<int8_t>::min() and
+               value <= std::numeric_limits<int8_t>::max();
+    }
+    case amun::NumberKind::U_INTEGER_8: {
+        auto value = str_to_int(literal);
+        ;
+        return value >= std::numeric_limits<uint8_t>::min() and
+               value <= std::numeric_limits<uint8_t>::max();
+    }
+    case amun::NumberKind::INTEGER_16: {
+        auto value = str_to_int(literal);
+        ;
+        return value >= std::numeric_limits<int16_t>::min() and
+               value <= std::numeric_limits<int16_t>::max();
+    }
+    case amun::NumberKind::U_INTEGER_16: {
+        auto value = str_to_int(literal);
+        ;
+        return value >= std::numeric_limits<uint16_t>::min() and
+               value <= std::numeric_limits<uint16_t>::max();
+    }
+    case amun::NumberKind::INTEGER_32: {
+        auto value = str_to_int(literal);
+        ;
+        return value >= std::numeric_limits<int32_t>::min() and
+               value <= std::numeric_limits<int32_t>::max();
+    }
+    case amun::NumberKind::U_INTEGER_32: {
+        auto value = str_to_int(literal);
+        ;
+        return value >= std::numeric_limits<uint32_t>::min() and
+               value <= std::numeric_limits<uint32_t>::max();
+    }
+    case amun::NumberKind::INTEGER_64: {
+        auto value = str_to_int(literal);
+        ;
+        return value >= std::numeric_limits<int64_t>::min() and
+               value <= std::numeric_limits<int64_t>::max();
+    }
+    case amun::NumberKind::U_INTEGER_64: {
+        auto value = str_to_int(literal);
+        ;
+        return value >= std::numeric_limits<uint64_t>::min() and
+               value <= std::numeric_limits<uint64_t>::max();
+    }
+    case amun::NumberKind::FLOAT_32: {
+        auto value = str_to_float(literal);
+        return value >= -std::numeric_limits<float>::max() and
+               value <= std::numeric_limits<float>::max();
+    }
+    case amun::NumberKind::FLOAT_64: {
+        auto value = str_to_float(literal);
+        return value >= -std::numeric_limits<double>::max() and
+               value <= std::numeric_limits<double>::max();
+    }
+    }
+}
+
 auto amun::TypeChecker::check_missing_return_statement(Shared<Statement> node) -> bool
 {
     // This case for single node function declaration
@@ -2009,7 +2093,8 @@ auto amun::TypeChecker::check_missing_return_statement(Shared<Statement> node) -
     const auto& body = std::dynamic_pointer_cast<BlockStatement>(node);
     const auto& statements = body->statements;
 
-    // This check called only for non void function so it must have return in empty body
+    // This check called only for non void function so it must have return in
+    // empty body
     if (statements.empty()) {
         return false;
     }
@@ -2082,7 +2167,8 @@ auto amun::TypeChecker::check_valid_assignment_right_side(Shared<Expression> nod
     }
 
     // Index expression is a valid right hand side but
-    // Make sure to report error if use want to modify string literal using index expression
+    // Make sure to report error if use want to modify string literal using
+    // index expression
     if (left_node_type == AstNodeType::AST_INDEX) {
         auto index_expression = std::dynamic_pointer_cast<IndexExpression>(node);
         auto value_type = index_expression->get_value()->get_type_node();
@@ -2108,45 +2194,46 @@ auto amun::TypeChecker::check_valid_assignment_right_side(Shared<Expression> nod
         throw "Stop";
     }
 
-    // Character literal can't be used as right hand side for assignment expression
+    // Character literal can't be used as right hand side for assignment
+    // expression
     if (left_node_type == AstNodeType::AST_CHARACTER) {
-        context->diagnostics.report_error(
-            position, "char literal is invalid right hand side for assignment expression");
+        context->diagnostics.report_error(position, "char literal is invalid right hand "
+                                                    "side for assignment expression");
         throw "Stop";
     }
 
     // Boolean value can't be used as right hand side for assignment expression
     if (left_node_type == AstNodeType::AST_BOOL) {
-        context->diagnostics.report_error(
-            position, "boolean value is invalid right hand side for assignment expression");
+        context->diagnostics.report_error(position, "boolean value is invalid right hand "
+                                                    "side for assignment expression");
         throw "Stop";
     }
 
     // Number value can't be used as right hand side for assignment expression
     if (left_node_type == AstNodeType::AST_NUMBER) {
-        context->diagnostics.report_error(
-            position, "number value is invalid right hand side for assignment expression");
+        context->diagnostics.report_error(position, "number value is invalid right hand "
+                                                    "side for assignment expression");
         throw "Stop";
     }
 
     // String value can't be used as right hand side for assignment expression
     if (left_node_type == AstNodeType::AST_STRING) {
-        context->diagnostics.report_error(
-            position, "string literal is invalid right hand side for assignment expression");
+        context->diagnostics.report_error(position, "string literal is invalid right hand side for "
+                                                    "assignment expression");
         throw "Stop";
     }
 
     // Enum element can't be used as right hand side for assignment expression
     if (left_node_type == AstNodeType::AST_ENUM_ELEMENT) {
-        context->diagnostics.report_error(
-            position, "Enum element is invalid right hand side for assignment expression");
+        context->diagnostics.report_error(position, "Enum element is invalid right hand "
+                                                    "side for assignment expression");
         throw "Stop";
     }
 
     // Null literal can't be used as right hand side for assignment expression
     if (left_node_type == AstNodeType::AST_NULL) {
-        context->diagnostics.report_error(
-            position, "Null literal is invalid right hand side for assignment expression");
+        context->diagnostics.report_error(position, "Null literal is invalid right hand "
+                                                    "side for assignment expression");
         throw "Stop";
     }
 }

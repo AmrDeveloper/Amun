@@ -35,7 +35,7 @@ auto mangle_type(Shared<amun::Type> type) -> std::string
 
     if (kind == amun::TypeKind::ENUM_ELEMENT) {
         auto enum_element_type = std::static_pointer_cast<amun::EnumElementType>(type);
-        return enum_element_type->name;
+        return enum_element_type->enum_name;
     }
 
     if (kind == amun::TypeKind::STRUCT) {

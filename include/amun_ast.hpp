@@ -6,6 +6,7 @@
 
 #include <any>
 #include <memory>
+#include <utility>
 #include <vector>
 
 enum class AstNodeType {
@@ -419,7 +420,8 @@ class SwitchStatement : public Statement {
   public:
     SwitchStatement(Token position, Shared<Expression> argument,
                     std::vector<Shared<SwitchCase>> cases, Shared<SwitchCase> default_case)
-        : position(position), argument(argument), cases(cases), default_case(default_case)
+        : position(std::move(position)), argument(std::move(argument)), cases(std::move(cases)),
+          default_case(std::move(default_case))
     {
     }
 
@@ -439,6 +441,8 @@ class SwitchStatement : public Statement {
     Shared<Expression> argument;
     std::vector<Shared<SwitchCase>> cases;
     Shared<SwitchCase> default_case;
+
+    bool should_perform_complete_check = false;
 };
 
 class ReturnStatement : public Statement {

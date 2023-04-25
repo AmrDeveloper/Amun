@@ -149,13 +149,13 @@ struct EnumType : public Type {
 };
 
 struct EnumElementType : public Type {
-    EnumElementType(std::string name, Shared<Type> element_type)
-        : name(std::move(name)), element_type(std::move(element_type))
+    EnumElementType(std::string enum_name, Shared<Type> element_type)
+        : enum_name(std::move(enum_name)), element_type(std::move(element_type))
     {
         type_kind = TypeKind::ENUM_ELEMENT;
     }
 
-    std::string name;
+    std::string enum_name;
     Shared<Type> element_type;
 };
 

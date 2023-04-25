@@ -121,13 +121,17 @@ class TypeChecker : public TreeVisitor {
 
     auto is_same_type(const Shared<amun::Type>& left, const Shared<amun::Type>& right) -> bool;
 
-    auto check_number_limits(const char* literal, amun::NumberKind kind) -> bool;
-
     auto resolve_generic_type(Shared<amun::Type> type, std::vector<std::string> generic_names = {},
                               std::vector<Shared<amun::Type>> generic_parameters = {})
         -> Shared<amun::Type>;
 
+    auto check_number_limits(const char* literal, amun::NumberKind kind) -> bool;
+
     auto check_missing_return_statement(Shared<Statement> node) -> bool;
+
+    auto check_complete_switch_cases(Shared<amun::EnumType> enum_type,
+                                     std::unordered_set<std::string> cases_values,
+                                     bool has_else_branch, TokenSpan span) -> void;
 
     auto check_parameters_types(TokenSpan location, std::vector<Shared<Expression>>& arguments,
                                 std::vector<Shared<amun::Type>>& parameters, bool has_varargs,

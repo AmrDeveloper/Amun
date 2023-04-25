@@ -87,6 +87,18 @@ auto amun::Parser::parse_statements_directive() -> Shared<Statement>
     auto directive_name = directive.literal;
     auto posiiton = directive.position;
 
+    if (directive_name == "complete") {
+        auto statement = parse_statement();
+        if (statement->get_ast_node_type() != AstNodeType::AST_SWITCH_STATEMENT) {
+            context->diagnostics.report_error(posiiton, "@complete expect switch statement");
+            throw "Stop";
+        }
+
+        auto switch_node = std::dynamic_pointer_cast<SwitchStatement>(statement);
+        switch_node->should_perform_complete_check = true;
+        return switch_node;
+    }
+
     context->diagnostics.report_error(posiiton,
                                       "No statement directive with name " + directive_name);
     throw "Stop";
