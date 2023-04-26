@@ -667,17 +667,20 @@ auto amun::TypeChecker::visit(IfExpression* node) -> std::any
 auto amun::TypeChecker::visit(SwitchExpression* node) -> std::any
 {
     auto argument = node_amun_type(node->get_argument()->accept(this));
+    auto position = node->get_position().position;
+
     auto cases = node->get_switch_cases();
     auto cases_size = cases.size();
+
     for (size_t i = 0; i < cases_size; i++) {
         auto case_expression = cases[i];
         auto case_type = node_amun_type(case_expression->accept(this));
         if (!amun::is_types_equals(argument, case_type)) {
             context->diagnostics.report_error(
-                node->get_position().position,
-                "Switch case type must be the same type of argument type " +
-                    amun::get_type_literal(argument) + " but got " +
-                    amun::get_type_literal(case_type) + " in case number " + std::to_string(i + 1));
+                position, "Switch case type must be the same type of argument type " +
+                              amun::get_type_literal(argument) + " but got " +
+                              amun::get_type_literal(case_type) + " in case number " +
+                              std::to_string(i + 1));
             throw "Stop";
         }
     }
@@ -687,7 +690,7 @@ auto amun::TypeChecker::visit(SwitchExpression* node) -> std::any
     for (size_t i = 1; i < cases_size; i++) {
         auto case_value = node_amun_type(values[i]->accept(this));
         if (!amun::is_types_equals(expected_type, case_value)) {
-            context->diagnostics.report_error(node->get_position().position,
+            context->diagnostics.report_error(position,
                                               "Switch cases must be the same time but got " +
                                                   amun::get_type_literal(expected_type) + " and " +
                                                   amun::get_type_literal(case_value));
@@ -695,15 +698,41 @@ auto amun::TypeChecker::visit(SwitchExpression* node) -> std::any
         }
     }
 
-    auto default_value_type = node_amun_type(node->get_default_case_value()->accept(this));
-    if (!amun::is_types_equals(expected_type, default_value_type)) {
-        context->diagnostics.report_error(
-            node->get_position().position,
-            "Switch case default values must be the same type of other cases "
-            "expect " +
-                amun::get_type_literal(expected_type) + " but got " +
-                amun::get_type_literal(default_value_type));
-        throw "Stop";
+    bool has_else_branch = false;
+    auto else_value = node->get_default_case_value();
+    if (else_value) {
+        auto default_value_type = node_amun_type(else_value->accept(this));
+        has_else_branch = true;
+        if (!amun::is_types_equals(expected_type, default_value_type)) {
+            context->diagnostics.report_error(
+                position,
+                "Switch case default values must be the same type of other cases expect " +
+                    amun::get_type_literal(expected_type) + " but got " +
+                    amun::get_type_literal(default_value_type));
+            throw "Stop";
+        }
+    }
+
+    // Check that switch expression are complete
+    if (!has_else_branch) {
+        if (amun::is_enum_element_type(argument)) {
+            auto enum_element = std::static_pointer_cast<amun::EnumElementType>(argument);
+            auto enum_name = enum_element->enum_name;
+            auto enum_type = context->enumerations[enum_name];
+            auto enum_values = enum_type->values;
+            auto cases_count = cases.size();
+            if (enum_values.size() > cases_count) {
+                context->diagnostics.report_error(position,
+                                                  "Switch is incomplete and must has else branch");
+                throw "Stop";
+            }
+        }
+        else {
+            // If argument type is not enum element, it must has else branch
+            context->diagnostics.report_error(position,
+                                              "Switch is incomplete and must has else branch");
+            throw "Stop";
+        }
     }
 
     node->set_type_node(expected_type);

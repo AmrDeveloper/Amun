@@ -969,21 +969,23 @@ auto amun::LLVMBackend::visit(SwitchExpression* node) -> std::any
     // In each branch check the equlity between argument and case
     // If they are equal conditional jump to the final branch, else jump to the next branch
     // If the current branch is default case branch, perform un conditional jump to final branch
-
     auto cases = node->get_switch_cases();
     auto values = node->get_switch_cases_values();
+    auto else_branch = node->get_default_case_value();
 
     // The number of cases that has a value (not default case)
     auto cases_size = cases.size();
 
     // The number of all values (cases and default case values)
-    auto values_size = cases_size + 1;
+    auto values_size = cases_size;
+
+    if (else_branch) {
+        values_size += 1;
+    }
 
     // The value type for all cases values
     auto value_type = llvm_type_from_amun_type(node->get_type_node());
-
     auto function = Builder.GetInsertBlock()->getParent();
-
     auto argument = llvm_resolve_value(node->get_argument()->accept(this));
 
     // Create basic blocks that match the number of cases even the default case
@@ -998,11 +1000,13 @@ auto amun::LLVMBackend::visit(SwitchExpression* node) -> std::any
         llvm_values[i] = llvm_resolve_value(values[i]->accept(this));
     }
 
-    // Resolve the default value
-    llvm_values[cases_size] = llvm_resolve_value(node->get_default_case_value()->accept(this));
+    // Resolve the else value if declared
+    if (else_branch) {
+        llvm_values[cases_size] = llvm_resolve_value(else_branch->accept(this));
+    }
 
     // Merge branch is the branch which contains the phi node used as a destination
-    // if current case has the same value as argument valeu
+    // if current case has the same value as argument value
     // or no case match the argument value so default branch will perfrom jump to it
     auto merge_branch = llvm::BasicBlock::Create(llvm_context);
 

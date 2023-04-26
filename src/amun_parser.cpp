@@ -1878,19 +1878,22 @@ auto amun::Parser::parse_switch_expression() -> Shared<SwitchExpression>
     std::vector<Shared<Expression>> values;
     Shared<Expression> default_value;
     bool has_default_branch = false;
-    while (is_source_available() and !is_current_kind(TokenKind::TOKEN_CLOSE_BRACE)) {
+    while (is_source_available() && !is_current_kind(TokenKind::TOKEN_CLOSE_BRACE)) {
         if (is_current_kind(TokenKind::TOKEN_ELSE)) {
             if (has_default_branch) {
+                has_default_branch = true;
+
                 context->diagnostics.report_error(
                     keyword.position, "Switch expression can't has more than one default branch");
                 throw "Stop";
             }
+
             assert_kind(TokenKind::TOKEN_ELSE, "Expect else keyword in switch default branch");
             assert_kind(TokenKind::TOKEN_RIGHT_ARROW,
                         "Expect -> after else keyword in switch default branch");
+
             default_value = parse_expression();
-            assert_kind(TokenKind::TOKEN_SEMICOLON, "Expect semicolon `;` after switch case value");
-            has_default_branch = true;
+            check_unnecessary_semicolon_warning();
             continue;
         }
 
@@ -1927,13 +1930,8 @@ auto amun::Parser::parse_switch_expression() -> Shared<SwitchExpression>
         for (size_t i = 0; i < case_values_count; i++) {
             values.push_back(right_value_expression);
         }
-        assert_kind(TokenKind::TOKEN_SEMICOLON, "Expect semicolon `;` after switch case value");
-    }
 
-    if (not has_default_branch) {
-        context->diagnostics.report_error(keyword.position,
-                                          "Switch expression must has a default case");
-        throw "Stop";
+        check_unnecessary_semicolon_warning();
     }
 
     if (cases.empty()) {
