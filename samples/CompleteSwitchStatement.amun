@@ -1,0 +1,18 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+enum Number { ONE, TWO, THREE };
+
+fun main() {
+    var num = Number::ONE;
+    @complete switch (num) {
+        Number::ONE -> {
+            printf("One\n");
+        }
+        Number::TWO -> {
+            printf("Two\n");
+        }
+        Number::THREE -> {
+            printf("Three\n");
+        }
+    }
+}
