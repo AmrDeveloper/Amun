@@ -63,9 +63,8 @@ enum class AstNodeType {
     AST_NULL
 };
 
-class AstNode {
-  public:
-    virtual AstNodeType get_ast_node_type() = 0;
+struct AstNode {
+    virtual auto get_ast_node_type() -> AstNodeType = 0;
 };
 
 class Statement : public AstNode {
@@ -83,24 +82,22 @@ class Expression : public AstNode {
     AstNodeType get_ast_node_type() { return AstNodeType::AST_NODE; }
 };
 
-class CompilationUnit {
-  public:
-    CompilationUnit(std::vector<Shared<Statement>> tree_nodes) : tree_nodes(tree_nodes) {}
-
-    std::vector<Shared<Statement>> get_tree_nodes() { return tree_nodes; }
+struct CompilationUnit {
+    explicit CompilationUnit(std::vector<Shared<Statement>> tree_nodes)
+        : tree_nodes(std::move(tree_nodes))
+    {
+    }
 
     std::vector<Shared<Statement>> tree_nodes;
 };
 
 class BlockStatement : public Statement {
   public:
-    BlockStatement(std::vector<Shared<Statement>> nodes) : statements(nodes) {}
+    explicit BlockStatement(std::vector<Shared<Statement>> nodes) : statements(std::move(nodes)) {}
 
-    std::vector<Shared<Statement>> get_nodes() { return statements; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_BLOCK; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_BLOCK; }
 
     std::vector<Shared<Statement>> statements;
 };
@@ -146,9 +143,9 @@ class ConstDeclaration : public Statement {
     {
     }
 
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_FIELD_DECLARAION; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_FIELD_DECLARAION; }
 
     Token name;
     Shared<Expression> value;
@@ -1050,15 +1047,15 @@ class CastExpression : public Expression {
 class TypeSizeExpression : public Expression {
   public:
     TypeSizeExpression(Token position, Shared<amun::Type> type)
-        : position(position), type(type), node_type(amun::i64_type)
+        : position(std::move(position)), type(std::move(type))
     {
     }
 
     Token get_position() { return position; }
 
-    Shared<amun::Type> get_type_node() override { return node_type; }
+    Shared<amun::Type> get_type_node() override { return amun::i64_type; }
 
-    void set_type_node(Shared<amun::Type> new_type) override { node_type = new_type; }
+    void set_type_node(Shared<amun::Type> new_type) override {}
 
     Shared<amun::Type> get_type() { return type; }
 
@@ -1070,21 +1067,20 @@ class TypeSizeExpression : public Expression {
 
     Token position;
     Shared<amun::Type> type;
-    Shared<amun::Type> node_type;
 };
 
 class ValueSizeExpression : public Expression {
   public:
     ValueSizeExpression(Token position, Shared<Expression> value)
-        : position(position), value(value), node_type(amun::i64_type)
+        : position(std::move(position)), value(std::move(value))
     {
     }
 
     Token get_position() { return position; }
 
-    Shared<amun::Type> get_type_node() override { return node_type; }
+    Shared<amun::Type> get_type_node() override { return amun::i64_type; }
 
-    void set_type_node(Shared<amun::Type> new_type) override { node_type = new_type; }
+    void set_type_node(Shared<amun::Type> new_type) override {}
 
     Shared<Expression> get_value() { return value; }
 
@@ -1096,7 +1092,6 @@ class ValueSizeExpression : public Expression {
 
     Token position;
     Shared<Expression> value;
-    Shared<amun::Type> node_type;
 };
 
 class IndexExpression : public Expression {

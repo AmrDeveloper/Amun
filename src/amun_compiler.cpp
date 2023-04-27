@@ -103,7 +103,12 @@ auto amun::Compiler::compile_source_code(const char* source_file) -> int
 
     // Link object file with optional libraries into executable
     auto result = external_linker.link(object_file_path);
-    std::cout << "Successfully compiled " << source_file << " to executable\n";
+    if (result == 0) {
+        std::cout << "Successfully compiled " << source_file << " to executable\n";
+    }
+    else {
+        std::cout << "External Linker error\n";
+    }
     return result;
 }
 

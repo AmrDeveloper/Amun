@@ -213,7 +213,7 @@ auto amun::Parser::parse_single_source_file(std::string& path) -> std::vector<Sh
     if (context->diagnostics.level_count(amun::DiagnosticLevel::ERROR) > 0) {
         throw "Stop";
     }
-    return compilation_unit->get_tree_nodes();
+    return compilation_unit->tree_nodes;
 }
 
 auto amun::Parser::parse_declaration_statement() -> Shared<Statement>

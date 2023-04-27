@@ -16,7 +16,7 @@
 
 auto amun::TypeChecker::check_compilation_unit(Shared<CompilationUnit> compilation_unit) -> void
 {
-    auto statements = compilation_unit->get_tree_nodes();
+    auto statements = compilation_unit->tree_nodes;
     try {
         // Iterate over top level nodes
         for (auto& statement : statements) {
@@ -30,7 +30,7 @@ auto amun::TypeChecker::check_compilation_unit(Shared<CompilationUnit> compilati
 auto amun::TypeChecker::visit(BlockStatement* node) -> std::any
 {
     push_new_scope();
-    for (auto& statement : node->get_nodes()) {
+    for (const auto& statement : node->statements) {
         statement->accept(this);
         // Here we can report warn for unreachable code after return, continue
         // or break keyword We can make it error after return, must modify the
@@ -1563,6 +1563,7 @@ auto amun::TypeChecker::visit(CastExpression* node) -> std::any
     auto value = node->get_value();
     auto value_type = node_amun_type(value->accept(this));
     auto target_type = node->get_type_node();
+    target_type = resolve_generic_type(target_type);
     auto node_position = node->position.position;
 
     // No need for castring if both has the same type
@@ -1583,12 +1584,16 @@ auto amun::TypeChecker::visit(CastExpression* node) -> std::any
 
 auto amun::TypeChecker::visit(TypeSizeExpression* node) -> std::any
 {
-    return node->get_type_node();
+    auto type = node->type;
+    auto resolved_type = resolve_generic_type(type);
+    node->type = resolved_type;
+    return amun::i64_type;
 }
 
 auto amun::TypeChecker::visit(ValueSizeExpression* node) -> std::any
 {
-    return node->get_type_node();
+    node->value->accept(this);
+    return amun::i64_type;
 }
 
 auto amun::TypeChecker::visit(IndexExpression* node) -> std::any

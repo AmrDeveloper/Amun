@@ -29,7 +29,7 @@ auto amun::LLVMBackend::compile(std::string module_name,
 {
     llvm_module = std::make_unique<llvm::Module>(module_name, llvm_context);
     try {
-        for (auto& statement : compilation_unit->get_tree_nodes()) {
+        for (const auto& statement : compilation_unit->tree_nodes) {
             statement->accept(this);
         }
     }
@@ -44,7 +44,7 @@ auto amun::LLVMBackend::visit(BlockStatement* node) -> std::any
     push_alloca_inst_scope();
     defer_calls_stack.top().push_new_scope();
     bool should_execute_defers = true;
-    for (auto& statement : node->get_nodes()) {
+    for (const auto& statement : node->statements) {
         const auto ast_node_type = statement->get_ast_node_type();
         if (ast_node_type == AstNodeType::AST_RETURN) {
             should_execute_defers = false;
@@ -1856,7 +1856,7 @@ auto amun::LLVMBackend::visit(CastExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(TypeSizeExpression* node) -> std::any
 {
-    auto llvm_type = llvm_type_from_amun_type(node->get_type());
+    auto llvm_type = llvm_type_from_amun_type(node->type);
     auto type_alloc_size = llvm_module->getDataLayout().getTypeAllocSize(llvm_type);
     auto type_size = llvm::ConstantInt::get(llvm_int64_type, type_alloc_size);
     return type_size;
@@ -2936,7 +2936,7 @@ auto amun::LLVMBackend::create_switch_case_branch(llvm::SwitchInst* switch_inst,
     // if it not block, check if it return statement or not
     if (branch_body->get_ast_node_type() == AstNodeType::AST_BLOCK) {
         auto block = std::dynamic_pointer_cast<BlockStatement>(branch_body);
-        auto nodes = block->get_nodes();
+        auto nodes = block->statements;
         if (not nodes.empty()) {
             body_has_return_statement =
                 nodes.back()->get_ast_node_type() == AstNodeType::AST_RETURN;
