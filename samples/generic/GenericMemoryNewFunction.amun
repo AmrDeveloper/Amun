@@ -1,0 +1,17 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+@extern fun malloc(size int64) *void;
+
+struct Point {
+    x int64;
+}
+
+fun generic_new<T> () *T {
+    return cast(*T) malloc(type_size(T));
+}
+
+fun main() {
+    var p = generic_new<Point>();
+    p.x = 10;
+    printf("%d\n", p.x);
+}
