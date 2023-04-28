@@ -20,7 +20,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.amun",
-					"match": "\\b(packed|var|const|load|import|type|if|else|fun|operator|extern|intrinsic|cast|defer|switch|prefix|infix|postfix|break|continue|vaamunrgs|void|true|false|null|for|while|struct|enum|return|value_size|type_size)\\b"
+					"match": "\\b(var|const|load|import|type|if|else|fun|operator|cast|defer|switch|break|continue|vaamunrgs|void|true|false|null|for|while|struct|enum|return|value_size|type_size)\\b"
 				},
 				{
 					"name": "keyword.types.amun",
