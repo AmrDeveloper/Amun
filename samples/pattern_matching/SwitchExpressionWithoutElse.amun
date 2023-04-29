@@ -1,0 +1,14 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+enum Op { PLUS, MINUS, POW, DIV }
+
+fun main() {
+    var op = Op::PLUS;
+    var result = switch (op) {
+        Op::PLUS -> 1
+        Op::MINUS -> 2
+        Op::POW -> 3
+        Op::DIV -> 4
+    };
+    printf("%d\n", result);
+}
