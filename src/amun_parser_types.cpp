@@ -98,7 +98,7 @@ auto amun::Parser::parse_fixed_size_array_type() -> Shared<amun::Type>
         throw "Stop";
     }
 
-    auto number_value = std::atoi(size->get_value().literal.c_str());
+    auto number_value = std::atoi(size->value.literal.c_str());
     assert_kind(TokenKind::TOKEN_CLOSE_BRACKET, "Expect ] after array size.");
     auto element_type = parse_type();
 

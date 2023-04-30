@@ -117,6 +117,8 @@ class TypeChecker : public TreeVisitor {
 
     auto visit(NullExpression* node) -> std::any override;
 
+    auto visit(UndefinedExpression* node) -> std::any override;
+
     auto node_amun_type(std::any any_type) -> Shared<amun::Type>;
 
     auto is_same_type(const Shared<amun::Type>& left, const Shared<amun::Type>& right) -> bool;

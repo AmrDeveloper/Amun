@@ -71,8 +71,8 @@ auto amun::LLVMBackend::visit(BlockStatement* node) -> std::any
 
 auto amun::LLVMBackend::visit(FieldDeclaration* node) -> std::any
 {
-    auto var_name = node->get_name().literal;
-    auto field_type = node->get_type();
+    auto var_name = node->name.literal;
+    auto field_type = node->type;
     if (field_type->type_kind == amun::TypeKind::GENERIC_PARAMETER) {
         auto generic = std::static_pointer_cast<amun::GenericParameterType>(field_type);
         field_type = generic_types[generic->name];
@@ -89,14 +89,14 @@ auto amun::LLVMBackend::visit(FieldDeclaration* node) -> std::any
 
     // Globals code generation block can be moved into other function to be clear and handle more
     // cases and to handle also soem compile time evaluations
-    if (node->is_global()) {
+    if (node->is_global) {
         // if field has initalizer evaluate it, else initalize it with default value
         llvm::Constant* constants_value;
-        if (node->get_value() == nullptr) {
+        if (node->value == nullptr) {
             constants_value = create_llvm_null(llvm_type_from_amun_type(field_type));
         }
         else {
-            constants_value = resolve_constant_expression(node->get_value());
+            constants_value = resolve_constant_expression(node->value);
         }
 
         auto global_variable =
@@ -108,11 +108,11 @@ auto amun::LLVMBackend::visit(FieldDeclaration* node) -> std::any
 
     // if field has initalizer evaluate it, else initalize it with default value
     std::any value;
-    if (node->get_value() == nullptr) {
+    if (node->value == nullptr) {
         value = create_llvm_null(llvm_type_from_amun_type(field_type));
     }
     else {
-        value = node->get_value()->accept(this);
+        value = node->value->accept(this);
     }
 
     auto current_function = Builder.GetInsertBlock()->getParent();
@@ -175,6 +175,12 @@ auto amun::LLVMBackend::visit(FieldDeclaration* node) -> std::any
         Builder.CreateStore(node, alloc_inst);
         alloca_inst_table.define(var_name, alloc_inst);
     }
+    else if (value.type() == typeid(llvm::UndefValue*)) {
+        auto undefined = std::any_cast<llvm::UndefValue*>(value);
+        auto alloc_inst = create_entry_block_alloca(current_function, var_name, llvm_type);
+        Builder.CreateStore(undefined, alloc_inst);
+        alloca_inst_table.define(var_name, alloc_inst);
+    }
     else {
         internal_compiler_error("Un supported rvalue for field declaration");
     }
@@ -185,18 +191,18 @@ auto amun::LLVMBackend::visit(ConstDeclaration* node) -> std::any { return 0; }
 
 auto amun::LLVMBackend::visit(FunctionPrototype* node) -> std::any
 {
-    auto parameters = node->get_parameters();
+    auto parameters = node->parameters;
     size_t parameters_size = parameters.size();
     std::vector<llvm::Type*> arguments(parameters_size);
     for (size_t i = 0; i < parameters_size; i++) {
         arguments[i] = llvm_type_from_amun_type(parameters[i]->type);
     }
 
-    auto return_type = llvm_type_from_amun_type(node->get_return_type());
-    auto function_type = llvm::FunctionType::get(return_type, arguments, node->has_varargs());
-    auto function_name = node->get_name().literal;
-    auto linkage = node->is_external() || function_name == "main" ? llvm::Function::ExternalLinkage
-                                                                  : llvm::Function::InternalLinkage;
+    auto return_type = llvm_type_from_amun_type(node->return_type);
+    auto function_type = llvm::FunctionType::get(return_type, arguments, node->has_varargs);
+    auto function_name = node->name.literal;
+    auto linkage = node->is_external || function_name == "main" ? llvm::Function::ExternalLinkage
+                                                                : llvm::Function::InternalLinkage;
 
     auto function = llvm::Function::Create(function_type, linkage, function_name, nullptr);
     llvm_module->getFunctionList().push_back(function);
@@ -246,8 +252,8 @@ auto amun::LLVMBackend::resolve_generic_function(FunctionDeclaration* node,
 {
 
     is_on_global_scope = false;
-    auto prototype = node->get_prototype();
-    auto name = prototype->get_name().literal;
+    auto prototype = node->prototype;
+    auto name = prototype->name.literal;
     auto mangled_name = name + mangle_types(generic_parameters);
 
     if (alloca_inst_table.is_defined(mangled_name)) {
@@ -312,7 +318,7 @@ auto amun::LLVMBackend::resolve_generic_function(FunctionDeclaration* node,
         Builder.CreateStore(&arg, alloca_inst);
     }
 
-    const auto& body = node->get_body();
+    const auto& body = node->body;
     body->accept(this);
 
     pop_alloca_inst_scope();
@@ -342,8 +348,8 @@ auto amun::LLVMBackend::resolve_generic_function(FunctionDeclaration* node,
 auto amun::LLVMBackend::visit(FunctionDeclaration* node) -> std::any
 {
     is_on_global_scope = false;
-    auto prototype = node->get_prototype();
-    auto name = prototype->get_name().literal;
+    auto prototype = node->prototype;
+    auto name = prototype->name.literal;
     if (prototype->is_generic) {
         functions_declaraions[name] = node;
         return 0;
@@ -364,7 +370,7 @@ auto amun::LLVMBackend::visit(FunctionDeclaration* node) -> std::any
         Builder.CreateStore(&arg, alloca_inst);
     }
 
-    const auto& body = node->get_body();
+    const auto& body = node->body;
     body->accept(this);
 
     pop_alloca_inst_scope();
@@ -396,7 +402,7 @@ auto amun::LLVMBackend::visit(OperatorFunctionDeclaraion* node) -> std::any
 
 auto amun::LLVMBackend::visit(StructDeclaration* node) -> std::any
 {
-    const auto struct_type = node->get_struct_type();
+    const auto struct_type = node->struct_type;
 
     // Generic Struct is a template and should be defined only when used
     if (struct_type->is_generic) {
@@ -424,7 +430,7 @@ auto amun::LLVMBackend::visit(IfStatement* node) -> std::any
     current_function->getBasicBlockList().push_back(start_block);
     Builder.SetInsertPoint(start_block);
 
-    auto conditional_blocks = node->get_conditional_blocks();
+    auto conditional_blocks = node->conditional_blocks;
     auto conditional_blocks_size = conditional_blocks.size();
     for (unsigned long i = 0; i < conditional_blocks_size; i++) {
         auto true_block = llvm::BasicBlock::Create(llvm_context, "if.true");
@@ -436,12 +442,12 @@ auto amun::LLVMBackend::visit(IfStatement* node) -> std::any
             current_function->getBasicBlockList().push_back(false_branch);
         }
 
-        auto condition = llvm_resolve_value(conditional_blocks[i]->get_condition()->accept(this));
+        auto condition = llvm_resolve_value(conditional_blocks[i]->condition->accept(this));
         Builder.CreateCondBr(condition, true_block, false_branch);
         Builder.SetInsertPoint(true_block);
 
         push_alloca_inst_scope();
-        conditional_blocks[i]->get_body()->accept(this);
+        conditional_blocks[i]->body->accept(this);
         pop_alloca_inst_scope();
 
         // If there are not return, break or continue statement, must branch end block
@@ -609,11 +615,10 @@ auto amun::LLVMBackend::visit(ForEachStatement* node) -> std::any
         Builder.CreateStore(collection, temp_alloca);
         alloca_inst_table.define(temp_name, temp_alloca);
 
-        auto collection_amun_type = node->collection->get_type_node();
-
         auto location = TokenSpan();
         auto token = Token{TokenKind::TOKEN_IDENTIFIER, location, temp_name};
-        collection_expression = std::make_shared<LiteralExpression>(token, collection_amun_type);
+        collection_expression = std::make_shared<LiteralExpression>(token);
+        collection_expression->set_type_node(node->collection->get_type_node());
     }
 
     // Update it variable with the element in the current index
@@ -694,20 +699,22 @@ auto amun::LLVMBackend::visit(WhileStatement* node) -> std::any
     current_function->getBasicBlockList().push_back(condition_branch);
     Builder.SetInsertPoint(condition_branch);
 
-    auto condition = llvm_node_value(node->get_condition()->accept(this));
+    auto condition = llvm_node_value(node->condition->accept(this));
     Builder.CreateCondBr(condition, loop_branch, end_branch);
 
     current_function->getBasicBlockList().push_back(loop_branch);
     Builder.SetInsertPoint(loop_branch);
 
     push_alloca_inst_scope();
-    node->get_body()->accept(this);
+    node->body->accept(this);
     pop_alloca_inst_scope();
 
-    if (has_break_or_continue_statement)
+    if (has_break_or_continue_statement) {
         has_break_or_continue_statement = false;
-    else
+    }
+    else {
         Builder.CreateBr(condition_branch);
+    }
 
     current_function->getBasicBlockList().push_back(end_branch);
     Builder.SetInsertPoint(end_branch);
@@ -721,12 +728,12 @@ auto amun::LLVMBackend::visit(WhileStatement* node) -> std::any
 auto amun::LLVMBackend::visit(SwitchStatement* node) -> std::any
 {
     auto current_function = Builder.GetInsertBlock()->getParent();
-    auto argument = node->get_argument();
+    auto argument = node->argument;
     auto llvm_value = llvm_resolve_value(argument->accept(this));
     auto basic_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
     auto switch_inst = Builder.CreateSwitch(llvm_value, basic_block);
 
-    auto switch_cases = node->get_cases();
+    auto switch_cases = node->cases;
     auto switch_cases_size = switch_cases.size();
 
     // Generate code for each switch case
@@ -736,7 +743,7 @@ auto amun::LLVMBackend::visit(SwitchStatement* node) -> std::any
     }
 
     // Generate code for default cases is exists
-    auto default_branch = node->get_default_case();
+    auto default_branch = node->default_case;
     if (default_branch) {
         create_switch_case_branch(switch_inst, current_function, basic_block, default_branch);
     }
@@ -750,11 +757,11 @@ auto amun::LLVMBackend::visit(ReturnStatement* node) -> std::any
     has_return_statement = true;
 
     // If node has no value that mean it will return void
-    if (not node->has_value()) {
+    if (!node->has_value) {
         return Builder.CreateRetVoid();
     }
 
-    auto value = node->return_value()->accept(this);
+    auto value = node->value->accept(this);
 
     if (value.type() == typeid(llvm::Value*)) {
         auto return_value = std::any_cast<llvm::Value*>(value);
@@ -801,7 +808,7 @@ auto amun::LLVMBackend::visit(ReturnStatement* node) -> std::any
     // Used when use return node is if or switch expression
     if (value.type() == typeid(llvm::PHINode*)) {
         auto phi = std::any_cast<llvm::PHINode*>(value);
-        auto expected_type = node->return_value()->get_type_node();
+        auto expected_type = node->value->get_type_node();
         auto expected_llvm_type = llvm_type_from_amun_type(expected_type);
 
         // Return type from PHI node is primitives and no need for derefernece
@@ -817,9 +824,9 @@ auto amun::LLVMBackend::visit(ReturnStatement* node) -> std::any
 
 auto amun::LLVMBackend::visit(DeferStatement* node) -> std::any
 {
-    auto call_expression = node->get_call_expression();
-    auto callee = std::dynamic_pointer_cast<LiteralExpression>(call_expression->get_callee());
-    auto callee_literal = callee->get_name().literal;
+    auto call_expression = node->call_expression;
+    auto callee = std::dynamic_pointer_cast<LiteralExpression>(call_expression->callee());
+    auto callee_literal = callee->name.literal;
     auto function = lookup_function(callee_literal);
     if (not function) {
         auto value = llvm_node_value(alloca_inst_table.lookup(callee_literal));
@@ -827,7 +834,7 @@ auto amun::LLVMBackend::visit(DeferStatement* node) -> std::any
             auto loaded = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
             auto function_type = llvm_type_from_amun_type(call_expression->get_type_node());
             if (auto function_pointer = llvm::dyn_cast<llvm::FunctionType>(function_type)) {
-                auto arguments = call_expression->get_arguments();
+                auto arguments = call_expression->arguments();
                 size_t arguments_size = arguments.size();
                 std::vector<llvm::Value*> arguments_values;
                 arguments_values.reserve(arguments_size);
@@ -850,7 +857,7 @@ auto amun::LLVMBackend::visit(DeferStatement* node) -> std::any
         return 0;
     }
 
-    auto arguments = call_expression->get_arguments();
+    auto arguments = call_expression->arguments();
     auto arguments_size = arguments.size();
     auto parameter_size = function->arg_size();
     std::vector<llvm::Value*> arguments_values;
@@ -892,7 +899,7 @@ auto amun::LLVMBackend::visit(BreakStatement* node) -> std::any
 {
     has_break_or_continue_statement = true;
 
-    for (int i = 1; i < node->get_times(); i++) {
+    for (int i = 1; i < node->times; i++) {
         break_blocks_stack.pop();
     }
 
@@ -904,7 +911,7 @@ auto amun::LLVMBackend::visit(ContinueStatement* node) -> std::any
 {
     has_break_or_continue_statement = true;
 
-    for (int i = 1; i < node->get_times(); i++) {
+    for (int i = 1; i < node->times; i++) {
         continue_blocks_stack.pop();
     }
 
@@ -914,7 +921,7 @@ auto amun::LLVMBackend::visit(ContinueStatement* node) -> std::any
 
 auto amun::LLVMBackend::visit(ExpressionStatement* node) -> std::any
 {
-    node->get_expression()->accept(this);
+    node->expression->accept(this);
     return 0;
 }
 
@@ -927,7 +934,7 @@ auto amun::LLVMBackend::visit(IfExpression* node) -> std::any
 
     auto function = Builder.GetInsertBlock()->getParent();
 
-    auto condition = llvm_resolve_value(node->get_condition()->accept(this));
+    auto condition = llvm_resolve_value(node->condition->accept(this));
 
     llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(llvm_context, "then", function);
     llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(llvm_context, "else");
@@ -935,7 +942,7 @@ auto amun::LLVMBackend::visit(IfExpression* node) -> std::any
     Builder.CreateCondBr(condition, thenBB, elseBB);
 
     Builder.SetInsertPoint(thenBB);
-    auto then_value = llvm_node_value(node->get_if_value()->accept(this));
+    auto then_value = llvm_node_value(node->if_expression->accept(this));
 
     Builder.CreateBr(mergeBB);
     thenBB = Builder.GetInsertBlock();
@@ -943,7 +950,7 @@ auto amun::LLVMBackend::visit(IfExpression* node) -> std::any
     function->getBasicBlockList().push_back(elseBB);
     Builder.SetInsertPoint(elseBB);
 
-    auto else_value = llvm_node_value(node->get_else_value()->accept(this));
+    auto else_value = llvm_node_value(node->else_expression->accept(this));
 
     Builder.CreateBr(mergeBB);
     elseBB = Builder.GetInsertBlock();
@@ -969,9 +976,9 @@ auto amun::LLVMBackend::visit(SwitchExpression* node) -> std::any
     // In each branch check the equlity between argument and case
     // If they are equal conditional jump to the final branch, else jump to the next branch
     // If the current branch is default case branch, perform un conditional jump to final branch
-    auto cases = node->get_switch_cases();
-    auto values = node->get_switch_cases_values();
-    auto else_branch = node->get_default_case_value();
+    auto cases = node->switch_cases;
+    auto values = node->switch_cases_values;
+    auto else_branch = node->default_value;
 
     // The number of cases that has a value (not default case)
     auto cases_size = cases.size();
@@ -986,7 +993,7 @@ auto amun::LLVMBackend::visit(SwitchExpression* node) -> std::any
     // The value type for all cases values
     auto value_type = llvm_type_from_amun_type(node->get_type_node());
     auto function = Builder.GetInsertBlock()->getParent();
-    auto argument = llvm_resolve_value(node->get_argument()->accept(this));
+    auto argument = llvm_resolve_value(node->argument->accept(this));
 
     // Create basic blocks that match the number of cases even the default case
     std::vector<llvm::BasicBlock*> llvm_branches(values_size);
@@ -1050,7 +1057,7 @@ auto amun::LLVMBackend::visit(SwitchExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(GroupExpression* node) -> std::any
 {
-    return node->get_expression()->accept(this);
+    return node->expression->accept(this);
 }
 
 auto amun::LLVMBackend::visit(TupleExpression* node) -> std::any
@@ -1072,15 +1079,15 @@ auto amun::LLVMBackend::visit(TupleExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(AssignExpression* node) -> std::any
 {
-    auto left_node = node->get_left();
+    auto left_node = node->left;
     // Assign value to variable
     // variable = value
     if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(left_node)) {
-        auto name = literal->get_name().literal;
-        auto value = node->get_right()->accept(this);
+        auto name = literal->name.literal;
+        auto value = node->right->accept(this);
 
         auto right_value = llvm_resolve_value(value);
-        auto left_value = node->get_left()->accept(this);
+        auto left_value = node->left->accept(this);
         if (left_value.type() == typeid(llvm::AllocaInst*)) {
             auto alloca = std::any_cast<llvm::AllocaInst*>(left_value);
 
@@ -1110,16 +1117,16 @@ auto amun::LLVMBackend::visit(AssignExpression* node) -> std::any
     // Assign value to n dimentions array position
     // array []? = value
     if (auto index_expression = std::dynamic_pointer_cast<IndexExpression>(left_node)) {
-        auto node_value = index_expression->get_value();
-        auto index = llvm_resolve_value(index_expression->get_index()->accept(this));
-        auto right_value = llvm_node_value(node->get_right()->accept(this));
+        auto node_value = index_expression->value;
+        auto index = llvm_resolve_value(index_expression->index->accept(this));
+        auto right_value = llvm_node_value(node->right->accept(this));
 
         // Update element value in Single dimention Array
         if (auto array_literal = std::dynamic_pointer_cast<LiteralExpression>(node_value)) {
             auto array = array_literal->accept(this);
             if (array.type() == typeid(llvm::AllocaInst*)) {
                 auto alloca = llvm::dyn_cast<llvm::AllocaInst>(
-                    llvm_node_value(alloca_inst_table.lookup(array_literal->get_name().literal)));
+                    llvm_node_value(alloca_inst_table.lookup(array_literal->name.literal)));
                 auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca,
                                              {zero_int32_value, index});
                 Builder.CreateStore(right_value, ptr);
@@ -1167,7 +1174,7 @@ auto amun::LLVMBackend::visit(AssignExpression* node) -> std::any
     // Assign value to structure field
     if (auto dot_expression = std::dynamic_pointer_cast<DotExpression>(left_node)) {
         auto member_ptr = access_struct_member_pointer(dot_expression.get());
-        auto rvalue = llvm_resolve_value(node->get_right()->accept(this));
+        auto rvalue = llvm_resolve_value(node->right->accept(this));
         Builder.CreateStore(rvalue, member_ptr);
         return rvalue;
     }
@@ -1175,10 +1182,10 @@ auto amun::LLVMBackend::visit(AssignExpression* node) -> std::any
     // Assign value to pointer address
     // *ptr = value;
     if (auto unary_expression = std::dynamic_pointer_cast<PrefixUnaryExpression>(left_node)) {
-        auto opt = unary_expression->get_operator_token().kind;
+        auto opt = unary_expression->operator_token.kind;
         if (opt == TokenKind::TOKEN_STAR) {
-            auto rvalue = llvm_node_value(node->get_right()->accept(this));
-            auto pointer = llvm_node_value(unary_expression->get_right()->accept(this));
+            auto rvalue = llvm_node_value(node->right->accept(this));
+            auto pointer = llvm_node_value(unary_expression->right->accept(this));
             auto load = Builder.CreateLoad(pointer->getType()->getPointerElementType(), pointer);
             Builder.CreateStore(rvalue, load);
             return rvalue;
@@ -1192,7 +1199,7 @@ auto amun::LLVMBackend::visit(BinaryExpression* node) -> std::any
 {
     auto lhs = llvm_resolve_value(node->left->accept(this));
     auto rhs = llvm_resolve_value(node->right->accept(this));
-    auto op = node->get_operator_token().kind;
+    auto op = node->operator_token.kind;
 
     // Binary Operations for integer types
     if (lhs->getType()->isIntegerTy() && rhs->getType()->isIntegerTy()) {
@@ -1214,12 +1221,12 @@ auto amun::LLVMBackend::visit(BinaryExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(ShiftExpression* node) -> std::any
 {
-    auto lhs = llvm_resolve_value(node->get_left()->accept(this));
-    auto rhs = llvm_resolve_value(node->get_right()->accept(this));
+    auto lhs = llvm_resolve_value(node->left->accept(this));
+    auto rhs = llvm_resolve_value(node->right->accept(this));
 
     auto lhs_type = node->left->get_type_node();
     auto rhs_type = node->right->get_type_node();
-    auto op = node->get_operator_token().kind;
+    auto op = node->operator_token.kind;
 
     if (amun::is_integer_type(lhs_type) && amun::is_integer_type(rhs_type)) {
         if (op == TokenKind::TOKEN_LEFT_SHIFT) {
@@ -1241,7 +1248,7 @@ auto amun::LLVMBackend::visit(ComparisonExpression* node) -> std::any
 {
     auto lhs = llvm_resolve_value(node->left->accept(this));
     auto rhs = llvm_resolve_value(node->right->accept(this));
-    const auto op = node->get_operator_token().kind;
+    const auto op = node->operator_token.kind;
 
     // Comparison Operations for integers types
     if (lhs->getType()->isIntegerTy() && rhs->getType()->isIntegerTy()) {
@@ -1294,7 +1301,7 @@ auto amun::LLVMBackend::visit(LogicalExpression* node) -> std::any
 
     auto lhs_type = node->left->get_type_node();
     auto rhs_type = node->right->get_type_node();
-    auto op = node->get_operator_token().kind;
+    auto op = node->operator_token.kind;
 
     if (amun::is_integer1_type(lhs_type) && amun::is_integer1_type(rhs_type)) {
         if (op == TokenKind::TOKEN_AND_AND) {
@@ -1314,8 +1321,8 @@ auto amun::LLVMBackend::visit(LogicalExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(PrefixUnaryExpression* node) -> std::any
 {
-    auto operand = node->get_right();
-    auto operator_kind = node->get_operator_token().kind;
+    auto operand = node->right;
+    auto operator_kind = node->operator_token.kind;
 
     // Unary - minus operator
     if (operator_kind == TokenKind::TOKEN_MINUS) {
@@ -1399,8 +1406,8 @@ auto amun::LLVMBackend::visit(PrefixUnaryExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(PostfixUnaryExpression* node) -> std::any
 {
-    auto operand = node->get_right();
-    auto operator_kind = node->get_operator_token().kind;
+    auto operand = node->right;
+    auto operator_kind = node->operator_token.kind;
 
     // Unary postfix ++ operator, example (x++)
     if (operator_kind == TokenKind::TOKEN_PLUS_PLUS) {
@@ -1429,19 +1436,19 @@ auto amun::LLVMBackend::visit(PostfixUnaryExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
 {
-    auto callee_ast_node_type = node->get_callee()->get_ast_node_type();
+    auto callee_ast_node_type = node->callee()->get_ast_node_type();
 
     // If callee is also a CallExpression this case when you have a function that return a
     // function pointer and you call it for example function()();
     if (callee_ast_node_type == AstNodeType::AST_CALL) {
-        auto callee_function = llvm_node_value(node->get_callee()->accept(this));
+        auto callee_function = llvm_node_value(node->callee()->accept(this));
         auto call_instruction = llvm::dyn_cast<llvm::CallInst>(callee_function);
         auto function = call_instruction->getCalledFunction();
         auto callee_function_type = function->getFunctionType();
         auto return_ptr_type = callee_function_type->getReturnType()->getPointerElementType();
         auto function_pointer_type = llvm::dyn_cast<llvm::FunctionType>(return_ptr_type);
 
-        auto arguments = node->get_arguments();
+        auto arguments = node->arguments();
         size_t arguments_size = arguments.size();
         std::vector<llvm::Value*> arguments_values;
         arguments_values.reserve(arguments_size);
@@ -1461,8 +1468,8 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
 
     // If callee is literal expression that mean it a function call or function pointer call
     if (callee_ast_node_type == AstNodeType::AST_LITERAL) {
-        auto callee = std::dynamic_pointer_cast<LiteralExpression>(node->get_callee());
-        auto callee_literal = callee->get_name().literal;
+        auto callee = std::dynamic_pointer_cast<LiteralExpression>(node->callee());
+        auto callee_literal = callee->name.literal;
         auto function = lookup_function(callee_literal);
         if (not function && functions_declaraions.contains(callee_literal)) {
             auto declaraion = functions_declaraions[callee_literal];
@@ -1476,7 +1483,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
                 auto loaded = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
                 auto function_type = llvm_type_from_amun_type(node->get_type_node());
                 if (auto function_pointer = llvm::dyn_cast<llvm::FunctionType>(function_type)) {
-                    auto arguments = node->get_arguments();
+                    auto arguments = node->arguments();
                     size_t arguments_size = arguments.size();
                     std::vector<llvm::Value*> arguments_values;
                     arguments_values.reserve(arguments_size);
@@ -1497,7 +1504,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
             }
         }
 
-        auto arguments = node->get_arguments();
+        auto arguments = node->arguments();
         auto arguments_size = arguments.size();
         auto parameter_size = function->arg_size();
         std::vector<llvm::Value*> arguments_values;
@@ -1556,11 +1563,11 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
 
     // If callee is lambda expression that mean we can call it as function pointer
     if (callee_ast_node_type == AstNodeType::AST_LAMBDA) {
-        auto lambda = std::dynamic_pointer_cast<LambdaExpression>(node->get_callee());
+        auto lambda = std::dynamic_pointer_cast<LambdaExpression>(node->callee());
         auto lambda_value = llvm_node_value(lambda->accept(this));
         auto function = llvm::dyn_cast<llvm::Function>(lambda_value);
 
-        auto arguments = node->get_arguments();
+        auto arguments = node->arguments();
         auto arguments_size = arguments.size();
         auto parameter_size = function->arg_size();
         std::vector<llvm::Value*> arguments_values;
@@ -1598,7 +1605,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
 
     // If callee is dot expression that mean we call function pointer from struct element
     if (callee_ast_node_type == AstNodeType::AST_DOT) {
-        auto dot = std::dynamic_pointer_cast<DotExpression>(node->get_callee());
+        auto dot = std::dynamic_pointer_cast<DotExpression>(node->callee());
         auto struct_fun_ptr = llvm_node_value(dot->accept(this));
 
         auto function_value = derefernecs_llvm_pointer(struct_fun_ptr);
@@ -1607,7 +1614,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
         auto llvm_type = llvm_type_from_amun_type(function_ptr_type->base_type);
         auto llvm_fun_type = llvm::dyn_cast<llvm::FunctionType>(llvm_type);
 
-        auto arguments = node->get_arguments();
+        auto arguments = node->arguments();
         auto arguments_size = arguments.size();
         auto parameter_size = llvm_fun_type->getNumParams();
         std::vector<llvm::Value*> arguments_values;
@@ -1752,14 +1759,14 @@ auto amun::LLVMBackend::visit(LambdaExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(DotExpression* node) -> std::any
 {
-    auto callee = node->get_callee();
+    auto callee = node->callee;
     auto callee_type = callee->get_type_node();
     auto callee_llvm_type = llvm_type_from_amun_type(callee_type);
     auto expected_llvm_type = llvm_type_from_amun_type(node->get_type_node());
 
     // Compile array attributes
     if (callee_llvm_type->isArrayTy()) {
-        if (node->get_field_name().literal == "count") {
+        if (node->field_name.literal == "count") {
             auto llvm_array_type = llvm::dyn_cast<llvm::ArrayType>(callee_llvm_type);
             auto length = llvm_array_type->getArrayNumElements();
             return create_llvm_int64(length, true);
@@ -1770,7 +1777,7 @@ auto amun::LLVMBackend::visit(DotExpression* node) -> std::any
 
     // Compile String literal attributes
     if (amun::is_pointer_of_type(callee_type, amun::i8_type)) {
-        if (node->get_field_name().literal == "count") {
+        if (node->field_name.literal == "count") {
 
             // If node is string expression, length can calculated without strlen
             if (node->callee->get_ast_node_type() == AstNodeType::AST_STRING) {
@@ -1804,8 +1811,8 @@ auto amun::LLVMBackend::visit(DotExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(CastExpression* node) -> std::any
 {
-    auto value = llvm_resolve_value(node->get_value()->accept(this));
-    auto value_type = llvm_type_from_amun_type(node->get_value()->get_type_node());
+    auto value = llvm_resolve_value(node->value->accept(this));
+    auto value_type = llvm_type_from_amun_type(node->value->get_type_node());
     auto target_type = llvm_type_from_amun_type(node->get_type_node());
 
     // No need for castring if both sides has the same type
@@ -1864,7 +1871,7 @@ auto amun::LLVMBackend::visit(TypeSizeExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(ValueSizeExpression* node) -> std::any
 {
-    auto llvm_type = llvm_type_from_amun_type(node->get_value()->get_type_node());
+    auto llvm_type = llvm_type_from_amun_type(node->value->get_type_node());
     auto type_alloc_size = llvm_module->getDataLayout().getTypeAllocSize(llvm_type);
     auto type_size = llvm::ConstantInt::get(llvm_int64_type, type_alloc_size);
     return type_size;
@@ -1872,20 +1879,20 @@ auto amun::LLVMBackend::visit(ValueSizeExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(IndexExpression* node) -> std::any
 {
-    auto index = llvm_resolve_value(node->get_index()->accept(this));
-    return access_array_element(node->get_value(), index);
+    auto index = llvm_resolve_value(node->index->accept(this));
+    return access_array_element(node->value, index);
 }
 
 auto amun::LLVMBackend::visit(EnumAccessExpression* node) -> std::any
 {
     auto element_type = llvm_type_from_amun_type(node->get_type_node());
-    auto element_index = llvm::ConstantInt::get(element_type, node->get_enum_element_index());
+    auto element_index = llvm::ConstantInt::get(element_type, node->enum_element_index);
     return llvm::dyn_cast<llvm::Value>(element_index);
 }
 
 auto amun::LLVMBackend::visit(LiteralExpression* node) -> std::any
 {
-    const auto name = node->get_name().literal;
+    const auto name = node->name.literal;
     // If found in alloca inst table that mean it local variable
     auto alloca_inst = alloca_inst_table.lookup(name);
     if (alloca_inst.type() != typeid(nullptr)) {
@@ -1898,21 +1905,22 @@ auto amun::LLVMBackend::visit(LiteralExpression* node) -> std::any
 auto amun::LLVMBackend::visit(NumberExpression* node) -> std::any
 {
     auto number_type = std::static_pointer_cast<amun::NumberType>(node->get_type_node());
-    return llvm_number_value(node->get_value().literal, number_type->number_kind);
+    return llvm_number_value(node->value.literal, number_type->number_kind);
 }
 
 auto amun::LLVMBackend::visit(ArrayExpression* node) -> std::any
 {
-    auto node_values = node->get_values();
+    auto node_values = node->values;
     auto size = node_values.size();
     if (node->is_constant()) {
-        auto arrayType =
-            llvm::dyn_cast<llvm::ArrayType>(llvm_type_from_amun_type(node->get_type_node()));
+        auto llvm_type = llvm_type_from_amun_type(node->get_type_node());
+        auto arrayType = llvm::dyn_cast<llvm::ArrayType>(llvm_type);
+
         std::vector<llvm::Constant*> values;
         values.reserve(size);
         for (auto& value : node_values) {
-            values.push_back(
-                llvm::dyn_cast<llvm::Constant>(llvm_resolve_value(value->accept(this))));
+            auto llvm_value = llvm_resolve_value(value->accept(this));
+            values.push_back(llvm::dyn_cast<llvm::Constant>(llvm_value));
         }
         return llvm::ConstantArray::get(arrayType, values);
     }
@@ -1924,6 +1932,7 @@ auto amun::LLVMBackend::visit(ArrayExpression* node) -> std::any
     for (auto& value : node_values) {
         values.push_back(llvm_resolve_value(value->accept(this)));
     }
+
     auto alloca = Builder.CreateAlloca(arrayType);
     for (size_t i = 0; i < size; i++) {
         auto index = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, i, true));
@@ -1933,32 +1942,40 @@ auto amun::LLVMBackend::visit(ArrayExpression* node) -> std::any
         if (value->getType() == ptr->getType()) {
             value = Builder.CreateLoad(value->getType()->getPointerElementType(), value);
         }
+
         Builder.CreateStore(value, ptr);
     }
+
     return alloca;
 }
 
 auto amun::LLVMBackend::visit(StringExpression* node) -> std::any
 {
-    std::string literal = node->get_value().literal;
+    std::string literal = node->value.literal;
     return resolve_constant_string_expression(literal);
 }
 
 auto amun::LLVMBackend::visit(CharacterExpression* node) -> std::any
 {
-    char char_asci_value = node->get_value().literal[0];
+    char char_asci_value = node->value.literal[0];
     return create_llvm_int8(char_asci_value, false);
 }
 
 auto amun::LLVMBackend::visit(BooleanExpression* node) -> std::any
 {
-    return create_llvm_int1(node->get_value().kind == TokenKind::TOKEN_TRUE);
+    return create_llvm_int1(node->value.kind == TokenKind::TOKEN_TRUE);
 }
 
 auto amun::LLVMBackend::visit(NullExpression* node) -> std::any
 {
     auto llvm_type = llvm_type_from_amun_type(node->null_base_type);
     return create_llvm_null(llvm_type);
+}
+
+auto amun::LLVMBackend::visit(UndefinedExpression* node) -> std::any
+{
+    auto llvm_type = llvm_type_from_amun_type(node->base_type);
+    return llvm::UndefValue::get(llvm_type);
 }
 
 auto amun::LLVMBackend::llvm_node_value(std::any any_value) -> llvm::Value*
@@ -1993,7 +2010,9 @@ auto amun::LLVMBackend::llvm_node_value(std::any any_value) -> llvm::Value*
     else if (any_value.type() == typeid(llvm::ConstantPointerNull*)) {
         return std::any_cast<llvm::ConstantPointerNull*>(any_value);
     }
-
+    else if (any_value.type() == typeid(llvm::UndefValue*)) {
+        return std::any_cast<llvm::UndefValue*>(any_value);
+    }
     internal_compiler_error("Unknown type llvm node type ");
 }
 
@@ -2545,7 +2564,7 @@ auto amun::LLVMBackend::create_overloading_function_call(std::string& name,
 auto amun::LLVMBackend::access_struct_member_pointer(DotExpression* expression) -> llvm::Value*
 {
 
-    auto callee = expression->get_callee();
+    auto callee = expression->callee;
     auto callee_value = llvm_node_value(callee->accept(this));
     auto callee_llvm_type = llvm_type_from_amun_type(callee->get_type_node());
 
@@ -2746,8 +2765,8 @@ auto amun::LLVMBackend::resolve_constant_expression(std::shared_ptr<Expression> 
 auto amun::LLVMBackend::resolve_constant_index_expression(
     std::shared_ptr<IndexExpression> expression) -> llvm::Constant*
 {
-    auto llvm_array = llvm_node_value(expression->get_value()->accept(this));
-    auto index_value = expression->get_index()->accept(this);
+    auto llvm_array = llvm_node_value(expression->value->accept(this));
+    auto index_value = expression->index->accept(this);
     auto constants_index = llvm::dyn_cast<llvm::ConstantInt>(llvm_node_value(index_value));
 
     if (auto global_variable_array = llvm::dyn_cast<llvm::GlobalVariable>(llvm_array)) {
@@ -2786,33 +2805,33 @@ auto amun::LLVMBackend::resolve_constant_index_expression(
 auto amun::LLVMBackend::resolve_constant_if_expression(std::shared_ptr<IfExpression> expression)
     -> llvm::Constant*
 {
-    auto condition = llvm_resolve_value(expression->get_condition()->accept(this));
+    auto condition = llvm_resolve_value(expression->condition->accept(this));
     auto constant_condition = llvm::dyn_cast<llvm::Constant>(condition);
     if (constant_condition->isZeroValue()) {
         return llvm::dyn_cast<llvm::Constant>(
-            llvm_resolve_value(expression->get_else_value()->accept(this)));
+            llvm_resolve_value(expression->else_expression->accept(this)));
     }
     return llvm::dyn_cast<llvm::Constant>(
-        llvm_resolve_value(expression->get_if_value()->accept(this)));
+        llvm_resolve_value(expression->if_expression->accept(this)));
 }
 
 auto amun::LLVMBackend::resolve_constant_switch_expression(
     std::shared_ptr<SwitchExpression> expression) -> llvm::Constant*
 {
-    auto argument = llvm_resolve_value(expression->get_argument()->accept(this));
+    auto argument = llvm_resolve_value(expression->argument->accept(this));
     auto constant_argument = llvm::dyn_cast<llvm::Constant>(argument);
-    auto switch_cases = expression->get_switch_cases();
+    auto switch_cases = expression->switch_cases;
     auto cases_size = switch_cases.size();
     for (size_t i = 0; i < cases_size; i++) {
         auto switch_case = switch_cases[i];
         auto case_value = llvm_resolve_value(switch_case->accept(this));
         auto constant_case = llvm::dyn_cast<llvm::Constant>(case_value);
         if (constant_argument == constant_case) {
-            auto value = llvm_resolve_value(expression->get_switch_cases_values()[i]->accept(this));
+            auto value = llvm_resolve_value(expression->switch_cases_values[i]->accept(this));
             return llvm::dyn_cast<llvm::Constant>(value);
         }
     }
-    auto default_value = llvm_resolve_value(expression->get_default_case_value()->accept(this));
+    auto default_value = llvm_resolve_value(expression->default_value->accept(this));
     return llvm::dyn_cast<llvm::Constant>(default_value);
 }
 
@@ -2930,7 +2949,7 @@ auto amun::LLVMBackend::create_switch_case_branch(llvm::SwitchInst* switch_inst,
 
     bool body_has_return_statement = false;
 
-    auto branch_body = switch_case->get_body();
+    auto branch_body = switch_case->body;
 
     // If switch body is block, check if the last node is return statement or not,
     // if it not block, check if it return statement or not
@@ -2957,7 +2976,7 @@ auto amun::LLVMBackend::create_switch_case_branch(llvm::SwitchInst* switch_inst,
     }
 
     // Normal switch case branch with value and body
-    auto switch_case_values = switch_case->get_values();
+    auto switch_case_values = switch_case->values;
     if (not switch_case_values.empty()) {
         // Map all values for this case with single branch block
         for (auto& switch_case_value : switch_case_values) {

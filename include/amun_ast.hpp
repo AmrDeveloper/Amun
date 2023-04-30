@@ -60,7 +60,8 @@ enum class AstNodeType {
     AST_NUMBER,
     AST_CHARACTER,
     AST_BOOL,
-    AST_NULL
+    AST_NULL,
+    AST_UNDEFINED,
 };
 
 struct AstNode {
@@ -69,25 +70,21 @@ struct AstNode {
 
 class Statement : public AstNode {
   public:
-    virtual std::any accept(StatementVisitor* visitor) = 0;
-    AstNodeType get_ast_node_type() { return AstNodeType::AST_NODE; }
+    virtual auto accept(StatementVisitor* visitor) -> std::any = 0;
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_NODE; }
 };
 
 class Expression : public AstNode {
   public:
-    virtual Shared<amun::Type> get_type_node() = 0;
-    virtual void set_type_node(Shared<amun::Type> new_type) = 0;
-    virtual std::any accept(ExpressionVisitor* visitor) = 0;
-    virtual bool is_constant() = 0;
-    AstNodeType get_ast_node_type() { return AstNodeType::AST_NODE; }
+    virtual auto get_type_node() -> Shared<amun::Type> = 0;
+    virtual auto set_type_node(Shared<amun::Type> new_type) -> void = 0;
+    virtual auto accept(ExpressionVisitor* visitor) -> std::any = 0;
+    virtual auto is_constant() -> bool = 0;
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_NODE; }
 };
 
 struct CompilationUnit {
-    explicit CompilationUnit(std::vector<Shared<Statement>> tree_nodes)
-        : tree_nodes(std::move(tree_nodes))
-    {
-    }
-
+    explicit CompilationUnit(std::vector<Shared<Statement>> nodes) : tree_nodes(std::move(nodes)) {}
     std::vector<Shared<Statement>> tree_nodes;
 };
 
@@ -110,30 +107,19 @@ struct Parameter {
 
 class FieldDeclaration : public Statement {
   public:
-    FieldDeclaration(Token name, Shared<amun::Type> type, Shared<Expression> value,
-                     bool global = false)
-        : name(name), type(type), value(value), global(global)
+    FieldDeclaration(Token name, Shared<amun::Type> type, Shared<Expression> value, bool global)
+        : name(std::move(name)), type(std::move(type)), value(std::move(value)), is_global(global)
     {
     }
 
-    Token get_name() { return name; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    void set_type(Shared<amun::Type> resolved_type) { type = resolved_type; }
-
-    Shared<amun::Type> get_type() { return type; }
-
-    Shared<Expression> get_value() { return value; }
-
-    bool is_global() { return global; }
-
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_FIELD_DECLARAION; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_FIELD_DECLARAION; }
 
     Token name;
     Shared<amun::Type> type;
     Shared<Expression> value;
-    bool global;
+    bool is_global;
 };
 
 class ConstDeclaration : public Statement {
@@ -157,34 +143,23 @@ class FunctionPrototype : public Statement {
                       Shared<amun::Type> return_type, bool external = false, bool varargs = false,
                       Shared<amun::Type> varargs_type = {}, bool is_generic = false,
                       std::vector<std::string> generic_parameters = {})
-        : name(name), parameters(parameters), return_type(return_type), external(external),
-          varargs(varargs), varargs_type(varargs_type), is_generic(is_generic),
-          generic_parameters(generic_parameters)
+        : name(std::move(name)), parameters(std::move(parameters)),
+          return_type(std::move(return_type)), is_external(external), has_varargs(varargs),
+          varargs_type(std::move(varargs_type)), is_generic(is_generic),
+          generic_parameters(std::move(generic_parameters))
     {
     }
 
-    Token get_name() { return name; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    std::vector<Shared<Parameter>> get_parameters() { return parameters; }
-
-    Shared<amun::Type> get_return_type() { return return_type; }
-
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    bool is_external() { return external; }
-
-    bool has_varargs() { return varargs; }
-
-    Shared<amun::Type> get_varargs_type() { return varargs_type; }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_PROTOTYPE; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_PROTOTYPE; }
 
     Token name;
     std::vector<Shared<Parameter>> parameters;
     Shared<amun::Type> return_type;
-    bool external;
+    bool is_external;
 
-    bool varargs;
+    bool has_varargs;
     Shared<amun::Type> varargs_type;
 
     bool is_generic;
@@ -196,20 +171,20 @@ class IntrinsicPrototype : public Statement {
     IntrinsicPrototype(Token name, std::string native_name,
                        std::vector<Shared<Parameter>> parameters, Shared<amun::Type> return_type,
                        bool varargs, Shared<amun::Type> varargs_type)
-        : name(name), native_name(native_name), parameters(parameters), return_type(return_type),
-          varargs(varargs), varargs_type(varargs_type)
+        : name(std::move(name)), native_name(std::move(native_name)),
+          parameters(std::move(parameters)), return_type(std::move(return_type)), varargs(varargs),
+          varargs_type(std::move(varargs_type))
     {
     }
 
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_INTRINSIC; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_INTRINSIC; }
 
     Token name;
     std::string native_name;
     std::vector<Shared<Parameter>> parameters;
     Shared<amun::Type> return_type;
-
     bool varargs;
     Shared<amun::Type> varargs_type;
 };
@@ -217,17 +192,13 @@ class IntrinsicPrototype : public Statement {
 class FunctionDeclaration : public Statement {
   public:
     FunctionDeclaration(Shared<FunctionPrototype> prototype, Shared<Statement> body)
-        : prototype(prototype), body(body)
+        : prototype(std::move(prototype)), body(std::move(body))
     {
     }
 
-    Shared<FunctionPrototype> get_prototype() { return prototype; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    Shared<Statement> get_body() { return body; }
-
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_FUNCTION; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_FUNCTION; }
 
     Shared<FunctionPrototype> prototype;
     Shared<Statement> body;
@@ -240,9 +211,9 @@ class OperatorFunctionDeclaraion : public Statement {
     {
     }
 
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_OPERATOR_FUNCTION; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_OPERATOR_FUNCTION; }
 
     Token op;
     Shared<FunctionDeclaration> function;
@@ -250,30 +221,25 @@ class OperatorFunctionDeclaraion : public Statement {
 
 class StructDeclaration : public Statement {
   public:
-    StructDeclaration(Shared<amun::StructType> struct_type) : struct_type(struct_type) {}
+    explicit StructDeclaration(Shared<amun::StructType> type) : struct_type(std::move(type)) {}
 
-    Shared<amun::StructType> get_struct_type() { return struct_type; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_STRUCT; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_STRUCT; }
 
     Shared<amun::StructType> struct_type;
 };
 
 class EnumDeclaration : public Statement {
   public:
-    EnumDeclaration(Token name, Shared<amun::EnumType> enum_type) : name(name), enum_type(enum_type)
+    EnumDeclaration(Token name, Shared<amun::EnumType> type)
+        : name(std::move(name)), enum_type(type)
     {
     }
 
-    Token get_name() { return name; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    Shared<amun::Type> get_enum_type() { return enum_type; }
-
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_ENUM; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_ENUM; }
 
     Token name;
     Shared<amun::Type> enum_type;
@@ -282,15 +248,9 @@ class EnumDeclaration : public Statement {
 class ConditionalBlock {
   public:
     ConditionalBlock(Token position, Shared<Expression> condition, Shared<Statement> body)
-        : position(position), condition(condition), body(body)
+        : position(std::move(position)), condition(std::move(condition)), body(std::move(body))
     {
     }
-
-    Token get_position() { return position; }
-
-    Shared<Expression> get_condition() { return condition; }
-
-    Shared<Statement> get_body() { return body; }
 
     Token position;
     Shared<Expression> condition;
@@ -300,17 +260,13 @@ class ConditionalBlock {
 class IfStatement : public Statement {
   public:
     IfStatement(std::vector<Shared<ConditionalBlock>> conditional_blocks, bool has_else)
-        : conditional_blocks(conditional_blocks), has_else(has_else)
+        : conditional_blocks(std::move(conditional_blocks)), has_else(has_else)
     {
     }
 
-    std::vector<Shared<ConditionalBlock>> get_conditional_blocks() { return conditional_blocks; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_IF_STATEMENT; }
-
-    bool has_else_branch() { return has_else; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_IF_STATEMENT; }
 
     std::vector<Shared<ConditionalBlock>> conditional_blocks;
     bool has_else;
@@ -320,15 +276,15 @@ class ForRangeStatement : public Statement {
   public:
     ForRangeStatement(Token position, std::string element_name, Shared<Expression> range_start,
                       Shared<Expression> range_end, Shared<Expression> step, Shared<Statement> body)
-        : position(position), element_name(std::move(element_name)),
+        : position(std::move(position)), element_name(std::move(element_name)),
           range_start(std::move(range_start)), range_end(std::move(range_end)),
           step(std::move(step)), body(std::move(body))
     {
     }
 
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_FOR_RANGE; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_FOR_RANGE; }
 
     Token position;
     std::string element_name;
@@ -347,9 +303,9 @@ class ForEachStatement : public Statement {
     {
     }
 
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_FOR_RANGE; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_FOR_RANGE; }
 
     Token position;
     std::string element_name;
@@ -361,13 +317,13 @@ class ForEachStatement : public Statement {
 class ForeverStatement : public Statement {
   public:
     ForeverStatement(Token position, Shared<Statement> body)
-        : position(position), body(std::move(body))
+        : position(std::move(position)), body(std::move(body))
     {
     }
 
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_FOR_EVER; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_FOR_EVER; }
 
     Token position;
     Shared<Statement> body;
@@ -376,21 +332,15 @@ class ForeverStatement : public Statement {
 class WhileStatement : public Statement {
   public:
     WhileStatement(Token position, Shared<Expression> condition, Shared<Statement> body)
-        : position(position), condition(condition), body(body)
+        : keyword(std::move(position)), condition(std::move(condition)), body(std::move(body))
     {
     }
 
-    Token get_position() { return position; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    Shared<Expression> get_condition() { return condition; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_WHILE; }
 
-    Shared<Statement> get_body() { return body; }
-
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_WHILE; }
-
-    Token position;
+    Token keyword;
     Shared<Expression> condition;
     Shared<Statement> body;
 };
@@ -398,15 +348,9 @@ class WhileStatement : public Statement {
 class SwitchCase {
   public:
     SwitchCase(Token position, std::vector<Shared<Expression>> values, Shared<Statement> body)
-        : position(position), values(values), body(body)
+        : position(std::move(position)), values(std::move(values)), body(std::move(body))
     {
     }
-
-    Token get_position() { return position; }
-
-    std::vector<Shared<Expression>> get_values() { return values; }
-
-    Shared<Statement> get_body() { return body; }
 
     Token position;
     std::vector<Shared<Expression>> values;
@@ -417,24 +361,16 @@ class SwitchStatement : public Statement {
   public:
     SwitchStatement(Token position, Shared<Expression> argument,
                     std::vector<Shared<SwitchCase>> cases, Shared<SwitchCase> default_case)
-        : position(std::move(position)), argument(std::move(argument)), cases(std::move(cases)),
+        : keyword(std::move(position)), argument(std::move(argument)), cases(std::move(cases)),
           default_case(std::move(default_case))
     {
     }
 
-    Token get_position() { return position; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    Shared<Expression> get_argument() { return argument; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_SWITCH_STATEMENT; }
 
-    std::vector<Shared<SwitchCase>> get_cases() { return cases; }
-
-    Shared<SwitchCase> get_default_case() { return default_case; }
-
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_SWITCH_STATEMENT; }
-
-    Token position;
+    Token keyword;
     Shared<Expression> argument;
     std::vector<Shared<SwitchCase>> cases;
     Shared<SwitchCase> default_case;
@@ -445,59 +381,42 @@ class SwitchStatement : public Statement {
 class ReturnStatement : public Statement {
   public:
     ReturnStatement(Token position, Shared<Expression> value, bool contain_value)
-        : position(position), value(value), contain_value(contain_value)
+        : keyword(std::move(position)), value(std::move(value)), has_value(contain_value)
     {
     }
 
-    Token get_position() { return position; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    Shared<Expression> return_value() { return value; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_RETURN; }
 
-    bool has_value() { return contain_value; }
-
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_RETURN; }
-
-    Token position;
+    Token keyword;
     Shared<Expression> value;
-    bool contain_value;
+    bool has_value;
 };
 
 class DeferStatement : public Statement {
   public:
-    DeferStatement(Token position, Shared<CallExpression> call) : position(position), call(call) {}
+    explicit DeferStatement(Shared<CallExpression> call) : call_expression(std::move(call)) {}
 
-    Token get_position() { return position; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    Shared<CallExpression> get_call_expression() { return call; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_DEFER; }
 
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_DEFER; }
-
-    Token position;
-    Shared<CallExpression> call;
+    Shared<CallExpression> call_expression;
 };
 
 class BreakStatement : public Statement {
   public:
     BreakStatement(Token token, bool has_times, int times)
-        : break_token(token), has_times(has_times), times(times)
+        : keyword(std::move(token)), has_times(has_times), times(times)
     {
     }
 
-    Token get_position() { return break_token; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    bool is_has_times() { return has_times; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_BREAK; }
 
-    int get_times() { return times; }
-
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_BREAK; }
-
-    Token break_token;
+    Token keyword;
     bool has_times;
     int times;
 };
@@ -505,35 +424,31 @@ class BreakStatement : public Statement {
 class ContinueStatement : public Statement {
   public:
     ContinueStatement(Token token, bool has_times, int times)
-        : break_token(token), has_times(has_times), times(times)
+        : keyword(std::move(token)), has_times(has_times), times(times)
     {
     }
 
-    Token get_position() { return break_token; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    bool is_has_times() { return has_times; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_CONTINUE; }
 
-    int get_times() { return times; }
-
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_CONTINUE; }
-
-    Token break_token;
+    Token keyword;
     bool has_times;
-
     int times;
 };
 
 class ExpressionStatement : public Statement {
   public:
-    ExpressionStatement(Shared<Expression> expression) : expression(expression) {}
+    explicit ExpressionStatement(Shared<Expression> expression) : expression(std::move(expression))
+    {
+    }
 
-    Shared<Expression> get_expression() { return expression; }
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    std::any accept(StatementVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_EXPRESSION_STATEMENT; }
+    auto get_ast_node_type() -> AstNodeType override
+    {
+        return AstNodeType::AST_EXPRESSION_STATEMENT;
+    }
 
     Shared<Expression> expression;
 };
@@ -542,35 +457,26 @@ class IfExpression : public Expression {
   public:
     IfExpression(Token if_token, Token else_token, Shared<Expression> condition,
                  Shared<Expression> if_expression, Shared<Expression> else_expression)
-        : if_token(if_token), else_token(else_token), condition(condition),
-          if_expression(if_expression), else_expression(else_expression)
+        : if_token(std::move(if_token)), else_token(std::move(else_token)),
+          condition(std::move(condition)), if_expression(if_expression),
+          else_expression(std::move(else_expression))
     {
         type = if_expression->get_type_node();
     }
 
-    Token get_if_position() { return if_token; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    Token get_else_position() { return else_token; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    Shared<Expression> get_condition() { return condition; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    Shared<Expression> get_if_value() { return if_expression; }
-
-    Shared<Expression> get_else_value() { return else_expression; }
-
-    Shared<amun::Type> get_type_node() override { return type; }
-
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
-
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
-
-    bool is_constant() override
+    auto is_constant() -> bool override
     {
         return condition->is_constant() && if_expression->is_constant() &&
                else_expression->is_constant();
     }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_IF_EXPRESSION; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_IF_EXPRESSION; }
 
     Token if_token;
     Token else_token;
@@ -586,49 +492,41 @@ class SwitchExpression : public Expression {
                      std::vector<Shared<Expression>> switch_cases,
                      std::vector<Shared<Expression>> switch_cases_values,
                      Shared<Expression> default_value)
-        : switch_token(switch_token), argument(argument), switch_cases(switch_cases),
-          switch_cases_values(switch_cases_values), default_value(default_value)
+        : keyword(std::move(switch_token)), argument(std::move(argument)),
+          switch_cases(std::move(switch_cases)), switch_cases_values(switch_cases_values),
+          default_value(std::move(default_value))
     {
         type = switch_cases_values[0]->get_type_node();
     }
 
-    Token get_position() { return switch_token; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    Shared<Expression> get_argument() { return argument; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    std::vector<Shared<Expression>> get_switch_cases() { return switch_cases; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    std::vector<Shared<Expression>> get_switch_cases_values() { return switch_cases_values; }
-
-    Shared<Expression> get_default_case_value() { return default_value; }
-
-    Shared<amun::Type> get_type_node() override { return type; }
-
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
-
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
-
-    bool is_constant() override
+    auto is_constant() -> bool override
     {
         if (argument->is_constant()) {
             for (auto& switch_case : switch_cases) {
-                if (not switch_case->is_constant()) {
+                if (!switch_case->is_constant()) {
                     return false;
                 }
             }
 
             for (auto& switch_value : switch_cases_values) {
-                if (not switch_value->is_constant()) {
+                if (!switch_value->is_constant()) {
                     return false;
                 }
             }
+            return true;
         }
-        return true;
+        return false;
     }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_SWITCH_EXPRESSION; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_SWITCH_EXPRESSION; }
 
-    Token switch_token;
+    Token keyword;
     Shared<Expression> argument;
     std::vector<Shared<Expression>> switch_cases;
     std::vector<Shared<Expression>> switch_cases_values;
@@ -638,27 +536,21 @@ class SwitchExpression : public Expression {
 
 class GroupExpression : public Expression {
   public:
-    GroupExpression(Token position, Shared<Expression> expression)
-        : position(position), expression(expression)
+    explicit GroupExpression(Shared<Expression> expression) : expression(expression)
     {
         type = expression->get_type_node();
     }
 
-    Token get_position() { return position; }
+    auto get_type_node() -> Shared<amun::Type> override { return expression->get_type_node(); }
 
-    Shared<Expression> get_expression() { return expression; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    Shared<amun::Type> get_type_node() override { return expression->get_type_node(); }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
+    auto is_constant() -> bool override { return expression->is_constant(); }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_GROUP; }
 
-    bool is_constant() override { return expression->is_constant(); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_GROUP; }
-
-    Token position;
     Shared<Expression> expression;
     Shared<amun::Type> type;
 };
@@ -666,20 +558,20 @@ class GroupExpression : public Expression {
 class TupleExpression : public Expression {
   public:
     TupleExpression(Token position, std::vector<Shared<Expression>> values)
-        : position(position), values(values)
+        : position(std::move(position)), values(std::move(values))
     {
         type = amun::none_type;
     }
 
     auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    bool is_constant() override { return true; }
+    auto is_constant() -> bool override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_TUPLE; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_TUPLE; }
 
     Token position;
     std::vector<Shared<Expression>> values;
@@ -689,26 +581,20 @@ class TupleExpression : public Expression {
 class AssignExpression : public Expression {
   public:
     AssignExpression(Shared<Expression> left, Token token, Shared<Expression> right)
-        : left(left), operator_token(token), right(right)
+        : left(std::move(left)), operator_token(std::move(token)), right(right)
     {
         type = right->get_type_node();
     }
 
-    Token get_operator_token() { return operator_token; }
-
-    Shared<Expression> get_right() { return right; }
-
-    Shared<Expression> get_left() { return left; }
-
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
     void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    bool is_constant() override { return false; }
+    auto is_constant() -> bool override { return false; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_ASSIGN; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_ASSIGN; }
 
     Shared<Expression> left;
     Token operator_token;
@@ -719,26 +605,20 @@ class AssignExpression : public Expression {
 class BinaryExpression : public Expression {
   public:
     BinaryExpression(Shared<Expression> left, Token token, Shared<Expression> right)
-        : left(left), operator_token(token), right(right)
+        : left(std::move(left)), operator_token(std::move(token)), right(right)
     {
         type = right->get_type_node();
     }
 
-    Token get_operator_token() { return operator_token; }
-
-    Shared<Expression> get_right() { return right; }
-
-    Shared<Expression> get_left() { return left; }
-
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
     void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    bool is_constant() override { return left->is_constant() and right->is_constant(); }
+    auto is_constant() -> bool override { return left->is_constant() and right->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_BINARY; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_BINARY; }
 
     Shared<Expression> left;
     Token operator_token;
@@ -749,26 +629,20 @@ class BinaryExpression : public Expression {
 class ShiftExpression : public Expression {
   public:
     ShiftExpression(Shared<Expression> left, Token token, Shared<Expression> right)
-        : left(left), operator_token(token), right(right)
+        : left(std::move(left)), operator_token(std::move(token)), right(right)
     {
         type = right->get_type_node();
     }
 
-    Token get_operator_token() { return operator_token; }
-
-    Shared<Expression> get_right() { return right; }
-
-    Shared<Expression> get_left() { return left; }
-
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
     void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    bool is_constant() override { return left->is_constant() and right->is_constant(); }
+    auto is_constant() -> bool override { return left->is_constant() and right->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_SHIFT; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_SHIFT; }
 
     Shared<Expression> left;
     Token operator_token;
@@ -779,81 +653,65 @@ class ShiftExpression : public Expression {
 class ComparisonExpression : public Expression {
   public:
     ComparisonExpression(Shared<Expression> left, Token token, Shared<Expression> right)
-        : left(left), operator_token(token), right(right), type(amun::i1_type)
+        : left(std::move(left)), operator_token(std::move(token)), right(std::move(right))
     {
     }
 
-    Token get_operator_token() { return operator_token; }
-
-    Shared<Expression> get_right() { return right; }
-
-    Shared<Expression> get_left() { return left; }
-
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
     void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    bool is_constant() override { return left->is_constant() and right->is_constant(); }
+    auto is_constant() -> bool override { return left->is_constant() and right->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_COMPARISON; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_COMPARISON; }
 
     Shared<Expression> left;
     Token operator_token;
     Shared<Expression> right;
-    Shared<amun::Type> type;
+    Shared<amun::Type> type = amun::i1_type;
 };
 
 class LogicalExpression : public Expression {
   public:
     LogicalExpression(Shared<Expression> left, Token token, Shared<Expression> right)
-        : left(left), operator_token(token), right(right), type(amun::i1_type)
+        : left(std::move(left)), operator_token(token), right(right)
     {
     }
 
-    Token get_operator_token() { return operator_token; }
-
-    Shared<Expression> get_right() { return right; }
-
-    Shared<Expression> get_left() { return left; }
-
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
     void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    bool is_constant() override { return left->is_constant() and right->is_constant(); }
+    auto is_constant() -> bool override { return left->is_constant() and right->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_LOGICAL; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_LOGICAL; }
 
     Shared<Expression> left;
     Token operator_token;
     Shared<Expression> right;
-    Shared<amun::Type> type;
+    Shared<amun::Type> type = amun::i1_type;
 };
 
 class PrefixUnaryExpression : public Expression {
   public:
     PrefixUnaryExpression(Token token, Shared<Expression> right)
-        : operator_token(token), right(right), type(right->get_type_node())
+        : operator_token(std::move(token)), right(right), type(right->get_type_node())
     {
     }
 
-    Token get_operator_token() { return operator_token; }
-
-    Shared<Expression> get_right() { return right; }
-
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
     void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    bool is_constant() override { return right->is_constant(); }
+    auto is_constant() -> bool override { return right->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_PREFIX_UNARY; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_PREFIX_UNARY; }
 
     Token operator_token;
     Shared<Expression> right;
@@ -863,23 +721,19 @@ class PrefixUnaryExpression : public Expression {
 class PostfixUnaryExpression : public Expression {
   public:
     PostfixUnaryExpression(Token token, Shared<Expression> right)
-        : operator_token(token), right(right), type(right->get_type_node())
+        : operator_token(std::move(token)), right(right), type(right->get_type_node())
     {
     }
 
-    Token get_operator_token() { return operator_token; }
-
-    Shared<Expression> get_right() { return right; }
-
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
     void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    bool is_constant() override { return right->is_constant(); }
+    auto is_constant() -> bool override { return right->is_constant(); }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_POSTFIX_UNARY; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_POSTFIX_UNARY; }
 
     Token operator_token;
     Shared<Expression> right;
@@ -891,26 +745,20 @@ class CallExpression : public Expression {
     CallExpression(Token position, Shared<Expression> callee,
                    std::vector<Shared<Expression>> arguments,
                    std::vector<Shared<amun::Type>> generic_arguments = {})
-        : position(position), callee(callee), arguments(arguments), type(callee->get_type_node()),
-          generic_arguments(generic_arguments)
+        : position(std::move(position)), callee(callee), arguments(std::move(arguments)),
+          type(callee->get_type_node()), generic_arguments(std::move(generic_arguments))
     {
     }
 
-    Token get_position() { return position; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    Shared<Expression> get_callee() { return callee; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    std::vector<Shared<Expression>> get_arguments() { return arguments; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto is_constant() -> bool override { return false; }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
-
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
-
-    bool is_constant() override { return false; }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_CALL; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_CALL; }
 
     Token position;
     Shared<Expression> callee;
@@ -927,23 +775,23 @@ class InitializeExpression : public Expression {
     {
     }
 
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    bool is_constant() override
+    auto is_constant() -> bool override
     {
-        for (auto& argument : arguments) {
-            if (not argument->is_constant()) {
+        for (const auto& argument : arguments) {
+            if (!argument->is_constant()) {
                 return false;
             }
         }
         return true;
     }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_INIT; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_INIT; }
 
     Token position;
     Shared<amun::Type> type;
@@ -962,20 +810,22 @@ class LambdaExpression : public Expression {
         for (auto& parameter : explicit_parameters) {
             parameters_types.push_back(parameter->type);
         }
+
         auto function_type =
             std::make_shared<amun::FunctionType>(position, parameters_types, return_type);
+
         lambda_type = std::make_shared<amun::PointerType>(function_type);
     }
 
-    Shared<amun::Type> get_type_node() override { return lambda_type; }
+    auto get_type_node() -> Shared<amun::Type> override { return lambda_type; }
 
-    void set_type_node(Shared<amun::Type> new_type) override { lambda_type = new_type; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { lambda_type = new_type; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    bool is_constant() override { return true; }
+    auto is_constant() -> bool override { return true; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_LAMBDA; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_LAMBDA; }
 
     Token position;
     std::vector<Shared<Parameter>> explicit_parameters;
@@ -989,25 +839,20 @@ class LambdaExpression : public Expression {
 class DotExpression : public Expression {
   public:
     DotExpression(Token dot_token, Shared<Expression> callee, Token field_name)
-        : dot_token(dot_token), callee(callee), field_name(field_name)
+        : dot_token(std::move(dot_token)), callee(std::move(callee)),
+          field_name(std::move(field_name))
     {
     }
 
-    Token get_position() { return dot_token; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    Shared<Expression> get_callee() { return callee; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    Token get_field_name() { return field_name; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_DOT; }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
-
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_DOT; }
-
-    bool is_constant() override { return is_constants_; }
+    auto is_constant() -> bool override { return is_constants_; }
 
     int field_index = 0;
     bool is_constants_ = false;
@@ -1021,23 +866,19 @@ class DotExpression : public Expression {
 class CastExpression : public Expression {
   public:
     CastExpression(Token position, Shared<amun::Type> type, Shared<Expression> value)
-        : position(position), type(type), value(value)
+        : position(std::move(position)), type(std::move(type)), value(std::move(value))
     {
     }
 
-    Token get_position() { return position; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    Shared<Expression> get_value() { return value; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
+    auto is_constant() -> bool override { return value->is_constant(); }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
-
-    bool is_constant() override { return value->is_constant(); }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_CAST; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_CAST; }
 
     Token position;
     Shared<amun::Type> type;
@@ -1046,81 +887,55 @@ class CastExpression : public Expression {
 
 class TypeSizeExpression : public Expression {
   public:
-    TypeSizeExpression(Token position, Shared<amun::Type> type)
-        : position(std::move(position)), type(std::move(type))
-    {
-    }
+    explicit TypeSizeExpression(Shared<amun::Type> type) : type(std::move(type)) {}
 
-    Token get_position() { return position; }
+    auto get_type_node() -> Shared<amun::Type> override { return amun::i64_type; }
 
-    Shared<amun::Type> get_type_node() override { return amun::i64_type; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override {}
 
-    void set_type_node(Shared<amun::Type> new_type) override {}
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    Shared<amun::Type> get_type() { return type; }
+    auto is_constant() -> bool override { return true; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_TYPE_SIZE; }
 
-    bool is_constant() override { return true; }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_TYPE_SIZE; }
-
-    Token position;
     Shared<amun::Type> type;
 };
 
 class ValueSizeExpression : public Expression {
   public:
-    ValueSizeExpression(Token position, Shared<Expression> value)
-        : position(std::move(position)), value(std::move(value))
-    {
-    }
+    explicit ValueSizeExpression(Shared<Expression> value) : value(std::move(value)) {}
 
-    Token get_position() { return position; }
-
-    Shared<amun::Type> get_type_node() override { return amun::i64_type; }
+    auto get_type_node() -> Shared<amun::Type> override { return amun::i64_type; }
 
     void set_type_node(Shared<amun::Type> new_type) override {}
 
-    Shared<Expression> get_value() { return value; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto is_constant() -> bool override { return true; }
 
-    bool is_constant() override { return true; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_VALUE_SIZE; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_VALUE_SIZE; }
-
-    Token position;
     Shared<Expression> value;
 };
 
 class IndexExpression : public Expression {
   public:
     IndexExpression(Token position, Shared<Expression> value, Shared<Expression> index)
-        : position(position), value(value), index(index)
+        : position(std::move(position)), value(std::move(value)), index(index)
     {
         type = std::make_shared<amun::NoneType>();
     }
 
-    Token get_position() { return position; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    Shared<Expression> get_value() { return value; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    Shared<Expression> get_index() { return index; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto is_constant() -> bool override { return index->is_constant(); }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
-
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
-
-    bool is_constant() override
-    {
-        // TODO: Should be calculated depend if value and index are constants
-        return index->is_constant();
-    }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_INDEX; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_INDEX; }
 
     Token position;
     Shared<Expression> value;
@@ -1132,34 +947,31 @@ class EnumAccessExpression : public Expression {
   public:
     EnumAccessExpression(Token enum_name, Token element_name, int index,
                          Shared<amun::Type> element_type)
-        : enum_name(enum_name), element_name(element_name), index(index), element_type(element_type)
+        : enum_name(std::move(enum_name)), element_name(std::move(element_name)),
+          enum_element_index(index), element_type(std::move(element_type))
     {
     }
 
-    Token get_enum_name() { return enum_name; }
+    auto get_type_node() -> Shared<amun::Type> override { return element_type; }
 
-    int get_enum_element_index() { return index; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { element_type = new_type; }
 
-    Shared<amun::Type> get_type_node() override { return element_type; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    void set_type_node(Shared<amun::Type> new_type) override { element_type = new_type; }
+    auto is_constant() -> bool override { return true; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
-
-    bool is_constant() override { return true; }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_ENUM_ELEMENT; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_ENUM_ELEMENT; }
 
     Token enum_name;
     Token element_name;
-    int index;
+    int enum_element_index;
     Shared<amun::Type> element_type;
 };
 
 class ArrayExpression : public Expression {
   public:
     ArrayExpression(Token position, std::vector<Shared<Expression>> values)
-        : position(position), values(values)
+        : position(std::move(position)), values(values)
     {
         auto size = values.size();
         auto element_type = size == 0 ? amun::none_type : values[0]->get_type_node();
@@ -1167,26 +979,22 @@ class ArrayExpression : public Expression {
 
         // Check if all values of array are constant or not
         for (auto& value : values) {
-            if (not value->is_constant()) {
+            if (!value->is_constant()) {
                 is_constants_array = false;
                 break;
             }
         }
     }
 
-    Token get_position() { return position; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    std::vector<Shared<Expression>> get_values() { return values; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
+    auto is_constant() -> bool override { return is_constants_array; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
-
-    bool is_constant() override { return is_constants_array; }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_ARRAY; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_ARRAY; }
 
     Token position;
     std::vector<Shared<Expression>> values;
@@ -1196,64 +1004,59 @@ class ArrayExpression : public Expression {
 
 class StringExpression : public Expression {
   public:
-    StringExpression(Token value) : value(value), type(amun::i8_ptr_type) {}
+    explicit StringExpression(Token value) : value(std::move(value)) {}
 
-    Token get_value() { return value; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto is_constant() -> bool override { return true; }
 
-    bool is_constant() override { return true; }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_STRING; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_STRING; }
 
     Token value;
-    Shared<amun::Type> type;
+    Shared<amun::Type> type = amun::i8_ptr_type;
 };
 
 class LiteralExpression : public Expression {
   public:
-    LiteralExpression(Token name, Shared<amun::Type> type) : name(name), type(type) {}
+    explicit LiteralExpression(Token name) : name(std::move(name)) {}
 
-    Token get_name() { return name; }
-
-    void set_type(Shared<amun::Type> resolved_type) { type = resolved_type; }
-
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
     void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
     void set_constant(bool is_constants) { constants = is_constants; }
 
-    bool is_constant() override { return constants; }
+    auto is_constant() -> bool override { return constants; }
 
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_LITERAL; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_LITERAL; }
 
     Token name;
-    Shared<amun::Type> type;
+    Shared<amun::Type> type = amun::none_type;
     bool constants = false;
 };
 
 class NumberExpression : public Expression {
   public:
-    NumberExpression(Token value, Shared<amun::Type> type) : value(value), type(type) {}
+    NumberExpression(Token value, Shared<amun::Type> type)
+        : value(std::move(value)), type(std::move(type))
+    {
+    }
 
-    Token get_value() { return value; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto is_constant() -> bool override { return true; }
 
-    bool is_constant() override { return true; }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_NUMBER; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_NUMBER; }
 
     Token value;
     Shared<amun::Type> type;
@@ -1261,66 +1064,73 @@ class NumberExpression : public Expression {
 
 class CharacterExpression : public Expression {
   public:
-    CharacterExpression(Token value) : value(value), type(amun::i8_type) {}
+    explicit CharacterExpression(Token value) : value(std::move(value)) {}
 
-    Token get_value() { return value; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto is_constant() -> bool override { return true; }
 
-    bool is_constant() override { return true; }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_CHARACTER; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_CHARACTER; }
 
     Token value;
-    Shared<amun::Type> type;
+    Shared<amun::Type> type = amun::i8_type;
 };
 
 class BooleanExpression : public Expression {
   public:
-    BooleanExpression(Token value) : value(value), type(amun::i1_type) {}
+    explicit BooleanExpression(Token value) : value(std::move(value)) {}
 
-    Token get_value() { return value; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto is_constant() -> bool override { return true; }
 
-    bool is_constant() override { return true; }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_BOOL; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_BOOL; }
 
     Token value;
-    Shared<amun::Type> type;
+    Shared<amun::Type> type = amun::i1_type;
 };
 
 class NullExpression : public Expression {
   public:
-    NullExpression(Token value)
-        : value(value), type(amun::null_type), null_base_type(amun::i32_ptr_type)
-    {
-    }
+    explicit NullExpression(Token value) : value(std::move(value)) {}
 
-    Token get_value() { return value; }
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
 
-    Shared<amun::Type> get_type_node() override { return type; }
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
 
-    void set_type_node(Shared<amun::Type> new_type) override { type = new_type; }
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
 
-    std::any accept(ExpressionVisitor* visitor) override { return visitor->visit(this); }
+    auto is_constant() -> bool override { return true; }
 
-    bool is_constant() override { return true; }
-
-    AstNodeType get_ast_node_type() override { return AstNodeType::AST_NULL; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_NULL; }
 
     Token value;
-    Shared<amun::Type> type;
+    Shared<amun::Type> type = amun::null_type;
+    Shared<amun::Type> null_base_type = amun::i32_ptr_type;
+};
 
+class UndefinedExpression : public Expression {
   public:
-    Shared<amun::Type> null_base_type;
+    explicit UndefinedExpression(Token keyword) : keyword(std::move(keyword)) {}
+
+    auto get_type_node() -> Shared<amun::Type> override { return base_type; }
+
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { base_type = new_type; }
+
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
+
+    auto is_constant() -> bool override { return true; }
+
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_UNDEFINED; }
+
+    Token keyword;
+    Shared<amun::Type> base_type = amun::none_type;
 };

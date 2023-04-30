@@ -119,6 +119,8 @@ class LLVMBackend : public TreeVisitor {
 
     auto visit(NullExpression* node) -> std::any override;
 
+    auto visit(UndefinedExpression* node) -> std::any override;
+
   private:
     auto llvm_node_value(std::any any_value) -> llvm::Value*;
 

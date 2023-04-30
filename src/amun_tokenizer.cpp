@@ -91,6 +91,9 @@ auto amun::Tokenizer::scan_next_token() -> Token
         }
 
         if (match('-')) {
+            if (match('-')) {
+                return build_token(TokenKind::TOKEN_UNDEFINED);
+            }
             return build_token(TokenKind::TOKEN_MINUS_MINUS);
         }
 
@@ -693,6 +696,9 @@ auto amun::Tokenizer::resolve_keyword_token_kind(const char* keyword) -> TokenKi
     case 9: {
         if (str9Equals("type_size", keyword)) {
             return TokenKind::TOKEN_TYPE_SIZE;
+        }
+        if (str9Equals("undefined", keyword)) {
+            return TokenKind::TOKEN_UNDEFINED;
         }
         return TokenKind::TOKEN_IDENTIFIER;
     }

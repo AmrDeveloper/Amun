@@ -304,16 +304,24 @@ auto amun::Parser::parse_field_declaration(bool is_global) -> Shared<FieldDeclar
         Shared<Expression> initalizer;
         if (is_current_kind(TokenKind::TOKEN_EQUAL)) {
             assert_kind(TokenKind::TOKEN_EQUAL, "Expect `=` after field declaraion name.");
-            initalizer = parse_expression();
+
+            // Parse value or undefined expression
+            if (is_current_kind(TokenKind::TOKEN_UNDEFINED)) {
+                auto keyword = peek_and_advance_token();
+                initalizer = std::make_shared<UndefinedExpression>(keyword);
+            }
+            else {
+                initalizer = parse_expression();
+            }
         }
         assert_kind(TokenKind::TOKEN_SEMICOLON, "Expect semicolon `;` after field declaration");
         return std::make_shared<FieldDeclaration>(name, type, initalizer, is_global);
     }
 
     assert_kind(TokenKind::TOKEN_EQUAL, "Expect `=` or `:` after field declaraion name.");
-    auto value = parse_expression();
+    auto init_value = parse_expression();
     assert_kind(TokenKind::TOKEN_SEMICOLON, "Expect semicolon `;` after field declaration");
-    return std::make_shared<FieldDeclaration>(name, amun::none_type, value, is_global);
+    return std::make_shared<FieldDeclaration>(name, amun::none_type, init_value, is_global);
 }
 
 auto amun::Parser::parse_intrinsic_prototype() -> Shared<IntrinsicPrototype>
@@ -554,7 +562,7 @@ auto amun::Parser::parse_function_declaration(amun::FunctionKind kind)
         auto close_brace = previous_token;
 
         // If function return type is void and has no return at the end, emit one
-        if (amun::is_void_type(prototype->get_return_type()) &&
+        if (amun::is_void_type(prototype->return_type) &&
             (block->statements.empty() ||
              block->statements.back()->get_ast_node_type() != AstNodeType::AST_RETURN)) {
             auto void_return =
@@ -645,7 +653,7 @@ auto amun::Parser::parse_operator_function_declaraion(amun::FunctionKind kind)
         auto close_brace = previous_token;
 
         // If function return type is void and has no return at the end, emit one
-        if (amun::is_void_type(prototype->get_return_type()) &&
+        if (amun::is_void_type(prototype->return_type) &&
             (block->statements.empty() ||
              block->statements.back()->get_ast_node_type() != AstNodeType::AST_RETURN)) {
             auto void_return =
@@ -864,7 +872,7 @@ auto amun::Parser::parse_enum_declaration() -> Shared<EnumDeclaration>
             }
 
             auto number_expr = std::dynamic_pointer_cast<NumberExpression>(field_value);
-            auto number_value_token = number_expr->get_value();
+            auto number_value_token = number_expr->value;
             if (is_float_number_token(number_value_token)) {
                 context->diagnostics.report_error(
                     enum_value.position,
@@ -944,7 +952,7 @@ auto amun::Parser::parse_defer_statement() -> Shared<DeferStatement>
     auto expression = parse_expression();
     if (auto call_expression = std::dynamic_pointer_cast<CallExpression>(expression)) {
         assert_kind(TokenKind::TOKEN_SEMICOLON, "Expect semicolon `;` after defer call statement");
-        return std::make_shared<DeferStatement>(defer_token, call_expression);
+        return std::make_shared<DeferStatement>(call_expression);
     }
 
     context->diagnostics.report_error(defer_token.position, "defer keyword expect call expression");
@@ -968,7 +976,7 @@ auto amun::Parser::parse_break_statement() -> Shared<BreakStatement>
 
     auto break_times = parse_expression();
     if (auto number_expr = std::dynamic_pointer_cast<NumberExpression>(break_times)) {
-        auto number_value = number_expr->get_value();
+        auto number_value = number_expr->value;
         if (is_float_number_token(number_value)) {
             context->diagnostics.report_error(
                 break_token.position,
@@ -1017,7 +1025,7 @@ auto amun::Parser::parse_continue_statement() -> Shared<ContinueStatement>
 
     auto continue_times = parse_expression();
     if (auto number_expr = std::dynamic_pointer_cast<NumberExpression>(continue_times)) {
-        auto number_value = number_expr->get_value();
+        auto number_value = number_expr->value;
         auto number_kind = number_value.kind;
         if (number_kind == TokenKind::TOKEN_FLOAT or number_kind == TokenKind::TOKEN_FLOAT32 or
             number_kind == TokenKind::TOKEN_FLOAT64) {
@@ -1385,7 +1393,7 @@ auto amun::Parser::parse_enum_access_expression() -> Shared<Expression>
     if (is_current_kind(TokenKind::TOKEN_COLON_COLON)) {
         auto colons_token = peek_and_advance_token();
         if (auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression)) {
-            auto enum_name = literal->get_name();
+            auto enum_name = literal->name;
             if (context->enumerations.contains(enum_name.literal)) {
                 auto enum_type = context->enumerations[enum_name.literal];
                 auto element = consume_kind(TokenKind::TOKEN_IDENTIFIER,
@@ -1606,7 +1614,7 @@ auto amun::Parser::parse_enumeration_attribute_expression() -> Shared<Expression
     if (is_current_kind(TokenKind::TOKEN_DOT) and
         expression->get_ast_node_type() == AstNodeType::AST_LITERAL) {
         auto literal = std::dynamic_pointer_cast<LiteralExpression>(expression);
-        auto literal_str = literal->get_name().literal;
+        auto literal_str = literal->name.literal;
         if (context->enumerations.contains(literal_str)) {
             auto dot_token = peek_and_advance_token();
             auto attribute =
@@ -1849,9 +1857,7 @@ auto amun::Parser::parse_number_expression() -> Shared<NumberExpression>
 
 auto amun::Parser::parse_literal_expression() -> Shared<LiteralExpression>
 {
-    Token symbol_token = peek_and_advance_token();
-    auto type = std::make_shared<amun::NoneType>();
-    return std::make_shared<LiteralExpression>(symbol_token, type);
+    return std::make_shared<LiteralExpression>(peek_and_advance_token());
 }
 
 auto amun::Parser::parse_if_expression() -> Shared<IfExpression>
@@ -1946,7 +1952,7 @@ auto amun::Parser::parse_switch_expression() -> Shared<SwitchExpression>
 
 auto amun::Parser::parse_group_or_tuple_expression() -> Shared<Expression>
 {
-    Token position = peek_and_advance_token();
+    assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect ( at the start of group or tuple expression");
     auto expression = parse_expression();
 
     // Parse Tuple values expression
@@ -1967,7 +1973,7 @@ auto amun::Parser::parse_group_or_tuple_expression() -> Shared<Expression>
     }
 
     assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) at the end of group expression");
-    return std::make_shared<GroupExpression>(position, expression);
+    return std::make_shared<GroupExpression>(expression);
 }
 
 auto amun::Parser::parse_array_expression() -> Shared<ArrayExpression>
@@ -1996,20 +2002,20 @@ auto amun::Parser::parse_cast_expression() -> Shared<CastExpression>
 
 auto amun::Parser::parse_type_size_expression() -> Shared<TypeSizeExpression>
 {
-    auto token = consume_kind(TokenKind::TOKEN_TYPE_SIZE, "Expect type_size keyword");
+    assert_kind(TokenKind::TOKEN_TYPE_SIZE, "Expect type_size keyword");
     assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect `(` after type_size keyword");
     auto type = parse_type();
     assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect `)` after type_size type");
-    return std::make_shared<TypeSizeExpression>(token, type);
+    return std::make_shared<TypeSizeExpression>(type);
 }
 
 auto amun::Parser::parse_value_size_expression() -> Shared<ValueSizeExpression>
 {
-    auto token = consume_kind(TokenKind::TOKEN_VALUE_SIZE, "Expect value_size keyword");
+    assert_kind(TokenKind::TOKEN_VALUE_SIZE, "Expect value_size keyword");
     assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect `(` after value_size keyword");
     auto value = parse_expression();
     assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect `)` after value_size type");
-    return std::make_shared<ValueSizeExpression>(token, value);
+    return std::make_shared<ValueSizeExpression>(value);
 }
 
 auto amun::Parser::check_generic_parameter_name(Token name) -> void

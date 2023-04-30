@@ -36,6 +36,7 @@ enum TokenKind {
     TOKEN_TRUE,
     TOKEN_FALSE,
     TOKEN_NULL,
+    TOKEN_UNDEFINED,
 
     TOKEN_VARARGS,
 
@@ -150,6 +151,7 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::TOKEN_TRUE, "true"},
     {TokenKind::TOKEN_FALSE, "false"},
     {TokenKind::TOKEN_NULL, "null"},
+    {TokenKind::TOKEN_UNDEFINED, "undefined"},
 
     {TokenKind::TOKEN_BREAK, "break"},
     {TokenKind::TOKEN_CONTINUE, "continue"},
