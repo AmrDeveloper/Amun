@@ -825,7 +825,7 @@ auto amun::LLVMBackend::visit(ReturnStatement* node) -> std::any
 auto amun::LLVMBackend::visit(DeferStatement* node) -> std::any
 {
     auto call_expression = node->call_expression;
-    auto callee = std::dynamic_pointer_cast<LiteralExpression>(call_expression->callee());
+    auto callee = std::dynamic_pointer_cast<LiteralExpression>(call_expression->callee);
     auto callee_literal = callee->name.literal;
     auto function = lookup_function(callee_literal);
     if (not function) {
@@ -834,7 +834,7 @@ auto amun::LLVMBackend::visit(DeferStatement* node) -> std::any
             auto loaded = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
             auto function_type = llvm_type_from_amun_type(call_expression->get_type_node());
             if (auto function_pointer = llvm::dyn_cast<llvm::FunctionType>(function_type)) {
-                auto arguments = call_expression->arguments();
+                auto arguments = call_expression->arguments;
                 size_t arguments_size = arguments.size();
                 std::vector<llvm::Value*> arguments_values;
                 arguments_values.reserve(arguments_size);
@@ -857,7 +857,7 @@ auto amun::LLVMBackend::visit(DeferStatement* node) -> std::any
         return 0;
     }
 
-    auto arguments = call_expression->arguments();
+    auto arguments = call_expression->arguments;
     auto arguments_size = arguments.size();
     auto parameter_size = function->arg_size();
     std::vector<llvm::Value*> arguments_values;
@@ -1436,19 +1436,19 @@ auto amun::LLVMBackend::visit(PostfixUnaryExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
 {
-    auto callee_ast_node_type = node->callee()->get_ast_node_type();
+    auto callee_ast_node_type = node->callee->get_ast_node_type();
 
     // If callee is also a CallExpression this case when you have a function that return a
     // function pointer and you call it for example function()();
     if (callee_ast_node_type == AstNodeType::AST_CALL) {
-        auto callee_function = llvm_node_value(node->callee()->accept(this));
+        auto callee_function = llvm_node_value(node->callee->accept(this));
         auto call_instruction = llvm::dyn_cast<llvm::CallInst>(callee_function);
         auto function = call_instruction->getCalledFunction();
         auto callee_function_type = function->getFunctionType();
         auto return_ptr_type = callee_function_type->getReturnType()->getPointerElementType();
         auto function_pointer_type = llvm::dyn_cast<llvm::FunctionType>(return_ptr_type);
 
-        auto arguments = node->arguments();
+        auto arguments = node->arguments;
         size_t arguments_size = arguments.size();
         std::vector<llvm::Value*> arguments_values;
         arguments_values.reserve(arguments_size);
@@ -1468,7 +1468,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
 
     // If callee is literal expression that mean it a function call or function pointer call
     if (callee_ast_node_type == AstNodeType::AST_LITERAL) {
-        auto callee = std::dynamic_pointer_cast<LiteralExpression>(node->callee());
+        auto callee = std::dynamic_pointer_cast<LiteralExpression>(node->callee);
         auto callee_literal = callee->name.literal;
         auto function = lookup_function(callee_literal);
         if (not function && functions_declaraions.contains(callee_literal)) {
@@ -1483,7 +1483,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
                 auto loaded = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
                 auto function_type = llvm_type_from_amun_type(node->get_type_node());
                 if (auto function_pointer = llvm::dyn_cast<llvm::FunctionType>(function_type)) {
-                    auto arguments = node->arguments();
+                    auto arguments = node->arguments;
                     size_t arguments_size = arguments.size();
                     std::vector<llvm::Value*> arguments_values;
                     arguments_values.reserve(arguments_size);
@@ -1504,7 +1504,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
             }
         }
 
-        auto arguments = node->arguments();
+        auto arguments = node->arguments;
         auto arguments_size = arguments.size();
         auto parameter_size = function->arg_size();
         std::vector<llvm::Value*> arguments_values;
@@ -1563,11 +1563,11 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
 
     // If callee is lambda expression that mean we can call it as function pointer
     if (callee_ast_node_type == AstNodeType::AST_LAMBDA) {
-        auto lambda = std::dynamic_pointer_cast<LambdaExpression>(node->callee());
+        auto lambda = std::dynamic_pointer_cast<LambdaExpression>(node->callee);
         auto lambda_value = llvm_node_value(lambda->accept(this));
         auto function = llvm::dyn_cast<llvm::Function>(lambda_value);
 
-        auto arguments = node->arguments();
+        auto arguments = node->arguments;
         auto arguments_size = arguments.size();
         auto parameter_size = function->arg_size();
         std::vector<llvm::Value*> arguments_values;
@@ -1605,7 +1605,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
 
     // If callee is dot expression that mean we call function pointer from struct element
     if (callee_ast_node_type == AstNodeType::AST_DOT) {
-        auto dot = std::dynamic_pointer_cast<DotExpression>(node->callee());
+        auto dot = std::dynamic_pointer_cast<DotExpression>(node->callee);
         auto struct_fun_ptr = llvm_node_value(dot->accept(this));
 
         auto function_value = derefernecs_llvm_pointer(struct_fun_ptr);
@@ -1614,7 +1614,7 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
         auto llvm_type = llvm_type_from_amun_type(function_ptr_type->base_type);
         auto llvm_fun_type = llvm::dyn_cast<llvm::FunctionType>(llvm_type);
 
-        auto arguments = node->arguments();
+        auto arguments = node->arguments;
         auto arguments_size = arguments.size();
         auto parameter_size = llvm_fun_type->getNumParams();
         std::vector<llvm::Value*> arguments_values;

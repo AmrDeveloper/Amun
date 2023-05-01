@@ -363,6 +363,10 @@ auto amun::Tokenizer::consume_character() -> Token
         return build_token(TokenKind::TOKEN_INVALID, "invalid character");
     }
 
+    if (c == '\'') {
+        return build_token(TokenKind::TOKEN_INVALID, "empty character literal");
+    }
+
     if (peek() != '\'') {
         return build_token(TokenKind::TOKEN_INVALID, "unterminated single quote character");
     }

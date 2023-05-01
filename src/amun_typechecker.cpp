@@ -1174,8 +1174,8 @@ auto amun::TypeChecker::visit(PostfixUnaryExpression* node) -> std::any
 
 auto amun::TypeChecker::visit(CallExpression* node) -> std::any
 {
-    auto callee = node->callee();
-    auto callee_ast_node_type = node->callee()->get_ast_node_type();
+    auto callee = node->callee;
+    auto callee_ast_node_type = node->callee->get_ast_node_type();
 
     // Call function by name for example function();
     if (callee_ast_node_type == AstNodeType::AST_LITERAL) {
@@ -1194,7 +1194,7 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
                 auto type = std::static_pointer_cast<amun::FunctionType>(value);
                 node->set_type_node(type);
                 auto parameters = type->parameters;
-                auto arguments = node->arguments();
+                auto arguments = node->arguments;
                 for (auto& argument : arguments) {
                     argument->set_type_node(node_amun_type(argument->accept(this)));
                 }
@@ -1268,7 +1268,7 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
 
             return_types_stack.pop();
 
-            auto arguments = node->arguments();
+            auto arguments = node->arguments;
             for (auto& argument : arguments) {
                 auto argument_type = node_amun_type(argument->accept(this));
                 argument_type = resolve_generic_type(argument_type);
@@ -1298,7 +1298,7 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
         auto function_type =
             std::static_pointer_cast<amun::FunctionType>(function_pointer_type->base_type);
         auto parameters = function_type->parameters;
-        auto arguments = node->arguments();
+        auto arguments = node->arguments;
         check_parameters_types(node->position.position, arguments, parameters,
                                function_type->has_varargs, function_type->varargs_type,
                                function_type->implicit_parameters_count);
@@ -1308,7 +1308,7 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
 
     // Call lambda expression for example { () void -> return; } ()
     if (callee_ast_node_type == AstNodeType::AST_LAMBDA) {
-        auto lambda = std::dynamic_pointer_cast<LambdaExpression>(node->callee());
+        auto lambda = std::dynamic_pointer_cast<LambdaExpression>(node->callee);
         auto lambda_function_type = node_amun_type(lambda->accept(this));
         auto function_ptr_type = std::static_pointer_cast<amun::PointerType>(lambda_function_type);
 
@@ -1316,7 +1316,7 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
             std::static_pointer_cast<amun::FunctionType>(function_ptr_type->base_type);
 
         auto parameters = function_type->parameters;
-        auto arguments = node->arguments();
+        auto arguments = node->arguments;
         for (auto& argument : arguments) {
             argument->set_type_node(node_amun_type(argument->accept(this)));
         }
@@ -1331,7 +1331,7 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
 
     // Call struct field with function pointer for example type struct.field()
     if (callee_ast_node_type == AstNodeType::AST_DOT) {
-        auto dot_expression = std::dynamic_pointer_cast<DotExpression>(node->callee());
+        auto dot_expression = std::dynamic_pointer_cast<DotExpression>(node->callee);
         auto dot_function_type = node_amun_type(dot_expression->accept(this));
         auto function_ptr_type = std::static_pointer_cast<amun::PointerType>(dot_function_type);
 
@@ -1339,7 +1339,7 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
             std::static_pointer_cast<amun::FunctionType>(function_ptr_type->base_type);
 
         auto parameters = function_type->parameters;
-        auto arguments = node->arguments();
+        auto arguments = node->arguments;
         for (auto& argument : arguments) {
             argument->set_type_node(node_amun_type(argument->accept(this)));
         }

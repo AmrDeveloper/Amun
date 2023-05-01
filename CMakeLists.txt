@@ -56,7 +56,7 @@ file(GLOB source_files CONFIGURE_DEPENDS
 
 add_executable(amun ${source_files})
 
-# Map Cpmponent to libAMUNries names
+# Map Cpmponent to libraries names
 llvm_map_components_to_libnames(llvm_libs
     Core
     MC
