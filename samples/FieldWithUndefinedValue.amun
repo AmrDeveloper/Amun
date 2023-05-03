@@ -1,0 +1,7 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() {
+    // Undefined value and Will print garbage value
+    var x : int64 = ---;
+    printf("%d\n", x);
+}
