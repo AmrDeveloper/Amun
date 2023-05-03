@@ -1852,9 +1852,23 @@ auto amun::LLVMBackend::visit(CastExpression* node) -> std::any
 
     // Array of type T to pointer or type T, return pointer to the first element
     if (target_type->isPointerTy() and value_type->isArrayTy()) {
-        auto load_inst = dyn_cast<llvm::LoadInst>(value);
-        return Builder.CreateGEP(value->getType(), load_inst->getPointerOperand(),
-                                 {zero_int32_value, zero_int32_value});
+        auto value_type = value->getType();
+
+        // Load array if it stored on variable
+        // Example -> var ptr = cast(*int64) array;
+        if (const auto& load_inst = dyn_cast<llvm::LoadInst>(value)) {
+            return Builder.CreateGEP(value_type, load_inst->getPointerOperand(),
+                                     {zero_int32_value, zero_int32_value});
+        }
+
+        // No need for load instruction if array is array literal not variable
+        // Example -> var ptr = cast(*int64) [1, 2, 3];
+        auto alloca = Builder.CreateAlloca(value_type);
+        Builder.CreateStore(value, alloca);
+        auto load = Builder.CreateLoad(alloca->getAllocatedType(), alloca);
+        const auto& load_inst = dyn_cast<llvm::LoadInst>(load);
+        auto ptr_operand = load_inst->getPointerOperand();
+        return Builder.CreateGEP(value_type, ptr_operand, {zero_int32_value, zero_int32_value});
     }
 
     // Bit casting
