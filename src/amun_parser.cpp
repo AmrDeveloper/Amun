@@ -1776,6 +1776,9 @@ auto amun::Parser::parse_primary_expression() -> Shared<Expression>
     case TokenKind::TOKEN_TYPE_SIZE: {
         return parse_type_size_expression();
     }
+    case TokenKind::TOKEN_TYPE_ALLIGN: {
+        return parse_type_allign_expression();
+    }
     case TokenKind::TOKEN_VALUE_SIZE: {
         return parse_value_size_expression();
     }
@@ -2007,6 +2010,15 @@ auto amun::Parser::parse_type_size_expression() -> Shared<TypeSizeExpression>
     auto type = parse_type();
     assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect `)` after type_size type");
     return std::make_shared<TypeSizeExpression>(type);
+}
+
+auto amun::Parser::parse_type_allign_expression() -> Shared<TypeAlignExpression>
+{
+    assert_kind(TokenKind::TOKEN_TYPE_ALLIGN, "Expect type_size keyword");
+    assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect `(` after type_size keyword");
+    auto type = parse_type();
+    assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect `)` after type_size type");
+    return std::make_shared<TypeAlignExpression>(type);
 }
 
 auto amun::Parser::parse_value_size_expression() -> Shared<ValueSizeExpression>

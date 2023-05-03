@@ -166,6 +166,8 @@ class Parser {
 
     auto parse_type_size_expression() -> Shared<TypeSizeExpression>;
 
+    auto parse_type_allign_expression() -> Shared<TypeAlignExpression>;
+
     auto parse_value_size_expression() -> Shared<ValueSizeExpression>;
 
     auto parse_expressions_directive() -> Shared<Expression>;

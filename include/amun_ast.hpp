@@ -902,6 +902,23 @@ class TypeSizeExpression : public Expression {
     Shared<amun::Type> type;
 };
 
+class TypeAlignExpression : public Expression {
+  public:
+    explicit TypeAlignExpression(Shared<amun::Type> type) : type(std::move(type)) {}
+
+    auto get_type_node() -> Shared<amun::Type> override { return amun::i64_type; }
+
+    auto set_type_node(Shared<amun::Type> new_type) -> void override {}
+
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
+
+    auto is_constant() -> bool override { return true; }
+
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_TYPE_SIZE; }
+
+    Shared<amun::Type> type;
+};
+
 class ValueSizeExpression : public Expression {
   public:
     explicit ValueSizeExpression(Shared<Expression> value) : value(std::move(value)) {}

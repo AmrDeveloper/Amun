@@ -1587,6 +1587,14 @@ auto amun::TypeChecker::visit(TypeSizeExpression* node) -> std::any
     return amun::i64_type;
 }
 
+auto amun::TypeChecker::visit(TypeAlignExpression* node) -> std::any
+{
+    auto type = node->type;
+    auto resolved_type = resolve_generic_type(type);
+    node->type = resolved_type;
+    return amun::i64_type;
+}
+
 auto amun::TypeChecker::visit(ValueSizeExpression* node) -> std::any
 {
     node->value->accept(this);

@@ -1,4 +1,5 @@
 #include "../include/amun_tokenizer.hpp"
+#include "../include/amun_basic.hpp"
 #include "../include/amun_logger.hpp"
 
 #include <iostream>
@@ -709,6 +710,12 @@ auto amun::Tokenizer::resolve_keyword_token_kind(const char* keyword) -> TokenKi
     case 10: {
         if (str10Equals("value_size", keyword)) {
             return TokenKind::TOKEN_VALUE_SIZE;
+        }
+        return TokenKind::TOKEN_IDENTIFIER;
+    }
+    case 11: {
+        if (str11Equals("type_allign", keyword)) {
+            return TokenKind::TOKEN_TYPE_ALLIGN;
         }
         return TokenKind::TOKEN_IDENTIFIER;
     }

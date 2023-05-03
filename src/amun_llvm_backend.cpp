@@ -1,5 +1,6 @@
 #include "../include/amun_llvm_backend.hpp"
 #include "../include/amun_ast_visitor.hpp"
+#include "../include/amun_llvm_builder.hpp"
 #include "../include/amun_llvm_intrinsic.hpp"
 #include "../include/amun_logger.hpp"
 #include "../include/amun_name_mangle.hpp"
@@ -1879,8 +1880,14 @@ auto amun::LLVMBackend::visit(TypeSizeExpression* node) -> std::any
 {
     auto llvm_type = llvm_type_from_amun_type(node->type);
     auto type_alloc_size = llvm_module->getDataLayout().getTypeAllocSize(llvm_type);
-    auto type_size = llvm::ConstantInt::get(llvm_int64_type, type_alloc_size);
-    return type_size;
+    return create_llvm_int64(type_alloc_size, true);
+}
+
+auto amun::LLVMBackend::visit(TypeAlignExpression* node) -> std::any
+{
+    auto llvm_type = llvm_type_from_amun_type(node->type);
+    auto allign = llvm_module->getDataLayout().getABITypeAlign(llvm_type);
+    return create_llvm_int64(allign.value(), true);
 }
 
 auto amun::LLVMBackend::visit(ValueSizeExpression* node) -> std::any

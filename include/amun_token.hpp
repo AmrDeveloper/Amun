@@ -31,6 +31,7 @@ enum TokenKind {
     TOKEN_CONTINUE,
 
     TOKEN_TYPE_SIZE,
+    TOKEN_TYPE_ALLIGN,
     TOKEN_VALUE_SIZE,
 
     TOKEN_TRUE,
@@ -157,6 +158,7 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::TOKEN_CONTINUE, "continue"},
 
     {TokenKind::TOKEN_TYPE_SIZE, "type_size"},
+    {TokenKind::TOKEN_TYPE_ALLIGN, "type_allign"},
     {TokenKind::TOKEN_VALUE_SIZE, "value_size"},
 
     {TokenKind::TOKEN_VARARGS, "varargs"},

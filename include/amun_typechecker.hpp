@@ -97,6 +97,8 @@ class TypeChecker : public TreeVisitor {
 
     auto visit(TypeSizeExpression* node) -> std::any override;
 
+    auto visit(TypeAlignExpression* node) -> std::any override;
+
     auto visit(ValueSizeExpression* node) -> std::any override;
 
     auto visit(IndexExpression* node) -> std::any override;

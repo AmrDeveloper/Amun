@@ -60,6 +60,9 @@ using Unique = std::unique_ptr<T>;
 // Compare two char* with length of 10
 #define str10Equals(first, other) str9Equals(first, other) && first[9] == other[9]
 
+// Compare two char* with length of 11
+#define str11Equals(first, other) str10Equals(first, other) && first[10] == other[10]
+
 // Convert string to integer
 auto str_to_int(const char* p) -> int64;
 

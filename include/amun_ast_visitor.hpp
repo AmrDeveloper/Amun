@@ -84,6 +84,7 @@ class LambdaExpression;
 class DotExpression;
 class CastExpression;
 class TypeSizeExpression;
+class TypeAlignExpression;
 class ValueSizeExpression;
 class IndexExpression;
 class EnumAccessExpression;
@@ -131,6 +132,8 @@ class ExpressionVisitor {
     virtual auto visit(CastExpression* node) -> std::any = 0;
 
     virtual auto visit(TypeSizeExpression* node) -> std::any = 0;
+
+    virtual auto visit(TypeAlignExpression* node) -> std::any = 0;
 
     virtual auto visit(ValueSizeExpression* node) -> std::any = 0;
 
