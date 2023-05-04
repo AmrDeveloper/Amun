@@ -80,7 +80,7 @@ class Parser {
 
     auto parse_operator_function_operator(amun::FunctionKind kind) -> Token;
 
-    auto parse_structure_declaration(bool is_packed) -> Shared<StructDeclaration>;
+    auto parse_structure_declaration(bool is_packed, bool is_extern) -> Shared<StructDeclaration>;
 
     auto parse_enum_declaration() -> Shared<EnumDeclaration>;
 

@@ -110,10 +110,10 @@ struct FunctionType : public Type {
 struct StructType : public Type {
     StructType(std::string name, std::vector<std::string> fields_names,
                std::vector<Shared<Type>> types, std::vector<std::string> generic_parameters = {},
-               bool is_packed = false, bool is_generic = false)
+               bool is_packed = false, bool is_generic = false, bool is_extern = false)
         : name(std::move(name)), fields_names(std::move(fields_names)),
           fields_types(std::move(types)), generic_parameters(std::move(generic_parameters)),
-          is_packed(is_packed), is_generic(is_generic)
+          is_packed(is_packed), is_generic(is_generic), is_extern(is_extern)
     {
         type_kind = TypeKind::STRUCT;
     }
@@ -124,6 +124,7 @@ struct StructType : public Type {
     std::vector<std::string> generic_parameters;
     bool is_packed;
     bool is_generic;
+    bool is_extern;
 };
 
 struct TupleType : public Type {

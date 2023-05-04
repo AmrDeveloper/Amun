@@ -14,6 +14,12 @@ auto amun::Parser::parse_declaraions_directive() -> Shared<Statement>
         }
 
         if (directive_name == "extern") {
+            // Parse opaque struct
+            if (is_next_kind(TokenKind::TOKEN_STRUCT)) {
+                advanced_token();
+                return parse_structure_declaration(false, true);
+            }
+
             return parse_function_prototype(amun::FunctionKind::NORMAL_FUNCTION, true);
         }
 
@@ -68,7 +74,7 @@ auto amun::Parser::parse_declaraions_directive() -> Shared<Statement>
 
         if (directive_name == "packed") {
             advanced_token();
-            return parse_structure_declaration(true);
+            return parse_structure_declaration(true, false);
         }
 
         context->diagnostics.report_error(posiiton,

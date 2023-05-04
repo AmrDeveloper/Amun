@@ -232,7 +232,7 @@ auto amun::Parser::parse_declaration_statement() -> Shared<Statement>
         return parse_compiletime_constants_declaraion();
     }
     case TokenKind::TOKEN_STRUCT: {
-        return parse_structure_declaration(false);
+        return parse_structure_declaration(false, false);
     }
     case TokenKind::TOKEN_ENUM: {
         return parse_enum_declaration();
@@ -711,7 +711,8 @@ auto amun::Parser::parse_operator_function_operator(amun::FunctionKind kind) -> 
     return op;
 }
 
-auto amun::Parser::parse_structure_declaration(bool is_packed) -> Shared<StructDeclaration>
+auto amun::Parser::parse_structure_declaration(bool is_packed, bool is_extern)
+    -> Shared<StructDeclaration>
 {
     auto struct_token = consume_kind(TokenKind::TOKEN_STRUCT, "Expect struct keyword");
     auto struct_name = consume_kind(TokenKind::TOKEN_IDENTIFIER, "Expect Symbol as struct name");
@@ -733,6 +734,23 @@ auto amun::Parser::parse_structure_declaration(bool is_packed) -> Shared<StructD
 
     current_struct_name = struct_name.literal;
 
+    std::vector<std::string> fields_names;
+    std::vector<Shared<amun::Type>> fields_types;
+
+    if (is_extern) {
+        assert_kind(TokenKind::TOKEN_SEMICOLON, "Expect `;` at the end of external struct");
+
+        auto structure_type =
+            std::make_shared<amun::StructType>(struct_name_str, fields_names, fields_types);
+        structure_type->is_extern = true;
+
+        context->structures[struct_name_str] = structure_type;
+        context->type_alias_table.define_alias(struct_name_str, structure_type);
+        current_struct_name = "";
+        generic_parameters_names.clear();
+        return std::make_shared<StructDeclaration>(structure_type);
+    }
+
     std::vector<std::string> generics_parameters;
 
     // Parse generic parameters declarations if they exists
@@ -750,8 +768,6 @@ auto amun::Parser::parse_structure_declaration(bool is_packed) -> Shared<StructD
         assert_kind(TokenKind::TOKEN_GREATER, "Expect > after struct type parameters");
     }
 
-    std::vector<std::string> fields_names;
-    std::vector<Shared<amun::Type>> fields_types;
     assert_kind(TokenKind::TOKEN_OPEN_BRACE, "Expect { after struct name");
     while (is_source_available() && !is_current_kind(TokenKind::TOKEN_CLOSE_BRACE)) {
         auto field_name = consume_kind(TokenKind::TOKEN_IDENTIFIER, "Expect Symbol as struct name");

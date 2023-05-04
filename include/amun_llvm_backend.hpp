@@ -168,7 +168,7 @@ class LLVMBackend : public TreeVisitor {
     auto create_llvm_string_length(llvm::Value* string) -> llvm::Value*;
 
     auto create_llvm_struct_type(std::string name, std::vector<Shared<amun::Type>> members,
-                                 bool is_packed) -> llvm::StructType*;
+                                 bool is_packed, bool is_extern) -> llvm::StructType*;
 
     auto create_overloading_function_call(std::string& name, std::vector<llvm::Value*> args)
         -> llvm::Value*;

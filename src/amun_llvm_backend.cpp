@@ -411,7 +411,8 @@ auto amun::LLVMBackend::visit(StructDeclaration* node) -> std::any
     }
 
     const auto struct_name = struct_type->name;
-    return create_llvm_struct_type(struct_name, struct_type->fields_types, struct_type->is_packed);
+    return create_llvm_struct_type(struct_name, struct_type->fields_types, struct_type->is_packed,
+                                   struct_type->is_extern);
     return 0;
 }
 
@@ -2173,12 +2174,14 @@ auto amun::LLVMBackend::llvm_type_from_amun_type(std::shared_ptr<amun::Type> typ
         }
 
         auto is_packed = struct_type->is_packed;
-        return create_llvm_struct_type(struct_name, struct_type->fields_types, is_packed);
+        auto is_extern = struct_type->is_extern;
+        return create_llvm_struct_type(struct_name, struct_type->fields_types, is_packed,
+                                       is_extern);
     }
 
     if (type_kind == amun::TypeKind::TUPLE) {
         auto tuple_type = std::static_pointer_cast<amun::TupleType>(type);
-        return create_llvm_struct_type(tuple_type->name, tuple_type->fields_types, false);
+        return create_llvm_struct_type(tuple_type->name, tuple_type->fields_types, false, false);
     }
 
     if (type_kind == amun::TypeKind::ENUM_ELEMENT) {
@@ -2522,14 +2525,19 @@ auto amun::LLVMBackend::create_llvm_string_length(llvm::Value* string) -> llvm::
 
 auto amun::LLVMBackend::create_llvm_struct_type(std::string name,
                                                 std::vector<Shared<amun::Type>> members,
-                                                bool is_packed) -> llvm::StructType*
+                                                bool is_packed, bool is_extern) -> llvm::StructType*
 {
     if (structures_types_map.contains(name)) {
         return llvm::dyn_cast<llvm::StructType>(structures_types_map[name]);
     }
 
-    auto* struct_llvm_type = llvm::StructType::create(llvm_context);
-    struct_llvm_type->setName(name);
+    auto* struct_llvm_type = llvm::StructType::create(llvm_context, name);
+
+    // External mean that this struct is opaque to be used for type safe c libraries
+    if (is_extern) {
+        structures_types_map[name] = struct_llvm_type;
+        return struct_llvm_type;
+    }
 
     std::vector<llvm::Type*> struct_fields;
     struct_fields.reserve(members.size());
