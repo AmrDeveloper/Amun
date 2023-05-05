@@ -65,6 +65,9 @@ auto amun::Parser::parse_tuple_type() -> Shared<amun::Type>
         if (is_current_kind(TokenKind::TOKEN_COMMA)) {
             advanced_token();
         }
+        else {
+            break;
+        }
     }
 
     assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after tuple values");
@@ -162,6 +165,9 @@ auto amun::Parser::parse_generic_struct_type() -> Shared<amun::Type>
 
                 if (is_current_kind(TokenKind::TOKEN_COMMA)) {
                     advanced_token();
+                }
+                else {
+                    break;
                 }
             }
 

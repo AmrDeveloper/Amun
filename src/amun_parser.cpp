@@ -444,6 +444,9 @@ auto amun::Parser::parse_function_prototype(amun::FunctionKind kind, bool is_ext
             if (is_current_kind(TokenKind::TOKEN_COMMA)) {
                 advanced_token();
             }
+            else {
+                break;
+            }
         }
 
         assert_kind(TokenKind::TOKEN_GREATER, "Expect > after struct type parameters");
@@ -763,6 +766,9 @@ auto amun::Parser::parse_structure_declaration(bool is_packed, bool is_extern)
             generics_parameters.push_back(parameter.literal);
             if (is_current_kind(TokenKind::TOKEN_COMMA)) {
                 advanced_token();
+            }
+            else {
+                break;
             }
         }
         assert_kind(TokenKind::TOKEN_GREATER, "Expect > after struct type parameters");
@@ -1560,12 +1566,13 @@ auto amun::Parser::parse_call_or_access_expression() -> Shared<Expression>
                 if (is_current_kind(TokenKind::TOKEN_COMMA)) {
                     advanced_token();
                 }
+                else {
+                    break;
+                }
             }
 
-            advanced_token();
-
-            assert_kind(TokenKind::TOKEN_OPEN_PAREN,
-                        "Expect ( after in the end of call expression");
+            assert_kind(TokenKind::TOKEN_GREATER, "Expect > after generic parameters types");
+            assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect ( after in the end of function call");
 
             std::vector<Shared<Expression>> arguments;
             while (not is_current_kind(TokenKind::TOKEN_CLOSE_PAREN)) {
@@ -1575,8 +1582,7 @@ auto amun::Parser::parse_call_or_access_expression() -> Shared<Expression>
                 }
             }
 
-            assert_kind(TokenKind::TOKEN_CLOSE_PAREN,
-                        "Expect ) after in the end of call expression");
+            assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after in the end of function call");
 
             // Add support for optional lambda after call expression
             if (is_current_kind(TokenKind::TOKEN_OPEN_BRACE)) {
