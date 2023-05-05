@@ -265,6 +265,7 @@ auto amun::Parser::parse_identifier_type() -> Shared<amun::Type>
     }
 
     // This type is not permitive, structure or enumerations
-    context->diagnostics.report_error(peek_current().position, "Unexpected identifier type");
+    context->diagnostics.report_error(peek_current().position,
+                                      "Cannot find type `" + type_literal + "` in this scope");
     throw "Stop";
 }
