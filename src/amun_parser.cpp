@@ -2147,6 +2147,14 @@ auto amun::Parser::unexpected_token_error() -> void
     auto current_token = peek_current();
     auto position = current_token.position;
     std::string token_literal = token_kind_literal[current_token.kind];
+
+    // Special error message for using undefined value in wrong place
+    if (current_token.kind == TokenKind::TOKEN_UNDEFINED) {
+        context->diagnostics.report_error(
+            position, "`---` used only in variable declaraion to represent an undefined value");
+        throw "Stop";
+    }
+
     context->diagnostics.report_error(position,
                                       "expected expression, found `" + token_literal + "`");
     throw "Stop";
