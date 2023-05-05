@@ -1180,7 +1180,7 @@ auto amun::Parser::parse_for_statement() -> Shared<Statement>
         expr = parse_expression();
     }
 
-    // For range statemnet for x -> y
+    // For range statemnet for x .. y
     if (is_current_kind(TokenKind::TOKEN_DOT_DOT)) {
         advanced_token();
         const auto range_end = parse_expression();
@@ -1941,7 +1941,7 @@ auto amun::Parser::parse_switch_expression() -> Shared<SwitchExpression>
                 }
                 else {
                     context->diagnostics.report_error(
-                        current_token->position,
+                        peek_current().position,
                         "In Switch expression can't use `,` with no value before it");
                     throw "Stop";
                 }

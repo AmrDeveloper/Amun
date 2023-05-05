@@ -385,19 +385,25 @@ auto amun::TypeChecker::visit(ForEachStatement* node) -> std::any
 
     push_new_scope();
 
-    // Define element name only inside loop scope
-    if (is_array_type) {
-        // If paramter is array, set element type to array elmenet type
-        auto array_type = std::static_pointer_cast<amun::StaticArrayType>(collection_type);
-        types_table.define(node->element_name, array_type->element_type);
-    }
-    else {
-        // If parameter is string, set element type to char (*int8) type
-        types_table.define(node->element_name, amun::i8_type);
+    // If name is equal _ that mean don't create implicit variable for element name
+    if (node->element_name != "_") {
+        // Define element name only inside loop scope
+        if (is_array_type) {
+            // If paramter is array, set element type to array elmenet type
+            auto array_type = std::static_pointer_cast<amun::StaticArrayType>(collection_type);
+            types_table.define(node->element_name, array_type->element_type);
+        }
+        else {
+            // If parameter is string, set element type to char (*int8) type
+            types_table.define(node->element_name, amun::i8_type);
+        }
     }
 
-    // Define element name inside loop scope
-    types_table.define(node->index_name, amun::i64_type);
+    // If name is equal _ that mean don't create implicit variable for index
+    if (node->index_name != "_") {
+        // Define element name inside loop scope
+        types_table.define(node->index_name, amun::i64_type);
+    }
 
     node->body->accept(this);
 

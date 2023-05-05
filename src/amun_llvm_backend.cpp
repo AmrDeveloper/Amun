@@ -586,11 +586,13 @@ auto amun::LLVMBackend::visit(ForEachStatement* node) -> std::any
     Builder.CreateStore(zero_value, index_alloca);
     alloca_inst_table.define(index_name, index_alloca);
 
-    // Resolve it to be collection[it_index]
+    // Resolve element name to be collection[it_index]
+    llvm::AllocaInst* element_alloca;
     const auto element_name = node->element_name;
     auto element_type = is_foreach_string ? llvm_int8_type : collection_type->getArrayElementType();
-    const auto element_alloca =
-        create_entry_block_alloca(current_function, element_name, element_type);
+    if (node->element_name != "_") {
+        element_alloca = create_entry_block_alloca(current_function, element_name, element_type);
+    }
 
     Builder.CreateBr(condition_block);
 
@@ -624,10 +626,12 @@ auto amun::LLVMBackend::visit(ForEachStatement* node) -> std::any
     }
 
     // Update it variable with the element in the current index
-    auto current_index = derefernecs_llvm_pointer(index_alloca);
-    auto value = access_array_element(collection_expression, current_index);
-    Builder.CreateStore(value, element_alloca);
-    alloca_inst_table.define(element_name, element_alloca);
+    if (element_name != "_") {
+        auto current_index = derefernecs_llvm_pointer(index_alloca);
+        auto value = access_array_element(collection_expression, current_index);
+        Builder.CreateStore(value, element_alloca);
+        alloca_inst_table.define(element_name, element_alloca);
+    }
 
     node->body->accept(this);
     pop_alloca_inst_scope();
