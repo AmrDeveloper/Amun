@@ -481,6 +481,9 @@ auto amun::Parser::parse_function_prototype(amun::FunctionKind kind, bool is_ext
             if (is_current_kind(TokenKind::TOKEN_COMMA)) {
                 advanced_token();
             }
+            else {
+                break;
+            }
         }
         assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after function parameters.");
     }
@@ -552,6 +555,7 @@ auto amun::Parser::parse_function_declaration(amun::FunctionKind kind)
         assert_kind(TokenKind::TOKEN_SEMICOLON, "Expect ; after function value");
         current_ast_scope = parent_node_scope;
         context->constants_table_map.pop_current_scope();
+        generic_parameters_names.clear();
         return std::make_shared<FunctionDeclaration>(prototype, return_statement);
     }
 
@@ -562,19 +566,19 @@ auto amun::Parser::parse_function_declaration(amun::FunctionKind kind)
         check_unnecessary_semicolon_warning();
 
         loop_levels_stack.pop();
-        auto close_brace = previous_token;
+        auto close_brace = peek_previous();
 
         // If function return type is void and has no return at the end, emit one
         if (amun::is_void_type(prototype->return_type) &&
             (block->statements.empty() ||
              block->statements.back()->get_ast_node_type() != AstNodeType::AST_RETURN)) {
-            auto void_return =
-                std::make_shared<ReturnStatement>(close_brace.value(), nullptr, false);
+            auto void_return = std::make_shared<ReturnStatement>(close_brace, nullptr, false);
             block->statements.push_back(void_return);
         }
 
         current_ast_scope = parent_node_scope;
         context->constants_table_map.pop_current_scope();
+        generic_parameters_names.clear();
         return std::make_shared<FunctionDeclaration>(prototype, block);
     }
 
@@ -593,7 +597,6 @@ auto amun::Parser::parse_operator_function_declaraion(amun::FunctionKind kind)
 
     auto operator_keyword = peek_and_advance_token();
     auto position = operator_keyword.position;
-
     auto operator_token = parse_operator_function_operator(kind);
 
     std::vector<Shared<Parameter>> parameters;
@@ -606,6 +609,9 @@ auto amun::Parser::parse_operator_function_declaraion(amun::FunctionKind kind)
             parameters_types.push_back(parameter->type);
             if (is_current_kind(TokenKind::TOKEN_COMMA)) {
                 advanced_token();
+            }
+            else {
+                break;
             }
         }
         assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after function parameters.");
