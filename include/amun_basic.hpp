@@ -95,3 +95,14 @@ auto append_vectors(std::vector<T>& vec, std::vector<T>& extra) -> void
         vec.push_back(element);
     }
 }
+
+template <typename... Args>
+std::string string_fmt(const char* fmt, Args... args)
+{
+    size_t size = snprintf(nullptr, 0, fmt, args...);
+    std::string buf;
+    buf.reserve(size + 1);
+    buf.resize(size);
+    snprintf(buf.data(), size + 1, fmt, args...);
+    return buf;
+}

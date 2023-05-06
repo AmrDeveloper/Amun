@@ -2149,10 +2149,21 @@ auto amun::Parser::unexpected_token_error() -> void
     std::string token_literal = token_kind_literal[current_token.kind];
 
     // Special error message for using undefined value in wrong place
-    if (current_token.kind == TokenKind::TOKEN_UNDEFINED) {
+    if (is_current_kind(TokenKind::TOKEN_UNDEFINED)) {
         context->diagnostics.report_error(
             position, "`---` used only in variable declaraion to represent an undefined value");
         throw "Stop";
+    }
+
+    // Check if its a two tokens operators with space in the middle
+    for (const auto& two_tokens_op : two_tokens_operators) {
+        if (is_previous_kind(two_tokens_op.first) && is_current_kind(two_tokens_op.second)) {
+            const char* unexpected = token_kind_literal[two_tokens_op.second];
+            const char* correct = token_kind_literal[two_tokens_op.both];
+            auto message = string_fmt("unexpected `%s`, do you means `%s`?", unexpected, correct);
+            context->diagnostics.report_error(position, message);
+            throw "Stop";
+        }
     }
 
     context->diagnostics.report_error(position,

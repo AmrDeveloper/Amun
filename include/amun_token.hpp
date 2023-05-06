@@ -129,6 +129,12 @@ struct Token {
     std::string literal;
 };
 
+struct TwoTokensOperator {
+    TokenKind first;
+    TokenKind second;
+    TokenKind both;
+};
+
 // Used for error messages and debugging
 static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::TOKEN_LOAD, "load"},
@@ -329,6 +335,30 @@ static std::unordered_set<TokenKind> overloading_postfix_operators = {
     TokenKind::TOKEN_MINUS_MINUS,
 };
 
+// A list of operators that created from two tokens for example ++, ==, !=, << ...etc
+// This list will used in the parser to check if use write them with speace in the middle
+// Note: a - -b is not an error it's minus with and unary expression
+static std::vector<TwoTokensOperator> two_tokens_operators = {
+    // Binary expressions
+    {TokenKind::TOKEN_PLUS, TokenKind::TOKEN_PLUS, TokenKind::TOKEN_PLUS_PLUS},
+
+    // Shift expression
+    {TokenKind::TOKEN_SMALLER, TokenKind::TOKEN_SMALLER, TokenKind::TOKEN_LEFT_SHIFT},
+
+    // Comparisons expression
+    {TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_EQUAL_EQUAL},
+    {TokenKind::TOKEN_BANG, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_BANG_EQUAL},
+    {TokenKind::TOKEN_GREATER, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_GREATER_EQUAL},
+    {TokenKind::TOKEN_SMALLER, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_SMALLER_EQUAL},
+
+    // Assignment expression
+    {TokenKind::TOKEN_PLUS, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_PLUS_EQUAL},
+    {TokenKind::TOKEN_MINUS, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_MINUS_EQUAL},
+    {TokenKind::TOKEN_STAR, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_STAR_EQUAL},
+    {TokenKind::TOKEN_SLASH, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_SLASH_EQUAL},
+    {TokenKind::TOKEN_PERCENT, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_PARCENT_EQUAL},
+};
+
 inline auto is_supported_overloading_operator(TokenKind kind) -> bool
 {
     return overloading_operator_literal.contains(kind);
@@ -364,9 +394,4 @@ inline auto is_float_number_token(Token token) -> bool
     const auto token_kind = token.kind;
     return token_kind == TokenKind::TOKEN_FLOAT or token_kind == TokenKind::TOKEN_FLOAT32 or
            token_kind == TokenKind::TOKEN_FLOAT64;
-}
-
-inline auto get_token_kind_literal(TokenKind kind) -> const char*
-{
-    return token_kind_literal[kind];
 }
