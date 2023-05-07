@@ -41,6 +41,7 @@ auto amun::Tokenizer::scan_next_token() -> Token
     case ',': return build_token(TokenKind::TOKEN_COMMA);
     case ';': return build_token(TokenKind::TOKEN_SEMICOLON);
     case '~': return build_token(TokenKind::TOKEN_NOT);
+    case '^': return build_token(TokenKind::TOKEN_XOR);
 
     // One or Two character token
     case '.': {

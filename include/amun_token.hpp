@@ -59,6 +59,7 @@ enum TokenKind {
     TOKEN_OR_OR,
     TOKEN_AND,
     TOKEN_AND_AND,
+    TOKEN_XOR,
 
     TOKEN_NOT,
 
@@ -187,6 +188,7 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::TOKEN_AND_AND, "&&"},
     {TokenKind::TOKEN_OR, "|"},
     {TokenKind::TOKEN_OR_OR, "||"},
+    {TokenKind::TOKEN_XOR, "^"},
 
     {TokenKind::TOKEN_NOT, "~"},
 
@@ -283,6 +285,7 @@ static std::unordered_map<TokenKind, std::string> overloading_operator_literal =
     // &, |
     {TokenKind::TOKEN_AND, "and"},
     {TokenKind::TOKEN_OR, "or"},
+    {TokenKind::TOKEN_XOR, "xor"},
 
     // &&, ||
     {TokenKind::TOKEN_AND_AND, "and_and"},
@@ -317,9 +320,10 @@ static std::unordered_set<TokenKind> overloading_infix_operators = {
     TokenKind::TOKEN_SMALLER,
     TokenKind::TOKEN_SMALLER_EQUAL,
 
-    // &, |
+    // &, |, ^
     TokenKind::TOKEN_AND,
     TokenKind::TOKEN_OR,
+    TokenKind::TOKEN_XOR,
 
     // &&, ||
     TokenKind::TOKEN_AND_AND,

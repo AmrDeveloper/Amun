@@ -1225,7 +1225,7 @@ auto amun::LLVMBackend::visit(BinaryExpression* node) -> std::any
     return create_overloading_function_call(name, {lhs, rhs});
 }
 
-auto amun::LLVMBackend::visit(ShiftExpression* node) -> std::any
+auto amun::LLVMBackend::visit(BitwiseExpression* node) -> std::any
 {
     auto lhs = llvm_resolve_value(node->left->accept(this));
     auto rhs = llvm_resolve_value(node->right->accept(this));
@@ -1235,6 +1235,18 @@ auto amun::LLVMBackend::visit(ShiftExpression* node) -> std::any
     auto op = node->operator_token.kind;
 
     if (amun::is_integer_type(lhs_type) && amun::is_integer_type(rhs_type)) {
+        if (op == TokenKind::TOKEN_OR) {
+            return Builder.CreateOr(lhs, rhs);
+        }
+
+        if (op == TokenKind::TOKEN_AND) {
+            return Builder.CreateAnd(lhs, rhs);
+        }
+
+        if (op == TokenKind::TOKEN_XOR) {
+            return Builder.CreateXor(lhs, rhs);
+        }
+
         if (op == TokenKind::TOKEN_LEFT_SHIFT) {
             return Builder.CreateShl(lhs, rhs);
         }

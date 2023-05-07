@@ -73,7 +73,7 @@ class GroupExpression;
 class TupleExpression;
 class AssignExpression;
 class BinaryExpression;
-class ShiftExpression;
+class BitwiseExpression;
 class ComparisonExpression;
 class LogicalExpression;
 class PrefixUnaryExpression;
@@ -111,7 +111,7 @@ class ExpressionVisitor {
 
     virtual auto visit(BinaryExpression* node) -> std::any = 0;
 
-    virtual auto visit(ShiftExpression* node) -> std::any = 0;
+    virtual auto visit(BitwiseExpression* node) -> std::any = 0;
 
     virtual auto visit(ComparisonExpression* node) -> std::any = 0;
 

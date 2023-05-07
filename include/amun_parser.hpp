@@ -116,11 +116,17 @@ class Parser {
 
     auto parse_logical_and_expression() -> Shared<Expression>;
 
+    auto parse_bitwise_and_expression() -> Shared<Expression>;
+
+    auto parse_bitwise_xor_expression() -> Shared<Expression>;
+
+    auto parse_bitwise_or_expression() -> Shared<Expression>;
+
     auto parse_equality_expression() -> Shared<Expression>;
 
     auto parse_comparison_expression() -> Shared<Expression>;
 
-    auto parse_shift_expression() -> Shared<Expression>;
+    auto parse_bitwise_shift_expression() -> Shared<Expression>;
 
     auto parse_term_expression() -> Shared<Expression>;
 

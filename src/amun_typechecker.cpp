@@ -828,7 +828,7 @@ auto amun::TypeChecker::visit(BinaryExpression* node) -> std::any
     throw "Stop";
 }
 
-auto amun::TypeChecker::visit(ShiftExpression* node) -> std::any
+auto amun::TypeChecker::visit(BitwiseExpression* node) -> std::any
 {
     auto lhs = node_amun_type(node->left->accept(this));
     auto rhs = node_amun_type(node->right->accept(this));
@@ -842,33 +842,35 @@ auto amun::TypeChecker::visit(ShiftExpression* node) -> std::any
             auto right_node_type = right->get_ast_node_type();
 
             // Check for compile time integer overflow if possiable
-            if (right_node_type == AstNodeType::AST_NUMBER) {
-                auto crhs = std::dynamic_pointer_cast<NumberExpression>(right);
-                auto str_value = crhs->value.literal;
-                auto num = str_to_int(str_value.c_str());
-                auto number_kind = std::static_pointer_cast<amun::NumberType>(lhs)->number_kind;
-                auto first_operand_width = number_kind_width[number_kind];
-                if (num >= first_operand_width) {
-                    context->diagnostics.report_error(node->operator_token.position,
-                                                      "Shift Expressions second operand can't be "
-                                                      "bigger than or equal first operand bit "
-                                                      "width (" +
-                                                          std::to_string(first_operand_width) +
-                                                          ")");
-                    throw "Stop";
+            if (op.kind == TokenKind::TOKEN_RIGHT_SHIFT || op.kind == TokenKind::TOKEN_LEFT_SHIFT) {
+                if (right_node_type == AstNodeType::AST_NUMBER) {
+                    auto crhs = std::dynamic_pointer_cast<NumberExpression>(right);
+                    auto str_value = crhs->value.literal;
+                    auto num = str_to_int(str_value.c_str());
+                    auto number_kind = std::static_pointer_cast<amun::NumberType>(lhs)->number_kind;
+                    auto first_operand_width = number_kind_width[number_kind];
+                    if (num >= first_operand_width) {
+                        context->diagnostics.report_error(
+                            node->operator_token.position,
+                            "Shift Expressions second operand can't be "
+                            "bigger than or equal first operand bit "
+                            "width (" +
+                                std::to_string(first_operand_width) + ")");
+                        throw "Stop";
+                    }
                 }
-            }
 
-            // Check that scond operand is a positive number
-            if (right_node_type == AstNodeType::AST_PREFIX_UNARY) {
-                auto unary = std::dynamic_pointer_cast<PrefixUnaryExpression>(right);
-                if (unary->operator_token.kind == TokenKind::TOKEN_MINUS &&
-                    unary->right->get_ast_node_type() == AstNodeType::AST_NUMBER) {
-                    context->diagnostics.report_error(
-                        node->operator_token.position,
-                        "Shift Expressions second operand can't be a negative "
-                        "number");
-                    throw "Stop";
+                // Check that scond operand is a positive number
+                if (right_node_type == AstNodeType::AST_PREFIX_UNARY) {
+                    auto unary = std::dynamic_pointer_cast<PrefixUnaryExpression>(right);
+                    if (unary->operator_token.kind == TokenKind::TOKEN_MINUS &&
+                        unary->right->get_ast_node_type() == AstNodeType::AST_NUMBER) {
+                        context->diagnostics.report_error(
+                            node->operator_token.position,
+                            "Shift Expressions second operand can't be a negative "
+                            "number");
+                        throw "Stop";
+                    }
                 }
             }
             return lhs;

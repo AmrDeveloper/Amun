@@ -40,7 +40,7 @@ enum class AstNodeType {
     AST_TUPLE,
     AST_ASSIGN,
     AST_BINARY,
-    AST_SHIFT,
+    AST_BITWISE,
     AST_COMPARISON,
     AST_LOGICAL,
     AST_PREFIX_UNARY,
@@ -626,9 +626,9 @@ class BinaryExpression : public Expression {
     Shared<amun::Type> type;
 };
 
-class ShiftExpression : public Expression {
+class BitwiseExpression : public Expression {
   public:
-    ShiftExpression(Shared<Expression> left, Token token, Shared<Expression> right)
+    BitwiseExpression(Shared<Expression> left, Token token, Shared<Expression> right)
         : left(std::move(left)), operator_token(std::move(token)), right(right)
     {
         type = right->get_type_node();
@@ -642,7 +642,7 @@ class ShiftExpression : public Expression {
 
     auto is_constant() -> bool override { return left->is_constant() and right->is_constant(); }
 
-    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_SHIFT; }
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_BITWISE; }
 
     Shared<Expression> left;
     Token operator_token;

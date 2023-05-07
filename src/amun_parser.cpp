@@ -1323,7 +1323,7 @@ auto amun::Parser::parse_logical_or_expression() -> Shared<Expression>
     auto expression = parse_logical_and_expression();
     while (is_current_kind(TokenKind::TOKEN_OR_OR)) {
         auto or_token = peek_and_advance_token();
-        auto right = parse_equality_expression();
+        auto right = parse_logical_and_expression();
         expression = std::make_shared<LogicalExpression>(expression, or_token, right);
     }
     return expression;
@@ -1331,11 +1331,44 @@ auto amun::Parser::parse_logical_or_expression() -> Shared<Expression>
 
 auto amun::Parser::parse_logical_and_expression() -> Shared<Expression>
 {
-    auto expression = parse_equality_expression();
+    auto expression = parse_bitwise_and_expression();
     while (is_current_kind(TokenKind::TOKEN_AND_AND)) {
         auto and_token = peek_and_advance_token();
-        auto right = parse_equality_expression();
+        auto right = parse_bitwise_and_expression();
         expression = std::make_shared<LogicalExpression>(expression, and_token, right);
+    }
+    return expression;
+}
+
+auto amun::Parser::parse_bitwise_and_expression() -> Shared<Expression>
+{
+    auto expression = parse_bitwise_xor_expression();
+    while (is_current_kind(TokenKind::TOKEN_AND)) {
+        auto and_token = peek_and_advance_token();
+        auto right = parse_bitwise_xor_expression();
+        expression = std::make_shared<BitwiseExpression>(expression, and_token, right);
+    }
+    return expression;
+}
+
+auto amun::Parser::parse_bitwise_xor_expression() -> Shared<Expression>
+{
+    auto expression = parse_bitwise_or_expression();
+    while (is_current_kind(TokenKind::TOKEN_XOR)) {
+        auto and_token = peek_and_advance_token();
+        auto right = parse_bitwise_or_expression();
+        expression = std::make_shared<BitwiseExpression>(expression, and_token, right);
+    }
+    return expression;
+}
+
+auto amun::Parser::parse_bitwise_or_expression() -> Shared<Expression>
+{
+    auto expression = parse_equality_expression();
+    while (is_current_kind(TokenKind::TOKEN_OR)) {
+        auto and_token = peek_and_advance_token();
+        auto right = parse_equality_expression();
+        expression = std::make_shared<BitwiseExpression>(expression, and_token, right);
     }
     return expression;
 }
@@ -1354,26 +1387,26 @@ auto amun::Parser::parse_equality_expression() -> Shared<Expression>
 
 auto amun::Parser::parse_comparison_expression() -> Shared<Expression>
 {
-    auto expression = parse_shift_expression();
+    auto expression = parse_bitwise_shift_expression();
     while (is_current_kind(TokenKind::TOKEN_GREATER) ||
            is_current_kind(TokenKind::TOKEN_GREATER_EQUAL) ||
            is_current_kind(TokenKind::TOKEN_SMALLER) ||
            is_current_kind(TokenKind::TOKEN_SMALLER_EQUAL)) {
         Token operator_token = peek_and_advance_token();
-        auto right = parse_shift_expression();
+        auto right = parse_bitwise_shift_expression();
         expression = std::make_shared<ComparisonExpression>(expression, operator_token, right);
     }
     return expression;
 }
 
-auto amun::Parser::parse_shift_expression() -> Shared<Expression>
+auto amun::Parser::parse_bitwise_shift_expression() -> Shared<Expression>
 {
     auto expression = parse_term_expression();
     while (true) {
         if (is_current_kind(TokenKind::TOKEN_LEFT_SHIFT)) {
             auto operator_token = peek_and_advance_token();
             auto right = parse_term_expression();
-            expression = std::make_shared<ShiftExpression>(expression, operator_token, right);
+            expression = std::make_shared<BitwiseExpression>(expression, operator_token, right);
             continue;
         }
 
@@ -1382,7 +1415,7 @@ auto amun::Parser::parse_shift_expression() -> Shared<Expression>
             auto operator_token = peek_and_advance_token();
             operator_token.kind = TokenKind::TOKEN_RIGHT_SHIFT;
             auto right = parse_term_expression();
-            expression = std::make_shared<ShiftExpression>(expression, operator_token, right);
+            expression = std::make_shared<BitwiseExpression>(expression, operator_token, right);
             continue;
         }
 

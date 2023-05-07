@@ -77,7 +77,7 @@ class LLVMBackend : public TreeVisitor {
 
     auto visit(BinaryExpression* node) -> std::any override;
 
-    auto visit(ShiftExpression* node) -> std::any override;
+    auto visit(BitwiseExpression* node) -> std::any override;
 
     auto visit(ComparisonExpression* node) -> std::any override;
 

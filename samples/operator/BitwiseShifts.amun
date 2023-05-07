@@ -1,0 +1,23 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    // 00000101
+    var a = 5;
+
+    // 00001001
+    var b = 9;
+
+     // The result is 00001010 
+    printf("a << 1 = %d, expect 10\n", a << 1);
+    
+    // The result is 00010010 
+    printf("b << 1 = %d, expect 18\n", b << 1); 
+
+    // The result is 00000010 
+    printf("a >> 1 = %d, expect 2\n", a >> 1);
+    
+    // The result is 00000100 
+    printf("b >> 1 = %d, expect 4\n", b >> 1); 
+
+    return 0;
+}
