@@ -1,0 +1,10 @@
+@extern fun printf(format *char, value int64) int64;
+
+fun main() int64 {
+    printf("%d\n", 1);
+    printf("%d\n", 2);
+    printf("%d\n", 3);
+    printf("%d\n", 4);
+    printf("%d\n", 5);
+    return 0;
+}
