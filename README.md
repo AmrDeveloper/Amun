@@ -30,6 +30,12 @@ fun main() {
   - [Editors](editors)
   - [Samples](samples)
 
+### Join us
+We'd love to have folks join us and contribute to the project. Amun is committed to a welcoming and inclusive environment where everyone can contribute.
+
+  - [Discord](https://discord.gg/NTsccntD)
+  - [r/Amun](https://www.reddit.com/r/Amun/)
+
 ### License
 ```
 MIT License
