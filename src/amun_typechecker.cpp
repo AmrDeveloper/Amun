@@ -2029,12 +2029,25 @@ auto amun::TypeChecker::check_parameters_types(TokenSpan location,
         size_t p = i + implicit_parameters_count;
 
         if (!amun::is_types_equals(parameters[p], arguments_types[i])) {
-
             // if Parameter is pointer type and null pointer passed as argument
             // Change null pointer base type to parameter type
-            if (amun::is_pointer_type(parameters[p]) and amun::is_null_type(arguments_types[i])) {
+            if (amun::is_pointer_type(parameters[p]) && amun::is_null_type(arguments_types[i])) {
                 auto null_expr = std::dynamic_pointer_cast<NullExpression>(arguments[i]);
                 null_expr->null_base_type = parameters[p];
+                continue;
+            }
+
+            // If parameter is array type and argument is an empty array literal
+            // Infier the element type of empty array literal to be the same element type of
+            // parameter element type
+            if (amun::is_array_type(parameters[p]) &&
+                arguments[i]->get_ast_node_type() == AstNodeType::AST_ARRAY) {
+                auto array_expr = std::dynamic_pointer_cast<ArrayExpression>(arguments[i]);
+                auto array_type = std::static_pointer_cast<amun::StaticArrayType>(array_expr->type);
+                auto param_type = std::static_pointer_cast<amun::StaticArrayType>(parameters[p]);
+                if (array_type->size == 0) {
+                    array_type->element_type = param_type->element_type;
+                }
                 continue;
             }
 
