@@ -27,9 +27,8 @@ auto execute_create_command(unused int argc, char** argv) -> int
     std::stringstream string_stream;
     string_stream << "import \"cstdio\"" << '\n';
     string_stream << "\n";
-    string_stream << "fun main() int32 {" << '\n';
-    string_stream << R"(    puts("Hello, World!\n");)" << '\n';
-    string_stream << "    return 0;" << '\n';
+    string_stream << "fun main() {" << '\n';
+    string_stream << R"(    printf("Hello, World!\n");)" << '\n';
     string_stream << "}";
 
     amun::create_file_with_content(project_name + "/main.amun", string_stream.str());
