@@ -1,0 +1,10 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var ptr = cast(*int64) [1, 2, 3, 4];
+    printf("%d\n", ptr[0]);
+    printf("%d\n", ptr[1]);
+    printf("%d\n", ptr[2]);
+    printf("%d\n", ptr[3]);
+    return 0;
+}

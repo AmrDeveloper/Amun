@@ -1,0 +1,10 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun accept_empty_array(array [0]int64) void {
+    printf("%d\n", array.count);
+}
+
+fun main() int64 {
+    accept_empty_array([]);
+    return 0;
+}

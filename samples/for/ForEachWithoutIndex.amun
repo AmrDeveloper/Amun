@@ -1,0 +1,11 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var elements = [1, 2, 3, 4];
+    
+    for (_, element : elements) {
+        printf("%d\n", element);
+    }
+
+    return 0;
+}
