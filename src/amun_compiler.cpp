@@ -58,6 +58,12 @@ auto amun::Compiler::compile_source_code(const char* source_file) -> int
     amun::LLVMBackend llvm_backend;
     auto llvm_ir_module = llvm_backend.compile(source_file, compilation_unit);
 
+    // Assert that main function exists to before creating executable file
+    if (llvm_ir_module->getFunction("main") == nullptr) {
+        std::cout << "consider adding a `main` function to " << source_file << "\n";
+        return EXIT_FAILURE;
+    }
+
     // Initalize native targers
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmParser();
