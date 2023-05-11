@@ -1302,18 +1302,26 @@ auto amun::Parser::parse_assignment_expression() -> Shared<Expression>
     auto expression = parse_logical_or_expression();
     if (is_assignments_operator_token(peek_current())) {
         auto assignments_token = peek_and_advance_token();
-        Shared<Expression> right_value;
+
         auto assignments_token_kind = assignments_token.kind;
-        if (assignments_token_kind == TokenKind::TOKEN_EQUAL) {
-            right_value = parse_assignment_expression();
+        auto rhs = parse_assignment_expression();
+
+        if (assignments_binary_operators.contains(assignments_token_kind)) {
+            auto op_kind = assignments_binary_operators[assignments_token_kind];
+            assignments_token.kind = op_kind;
+            auto binary = std::make_shared<BinaryExpression>(expression, assignments_token, rhs);
+            return std::make_shared<AssignExpression>(expression, assignments_token, binary);
         }
-        else {
-            assignments_token.kind = assignments_binary_operators[assignments_token_kind];
-            auto right_expression = parse_assignment_expression();
-            right_value =
-                std::make_shared<BinaryExpression>(expression, assignments_token, right_expression);
+
+        if (assignments_bitwise_operators.contains(assignments_token_kind)) {
+            auto op_kind = assignments_bitwise_operators[assignments_token_kind];
+            assignments_token.kind = op_kind;
+            auto bitwise = std::make_shared<BitwiseExpression>(expression, assignments_token, rhs);
+            return std::make_shared<AssignExpression>(expression, assignments_token, bitwise);
         }
-        return std::make_shared<AssignExpression>(expression, assignments_token, right_value);
+
+        // Operator is equal `=`
+        return std::make_shared<AssignExpression>(expression, assignments_token, rhs);
     }
     return expression;
 }

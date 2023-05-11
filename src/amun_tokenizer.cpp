@@ -41,7 +41,7 @@ auto amun::Tokenizer::scan_next_token() -> Token
     case ',': return build_token(TokenKind::TOKEN_COMMA);
     case ';': return build_token(TokenKind::TOKEN_SEMICOLON);
     case '~': return build_token(TokenKind::TOKEN_NOT);
-    case '^': return build_token(TokenKind::TOKEN_XOR);
+    case '@': return build_token(TokenKind::TOKEN_AT);
 
     // One or Two character token
     case '.': {
@@ -49,12 +49,6 @@ auto amun::Tokenizer::scan_next_token() -> Token
     }
     case ':': {
         return build_token(match(':') ? TokenKind::TOKEN_COLON_COLON : TokenKind::TOKEN_COLON);
-    }
-    case '|': {
-        return build_token(match('|') ? TokenKind::TOKEN_OR_OR : TokenKind::TOKEN_OR);
-    }
-    case '&': {
-        return build_token(match('&') ? TokenKind::TOKEN_AND_AND : TokenKind::TOKEN_AND);
     }
     case '=': {
         return build_token(match('=') ? TokenKind::TOKEN_EQUAL_EQUAL : TokenKind::TOKEN_EQUAL);
@@ -71,8 +65,8 @@ auto amun::Tokenizer::scan_next_token() -> Token
     case '%': {
         return build_token(match('=') ? TokenKind::TOKEN_PARCENT_EQUAL : TokenKind::TOKEN_PERCENT);
     }
-    case '@': {
-        return build_token(TokenKind::TOKEN_AT);
+    case '^': {
+        return build_token(match('=') ? TokenKind::TOKEN_XOR_EQUAL : TokenKind::TOKEN_XOR);
     }
 
     case '+': {
@@ -124,6 +118,30 @@ auto amun::Tokenizer::scan_next_token() -> Token
         }
 
         return build_token(TokenKind::TOKEN_SMALLER);
+    }
+
+    case '|': {
+        if (match('=')) {
+            return build_token(TokenKind::TOKEN_OR_EQUAL);
+        }
+
+        if (match('|')) {
+            return build_token(TokenKind::TOKEN_OR_OR);
+        }
+
+        return build_token(TokenKind::TOKEN_OR);
+    }
+
+    case '&': {
+        if (match('=')) {
+            return build_token(TokenKind::TOKEN_AND_EQUAL);
+        }
+
+        if (match('&')) {
+            return build_token(TokenKind::TOKEN_AND_AND);
+        }
+
+        return build_token(TokenKind::TOKEN_AND);
     }
 
     case 'A':

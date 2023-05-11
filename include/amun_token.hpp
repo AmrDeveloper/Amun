@@ -81,6 +81,10 @@ enum TokenKind {
     TOKEN_SLASH_EQUAL,
     TOKEN_PARCENT_EQUAL,
 
+    TOKEN_OR_EQUAL,
+    TOKEN_AND_EQUAL,
+    TOKEN_XOR_EQUAL,
+
     TOKEN_PLUS_PLUS,
     TOKEN_MINUS_MINUS,
 
@@ -250,8 +254,18 @@ static std::unordered_set<TokenKind> unary_operators = {
 };
 
 static std::unordered_set<TokenKind> assignments_operators = {
-    TokenKind::TOKEN_EQUAL,      TokenKind::TOKEN_PLUS_EQUAL,  TokenKind::TOKEN_MINUS_EQUAL,
-    TokenKind::TOKEN_STAR_EQUAL, TokenKind::TOKEN_SLASH_EQUAL, TokenKind::TOKEN_PARCENT_EQUAL,
+    // Arithmatic operators
+    TokenKind::TOKEN_EQUAL,
+    TokenKind::TOKEN_PLUS_EQUAL,
+    TokenKind::TOKEN_MINUS_EQUAL,
+    TokenKind::TOKEN_STAR_EQUAL,
+    TokenKind::TOKEN_SLASH_EQUAL,
+    TokenKind::TOKEN_PARCENT_EQUAL,
+
+    // Bitwise operators
+    TokenKind::TOKEN_OR_EQUAL,
+    TokenKind::TOKEN_AND_EQUAL,
+    TokenKind::TOKEN_XOR_EQUAL,
 };
 
 static std::unordered_map<TokenKind, TokenKind> assignments_binary_operators = {
@@ -260,6 +274,12 @@ static std::unordered_map<TokenKind, TokenKind> assignments_binary_operators = {
     {TokenKind::TOKEN_STAR_EQUAL, TokenKind::TOKEN_STAR},
     {TokenKind::TOKEN_SLASH_EQUAL, TokenKind::TOKEN_SLASH},
     {TokenKind::TOKEN_PARCENT_EQUAL, TokenKind::TOKEN_PERCENT},
+};
+
+static std::unordered_map<TokenKind, TokenKind> assignments_bitwise_operators = {
+    {TokenKind::TOKEN_OR_EQUAL, TokenKind::TOKEN_OR},
+    {TokenKind::TOKEN_AND_EQUAL, TokenKind::TOKEN_AND},
+    {TokenKind::TOKEN_XOR_EQUAL, TokenKind::TOKEN_XOR},
 };
 
 static std::unordered_map<TokenKind, std::string> overloading_operator_literal = {

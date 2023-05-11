@@ -27,6 +27,10 @@ auto amun::AliasTable::config_type_alias_table() -> void
     type_alias_table["int32"] = amun::i32_type;
     type_alias_table["int64"] = amun::i64_type;
 
+    // Characters
+    type_alias_table["char"] = amun::i8_type;
+    type_alias_table["uchar"] = amun::u8_type;
+
     // Define unsinged integers primitives
     type_alias_table["uint8"] = amun::u8_type;
     type_alias_table["uint16"] = amun::u16_type;
@@ -36,4 +40,7 @@ auto amun::AliasTable::config_type_alias_table() -> void
     // Define floating points types
     type_alias_table["float32"] = amun::f32_type;
     type_alias_table["float64"] = amun::f64_type;
+
+    // Void
+    type_alias_table["void"] = amun::void_type;
 }
