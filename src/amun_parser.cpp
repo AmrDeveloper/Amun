@@ -1885,8 +1885,14 @@ auto amun::Parser::parse_lambda_expression() -> Shared<LambdaExpression>
         }
 
         assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after lambda parameters");
-        return_type = parse_type();
-        assert_kind(TokenKind::TOKEN_RIGHT_ARROW, "Expect -> after lambda return type");
+        if (is_current_kind(TokenKind::TOKEN_RIGHT_ARROW)) {
+            advanced_token();
+            return_type = amun::void_type;
+        }
+        else {
+            return_type = parse_type();
+            assert_kind(TokenKind::TOKEN_RIGHT_ARROW, "Expect -> after lambda return type");
+        }
     }
     else {
         // Default return type for lambda expression
