@@ -1,0 +1,16 @@
+@extern fun printf(format *char, value int64) int64;
+
+fun main() int64 {
+    var x = 1;
+    x ^= 1;
+    printf("x ^= 0 %i expect 1\n", x);
+
+    x = 1;
+    x |= 0;
+    printf("x |= 0 %i expect 1\n", x);
+
+    x = 1;
+    x &= 0;
+    printf("x &= 0 %i expect 0\n", x);
+    return 0;
+}
