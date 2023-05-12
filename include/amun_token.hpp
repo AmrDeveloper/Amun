@@ -381,6 +381,9 @@ static std::vector<TwoTokensOperator> two_tokens_operators = {
     {TokenKind::TOKEN_STAR, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_STAR_EQUAL},
     {TokenKind::TOKEN_SLASH, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_SLASH_EQUAL},
     {TokenKind::TOKEN_PERCENT, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_PARCENT_EQUAL},
+    {TokenKind::TOKEN_OR, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_OR_EQUAL},
+    {TokenKind::TOKEN_AND, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_AND_EQUAL},
+    {TokenKind::TOKEN_XOR, TokenKind::TOKEN_EQUAL, TokenKind::TOKEN_XOR_EQUAL},
 };
 
 inline auto is_supported_overloading_operator(TokenKind kind) -> bool

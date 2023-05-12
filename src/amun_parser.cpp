@@ -1866,14 +1866,13 @@ auto amun::Parser::parse_lambda_expression() -> Shared<LambdaExpression>
         consume_kind(TokenKind::TOKEN_OPEN_BRACE, "Expect { at the start of lambda expression");
 
     std::vector<Shared<Parameter>> parameters;
-
     Shared<amun::Type> return_type;
 
     if (is_current_kind(TokenKind::TOKEN_OPEN_PAREN)) {
         advanced_token();
 
         // Parse Parameters
-        while (not is_current_kind(TokenKind::TOKEN_CLOSE_PAREN)) {
+        while (!is_current_kind(TokenKind::TOKEN_CLOSE_PAREN)) {
             parameters.push_back(parse_parameter());
 
             if (is_current_kind(TokenKind::TOKEN_COMMA)) {
