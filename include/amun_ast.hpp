@@ -806,11 +806,6 @@ class LambdaExpression : public Expression {
           return_type(return_type), body(std::move(body))
     {
         std::vector<Shared<amun::Type>> parameters_types;
-        parameters_types.reserve(explicit_parameters.size());
-        for (auto& parameter : explicit_parameters) {
-            parameters_types.push_back(parameter->type);
-        }
-
         auto function_type =
             std::make_shared<amun::FunctionType>(position, parameters_types, return_type);
 

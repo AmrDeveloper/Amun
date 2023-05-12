@@ -1388,6 +1388,9 @@ auto amun::TypeChecker::visit(LambdaExpression* node) -> std::any
 {
     auto function_ptr_type = std::static_pointer_cast<amun::PointerType>(node->get_type_node());
     auto function_type = std::static_pointer_cast<amun::FunctionType>(function_ptr_type->base_type);
+
+    // Resolving return type
+    function_type->return_type = resolve_generic_type(function_type->return_type);
     return_types_stack.push(function_type->return_type);
 
     is_inside_lambda_body = true;
@@ -1395,9 +1398,14 @@ auto amun::TypeChecker::visit(LambdaExpression* node) -> std::any
 
     push_new_scope();
 
+    function_type->parameters.clear();
+
     // Define Explicit parameter inside lambda body scope
     for (auto& parameter : node->explicit_parameters) {
+        // Resolve only if lambda is inside generic function
+        parameter->type = resolve_generic_type(parameter->type);
         types_table.define(parameter->name.literal, parameter->type);
+        function_type->parameters.push_back(parameter->type);
     }
 
     node->body->accept(this);
@@ -2006,6 +2014,9 @@ auto amun::TypeChecker::check_parameters_types(TokenSpan location,
 
     // Resolve Arguments
     for (auto& argument : arguments) {
+        // Check if any argument is an lambda expression with implicit capturing
+        check_lambda_has_invalid_capturing(argument);
+
         auto argument_type = node_amun_type(argument->accept(this));
         if (argument_type->type_kind == amun::TypeKind::GENERIC_STRUCT) {
             arguments_types.push_back(resolve_generic_type(argument_type));
@@ -2071,6 +2082,25 @@ auto amun::TypeChecker::check_parameters_types(TokenSpan location,
                                               "Argument type didn't match varargs type expect " +
                                                   amun::get_type_literal(varargs_type) + " got " +
                                                   amun::get_type_literal(arguments_types[i]));
+            throw "Stop";
+        }
+    }
+}
+
+auto amun::TypeChecker::check_lambda_has_invalid_capturing(Shared<Expression> expression) -> void
+{
+    if (expression->get_ast_node_type() == AstNodeType::AST_LAMBDA) {
+        auto lambda = std::dynamic_pointer_cast<LambdaExpression>(expression);
+        auto location = lambda->position.position;
+        if (!lambda->implict_parameters_names.empty()) {
+            std::stringstream error_message;
+            error_message << "function argument lambda expression can't capture variables ";
+            error_message << "from non global scopes\n\n";
+            error_message << "Captured variables:\n";
+            for (const auto& name : lambda->implict_parameters_names) {
+                error_message << "-> " + name + "\n";
+            }
+            context->diagnostics.report_error(location, error_message.str());
             throw "Stop";
         }
     }

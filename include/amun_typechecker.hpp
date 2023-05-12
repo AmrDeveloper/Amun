@@ -142,6 +142,8 @@ class TypeChecker : public TreeVisitor {
                                 Shared<amun::Type> varargs_type, int implicit_parameters_count)
         -> void;
 
+    auto check_lambda_has_invalid_capturing(Shared<Expression> expression) -> void;
+
     auto check_valid_assignment_right_side(Shared<Expression> node, TokenSpan position) -> void;
 
     auto push_new_scope() -> void;
