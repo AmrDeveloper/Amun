@@ -42,12 +42,7 @@ auto amun::TypeChecker::visit(BlockStatement* node) -> std::any
 
 auto amun::TypeChecker::visit(FieldDeclaration* node) -> std::any
 {
-    auto left_type = node->type;
-    if (left_type->type_kind == amun::TypeKind::GENERIC_PARAMETER) {
-        auto generic = std::static_pointer_cast<amun::GenericParameterType>(left_type);
-        left_type = generic_types[generic->name];
-    }
-
+    auto left_type = resolve_generic_type(node->type);
     auto right_value = node->value;
     auto name = node->name.literal;
 
