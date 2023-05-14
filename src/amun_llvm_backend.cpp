@@ -262,12 +262,16 @@ auto amun::LLVMBackend::resolve_generic_function(FunctionDeclaration* node,
         return std::any_cast<llvm::Function*>(value);
     }
 
+    // Resolve Generic Parameters
+    int generic_parameter_index = 0;
+    for (const auto& parameter : prototype->generic_parameters) {
+        generic_types[parameter] = generic_parameters[generic_parameter_index++];
+    }
+
     auto return_type = prototype->return_type;
     if (prototype->return_type->type_kind == amun::TypeKind::GENERIC_PARAMETER) {
         auto generic_type = std::static_pointer_cast<amun::GenericParameterType>(return_type);
-        auto position = index_of(prototype->generic_parameters, generic_type->name);
-        generic_types[generic_type->name] = generic_parameters[position];
-        return_type = generic_parameters[position];
+        return_type = generic_types[generic_type->name];
     }
 
     std::vector<llvm::Type*> arguments;
@@ -275,9 +279,7 @@ auto amun::LLVMBackend::resolve_generic_function(FunctionDeclaration* node,
         if (parameter->type->type_kind == amun::TypeKind::GENERIC_PARAMETER) {
             auto generic_type =
                 std::static_pointer_cast<amun::GenericParameterType>(parameter->type);
-            auto position = index_of(prototype->generic_parameters, generic_type->name);
-            generic_types[generic_type->name] = generic_parameters[position];
-            arguments.push_back(llvm_type_from_amun_type(generic_parameters[position]));
+            arguments.push_back(llvm_type_from_amun_type(generic_types[generic_type->name]));
         }
         else {
             arguments.push_back(llvm_type_from_amun_type(parameter->type));
@@ -336,6 +338,7 @@ auto amun::LLVMBackend::resolve_generic_function(FunctionDeclaration* node,
             Builder.CreateUnreachable();
         }
     }
+
     verifyFunction(*function);
 
     has_return_statement = false;
@@ -343,6 +346,7 @@ auto amun::LLVMBackend::resolve_generic_function(FunctionDeclaration* node,
 
     Builder.SetInsertPoint(previous_insert_block);
 
+    generic_types.clear();
     return function;
 }
 

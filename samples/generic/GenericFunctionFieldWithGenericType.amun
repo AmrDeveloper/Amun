@@ -1,0 +1,10 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun generic_function<T> (x T) {
+    var value : T = 10;
+}
+
+fun main() int64 {
+    generic_function<int64>(1);
+    return 0;
+}
