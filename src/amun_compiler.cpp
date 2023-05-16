@@ -118,6 +118,78 @@ auto amun::Compiler::compile_source_code(const char* source_file) -> int
     return result;
 }
 
+auto amun::Compiler::compile_to_object_file_from_source_code(const char* source_file) -> int
+{
+    auto compilation_unit = parse_source_code(source_file);
+
+    amun::TypeChecker type_checker(context);
+    type_checker.check_compilation_unit(compilation_unit);
+
+    if (context->options.should_report_warns and
+        context->diagnostics.level_count(amun::DiagnosticLevel::WARNING) > 0) {
+        context->diagnostics.report_diagnostics(amun::DiagnosticLevel::WARNING);
+    }
+
+    if (context->diagnostics.level_count(amun::DiagnosticLevel::ERROR) > 0) {
+        context->diagnostics.report_diagnostics(amun::DiagnosticLevel::ERROR);
+        return EXIT_FAILURE;
+    }
+
+    if (context->options.convert_warns_to_errors and
+        context->diagnostics.level_count(amun::DiagnosticLevel::WARNING) > 0) {
+        return EXIT_FAILURE;
+    }
+
+    amun::LLVMBackend llvm_backend;
+    auto llvm_ir_module = llvm_backend.compile(source_file, compilation_unit);
+
+    // Initalize native targers
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmParser();
+    llvm::InitializeNativeTargetAsmPrinter();
+
+    std::string object_file_path = context->options.output_file_name + ".o";
+
+    std::error_code object_file_error;
+    auto flags = llvm::sys::fs::OF_None;
+    llvm::raw_fd_ostream stream(object_file_path, object_file_error, flags);
+    if (object_file_error.message() != "Success") {
+        std::cout << "Can't create output file " << object_file_error.message() << '\n';
+        return EXIT_FAILURE;
+    }
+
+    // Get current machine target triple
+    auto target_triple = llvm::sys::getDefaultTargetTriple();
+
+    // Check if this target is available
+    std::string lookup_target_error;
+    auto target = llvm::TargetRegistry::lookupTarget(target_triple, lookup_target_error);
+    if (!lookup_target_error.empty()) {
+        std::cout << lookup_target_error << '\n';
+        return EXIT_FAILURE;
+    }
+
+    llvm::TargetOptions opt;
+    auto rm = llvm::Optional<llvm::Reloc::Model>();
+    llvm::legacy::PassManager pass_manager;
+
+    constexpr auto CPU = "generic";
+    constexpr auto FEATURES = "";
+    auto target_machine = target->createTargetMachine(target_triple, CPU, FEATURES, opt, rm);
+
+    auto file_type = llvm::CGFT_ObjectFile;
+    if (target_machine->addPassesToEmitFile(pass_manager, stream, nullptr, file_type, true)) {
+        std::cout << "Target machine can't emit a file of this type" << '\n';
+        return EXIT_FAILURE;
+    }
+
+    pass_manager.run(*llvm_ir_module);
+    stream.flush();
+
+    std::cout << "Successfully compiled " << source_file << " to object file\n";
+    return EXIT_SUCCESS;
+}
+
 auto amun::Compiler::emit_llvm_ir_from_source_code(const char* source_file) -> int
 {
     auto compilation_unit = parse_source_code(source_file);

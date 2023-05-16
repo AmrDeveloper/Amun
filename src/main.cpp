@@ -8,7 +8,7 @@
 
 #define unused [[maybe_unused]]
 
-auto execute_create_command(unused int argc, char** argv) -> int
+auto execute_create_command(int argc, char** argv) -> int
 {
     if (argc < 3) {
         printf("Invalid number of arguments for create command expect %i but got %i\n", 3, argc);
@@ -38,7 +38,7 @@ auto execute_create_command(unused int argc, char** argv) -> int
     return EXIT_SUCCESS;
 }
 
-auto execute_compile_command(unused int argc, char** argv) -> int
+auto execute_compile_command(int argc, char** argv) -> int
 {
     if (argc < 3) {
         printf("Invalid number of arguments for `compile` command expect at last %i but got %i\n",
@@ -65,7 +65,34 @@ auto execute_compile_command(unused int argc, char** argv) -> int
     return compiler.compile_source_code(source_file);
 }
 
-auto emit_llvm_ir_coomand(unused int argc, char** argv) -> int
+auto execute_object_command(int argc, char** argv) -> int
+{
+    if (argc < 3) {
+        printf("Invalid number of arguments for `compile` command expect at last %i but got %i\n",
+               3, argc);
+        printf("Usage : %s compile <file> <options>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const char* source_file = argv[2];
+    if (!amun::is_file_exists(source_file)) {
+        printf("Path %s not exists\n", source_file);
+        return EXIT_FAILURE;
+    }
+
+    if (!is_ends_with(source_file, AMUN_LANGUAGE_EXTENSION)) {
+        printf("Invalid source file extension, file must end with `%s`\n", AMUN_LANGUAGE_EXTENSION);
+        return EXIT_FAILURE;
+    }
+
+    auto context = std::make_shared<amun::Context>();
+    parse_compiler_options(&context->options, argc, argv);
+
+    amun::Compiler compiler(context);
+    return compiler.compile_to_object_file_from_source_code(source_file);
+}
+
+auto emit_llvm_ir_coomand(int argc, char** argv) -> int
 {
     if (argc < 3) {
         printf("Invalid number of arguments for `compile` command expect at last %i but got %i\n",
@@ -92,7 +119,7 @@ auto emit_llvm_ir_coomand(unused int argc, char** argv) -> int
     return compiler.emit_llvm_ir_from_source_code(source_file);
 }
 
-auto execute_check_command(unused int argc, char** argv) -> int
+auto execute_check_command(int argc, char** argv) -> int
 {
     if (argc < 3) {
         printf("Invalid number of arguments for `check` command expect %i but got %i\n", 3, argc);
@@ -128,6 +155,7 @@ auto execute_help_command(unused int argc, char** argv) -> int
     printf("Commands:\n");
     printf("    - create  <name>           : Create a new project with Hello world code.\n");
     printf("    - compile <file> <options> : Compile source files to executables with options.\n");
+    printf("    - object  <file> <options> : Compile source files to object file with options.\n");
     printf("    - emit-ir <file> <options> : Compile source to llvm ir files with options.\n");
     printf("    - check   <file>           : Check if the source code is valid.\n");
     printf("    - version                  : Print the current compiler version.\n");
@@ -144,6 +172,7 @@ auto main(int argc, char** argv) -> int
     amun::CommandMap command_map;
     command_map.registerCommand("create", execute_create_command);
     command_map.registerCommand("compile", execute_compile_command);
+    command_map.registerCommand("object", execute_object_command);
     command_map.registerCommand("emit-ir", emit_llvm_ir_coomand);
     command_map.registerCommand("check", execute_check_command);
     command_map.registerCommand("version", execute_version_command);
