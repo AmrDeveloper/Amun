@@ -16,4 +16,6 @@ auto find_parent_path(const std::string& path) -> std::string;
 
 auto is_file_exists(const std::string& path) -> bool;
 
+auto file_spreator() -> char;
+
 } // namespace amun
