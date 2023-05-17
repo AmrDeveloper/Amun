@@ -43,3 +43,5 @@ auto amun::find_parent_path(const std::string& path) -> std::string
 }
 
 auto amun::is_file_exists(const std::string& path) -> bool { return std::filesystem::exists(path); }
+
+auto amun::file_spreator() -> char { return std::filesystem::path::preferred_separator; }
