@@ -27,7 +27,6 @@ fun main() {
   - [Compile Options](https://amrdeveloper.github.io/amun/compiler_options/)
   - [Reference](https://amrdeveloper.github.io/amun/)
   - [Contribution](https://amrdeveloper.github.io/amun/contribution/)
-  - [Editors](editors)
   - [Samples](samples)
 
 ### Join us
