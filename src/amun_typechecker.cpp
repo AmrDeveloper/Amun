@@ -1272,10 +1272,15 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
             return_types_stack.pop();
 
             auto arguments = node->arguments;
-            for (auto& argument : arguments) {
+            for (auto& argument : node->arguments) {
                 auto argument_type = node_amun_type(argument->accept(this));
                 argument_type = resolve_generic_type(argument_type);
                 argument->set_type_node(argument_type);
+            }
+
+            // Resolve varargs type if it exists
+            if (prototype->varargs_type) {
+                prototype->varargs_type = resolve_generic_type(prototype->varargs_type);
             }
 
             check_parameters_types(node->position.position, arguments, resolved_parameters,
