@@ -55,6 +55,13 @@ auto amun::TypeChecker::visit(FieldDeclaration* node) -> std::any
         auto origin_right_value_type = right_value->get_type_node();
         auto right_type = node_amun_type(right_value->accept(this));
 
+        // Prevent declaring field with void type
+        if (amun::is_void_type(right_type)) {
+            context->diagnostics.report_error(node->name.position,
+                                              "Can't declare field with void type");
+            throw "Stop";
+        }
+
         bool is_type_updated = false;
         if (origin_right_value_type != nullptr) {
             is_type_updated = origin_right_value_type->type_kind == amun::TypeKind::GENERIC_STRUCT;
