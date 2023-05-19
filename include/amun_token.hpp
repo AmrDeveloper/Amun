@@ -367,6 +367,7 @@ static std::vector<TwoTokensOperator> two_tokens_operators = {
     {TokenKind::TOKEN_PLUS, TokenKind::TOKEN_PLUS, TokenKind::TOKEN_PLUS_PLUS},
 
     // Shift expression
+    {TokenKind::TOKEN_GREATER, TokenKind::TOKEN_GREATER, TokenKind::TOKEN_RIGHT_SHIFT},
     {TokenKind::TOKEN_SMALLER, TokenKind::TOKEN_SMALLER, TokenKind::TOKEN_LEFT_SHIFT},
 
     // Comparisons expression
