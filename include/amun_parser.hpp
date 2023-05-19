@@ -239,6 +239,12 @@ class Parser {
 
     auto assert_kind(TokenKind, const char*) -> void;
 
+    // We can't use TOKEN_RIGHT_SHIFT >> directly in the parser
+    // It can produce error when parsing generic struct type for example Foo<Foo<T[>>]
+    // This helper function check that the two tokens are TOKEN_GREATER and they are on the same
+    // line also that there are no speace between them
+    auto is_right_shift_operator(Token first, Token second) -> bool;
+
     auto is_source_available() -> bool;
 
     std::string file_parent_path;

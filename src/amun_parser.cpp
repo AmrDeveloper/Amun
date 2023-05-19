@@ -684,7 +684,7 @@ auto amun::Parser::parse_operator_function_declaraion(amun::FunctionKind kind)
 auto amun::Parser::parse_operator_function_operator(amun::FunctionKind kind) -> Token
 {
     auto op = peek_and_advance_token();
-    if (is_previous_kind(TokenKind::TOKEN_GREATER) && is_current_kind(TokenKind::TOKEN_GREATER)) {
+    if (is_right_shift_operator(peek_previous(), peek_current())) {
         advanced_token();
         op.kind = TokenKind::TOKEN_RIGHT_SHIFT;
     }
@@ -1418,7 +1418,7 @@ auto amun::Parser::parse_bitwise_shift_expression() -> Shared<Expression>
             continue;
         }
 
-        if (is_current_kind(TokenKind::TOKEN_GREATER) && is_next_kind(TokenKind::TOKEN_GREATER)) {
+        if (is_right_shift_operator(peek_current(), peek_next())) {
             advanced_token();
             auto operator_token = peek_and_advance_token();
             operator_token.kind = TokenKind::TOKEN_RIGHT_SHIFT;
@@ -2329,6 +2329,17 @@ void amun::Parser::assert_kind(TokenKind kind, const char* message)
     }
     context->diagnostics.report_error(location, message);
     throw "Stop";
+}
+
+auto amun::Parser::is_right_shift_operator(Token first, Token second) -> bool
+{
+    if (first.kind == TokenKind::TOKEN_GREATER && second.kind == TokenKind::TOKEN_GREATER) {
+        auto first_position = first.position;
+        auto second_position = second.position;
+        return (first_position.line_number == second_position.line_number) &&
+               (first_position.column_end + 1 == second_position.column_start);
+    }
+    return false;
 }
 
 auto amun::Parser::is_source_available() -> bool
