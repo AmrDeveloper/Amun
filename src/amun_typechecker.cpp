@@ -961,6 +961,13 @@ auto amun::TypeChecker::visit(ComparisonExpression* node) -> std::any
         return amun::i1_type;
     }
 
+    // Can't compare null value with non pointer value
+    if (amun::is_null_type(lhs) || amun::is_null_type(rhs)) {
+        context->diagnostics.report_error(node->operator_token.position,
+                                          "Can't compare non pointer type with null value");
+        throw "Stop";
+    }
+
     // Check if those types has an operator overloading function
     auto function_name = mangle_operator_function(op.kind, {lhs, rhs});
     if (types_table.is_defined(function_name)) {
