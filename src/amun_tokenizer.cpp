@@ -105,6 +105,10 @@ auto amun::Tokenizer::scan_next_token() -> Token
             return build_token(TokenKind::TOKEN_GREATER_EQUAL);
         }
 
+        if (match('>', '=')) {
+            return build_token(TokenKind::TOKEN_RIGHT_SHIFT_EQUAL);
+        }
+
         return build_token(TokenKind::TOKEN_GREATER);
     }
 
@@ -114,6 +118,9 @@ auto amun::Tokenizer::scan_next_token() -> Token
         }
 
         if (match('<')) {
+            if (match('=')) {
+                return build_token(TokenKind::TOKEN_LEFT_SHIFT_EQUAL);
+            }
             return build_token(TokenKind::TOKEN_LEFT_SHIFT);
         }
 
@@ -548,14 +555,24 @@ auto amun::Tokenizer::skip_multi_lines_comment() -> void
     }
 }
 
-auto amun::Tokenizer::match(char expected) -> bool
+auto amun::Tokenizer::match(char current) -> bool
 {
-    if (!is_source_available() || expected != peek()) {
+    if (!is_source_available() || current != peek()) {
         return false;
     }
     current_position++;
     column_current++;
     return true;
+}
+
+auto amun::Tokenizer::match(char current, char next) -> bool
+{
+    if (current == peek() && next == peek_next()) {
+        current_position += 2;
+        column_current += 2;
+        return true;
+    }
+    return false;
 }
 
 auto amun::Tokenizer::advance() -> char
@@ -743,6 +760,8 @@ auto amun::Tokenizer::resolve_keyword_token_kind(const char* keyword) -> TokenKi
     }
     }
 }
+
+auto amun::Tokenizer::get_source_file_id() -> int { return source_file_id; }
 
 auto amun::Tokenizer::is_source_available() -> bool
 {

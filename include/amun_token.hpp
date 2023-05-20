@@ -73,7 +73,9 @@ enum TokenKind {
     TOKEN_SMALLER_EQUAL,
 
     TOKEN_RIGHT_SHIFT,
+    TOKEN_RIGHT_SHIFT_EQUAL,
     TOKEN_LEFT_SHIFT,
+    TOKEN_LEFT_SHIFT_EQUAL,
 
     TOKEN_PLUS_EQUAL,
     TOKEN_MINUS_EQUAL,
@@ -207,7 +209,9 @@ static std::unordered_map<TokenKind, const char*> token_kind_literal = {
     {TokenKind::TOKEN_SMALLER_EQUAL, "<="},
 
     {TokenKind::TOKEN_RIGHT_SHIFT, ">>"},
+    {TokenKind::TOKEN_RIGHT_SHIFT_EQUAL, ">>="},
     {TokenKind::TOKEN_LEFT_SHIFT, "<<"},
+    {TokenKind::TOKEN_LEFT_SHIFT_EQUAL, "<<="},
 
     {TokenKind::TOKEN_PLUS_EQUAL, "+="},
     {TokenKind::TOKEN_MINUS_EQUAL, "-="},
@@ -266,6 +270,8 @@ static std::unordered_set<TokenKind> assignments_operators = {
     TokenKind::TOKEN_OR_EQUAL,
     TokenKind::TOKEN_AND_EQUAL,
     TokenKind::TOKEN_XOR_EQUAL,
+    TokenKind::TOKEN_RIGHT_SHIFT_EQUAL,
+    TokenKind::TOKEN_LEFT_SHIFT_EQUAL,
 };
 
 static std::unordered_map<TokenKind, TokenKind> assignments_binary_operators = {
@@ -280,6 +286,8 @@ static std::unordered_map<TokenKind, TokenKind> assignments_bitwise_operators = 
     {TokenKind::TOKEN_OR_EQUAL, TokenKind::TOKEN_OR},
     {TokenKind::TOKEN_AND_EQUAL, TokenKind::TOKEN_AND},
     {TokenKind::TOKEN_XOR_EQUAL, TokenKind::TOKEN_XOR},
+    {TokenKind::TOKEN_RIGHT_SHIFT_EQUAL, TokenKind::TOKEN_RIGHT_SHIFT},
+    {TokenKind::TOKEN_LEFT_SHIFT_EQUAL, TokenKind::TOKEN_LEFT_SHIFT},
 };
 
 static std::unordered_map<TokenKind, std::string> overloading_operator_literal = {

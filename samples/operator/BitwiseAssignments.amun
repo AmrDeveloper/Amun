@@ -12,5 +12,13 @@ fun main() int64 {
     x = 1;
     x &= 0;
     printf("x &= 0 %i expect 0\n", x);
+
+    x = 10;
+    x <<= 1;
+    printf("x <<= 1 %i expect 20\n", x);
+
+    x = 10;
+    x >>= 1;
+    printf("x >>= 1 %i expect 5\n", x);
     return 0;
 }

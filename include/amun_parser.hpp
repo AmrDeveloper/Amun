@@ -43,7 +43,8 @@ class Parser {
     Parser(Shared<amun::Context> context, amun::Tokenizer& tokenizer)
         : context(context), tokenizer(tokenizer)
     {
-        auto file_path = context->source_manager.resolve_source_path(tokenizer.source_file_id);
+        auto current_source_file_id = tokenizer.get_source_file_id();
+        auto file_path = context->source_manager.resolve_source_path(current_source_file_id);
         file_parent_path = amun::find_parent_path(file_path);
 
         if (!file_parent_path.empty() && !file_parent_path.ends_with(amun::file_spreator())) {

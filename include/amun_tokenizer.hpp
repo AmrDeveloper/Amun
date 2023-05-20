@@ -9,7 +9,7 @@ namespace amun {
 class Tokenizer {
   public:
     Tokenizer(int source_file_id, std::string source)
-        : source_file_id(source_file_id), source_code(std::move(source)),
+        : source_code(std::move(source)), source_file_id(source_file_id),
           source_code_length(source_code.size()), start_position(0), current_position(0),
           line_number(1), column_start(0), column_current(0)
     {
@@ -19,7 +19,7 @@ class Tokenizer {
 
     auto scan_next_token() -> Token;
 
-    int source_file_id;
+    auto get_source_file_id() -> int;
 
   private:
     auto consume_symbol() -> Token;
@@ -48,7 +48,9 @@ class Tokenizer {
 
     void skip_multi_lines_comment();
 
-    auto match(char) -> bool;
+    auto match(char current) -> bool;
+
+    auto match(char current, char next) -> bool;
 
     auto advance() -> char;
 
@@ -79,6 +81,7 @@ class Tokenizer {
     auto is_source_available() -> bool;
 
     std::string source_code;
+    int source_file_id;
     size_t source_code_length;
     size_t start_position;
     size_t current_position;
