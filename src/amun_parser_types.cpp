@@ -146,8 +146,7 @@ auto amun::Parser::parse_generic_struct_type() -> Shared<amun::Type>
     // Parse generic struct type with types parameters
     if (is_current_kind(TokenKind::TOKEN_SMALLER)) {
         if (primary_type->type_kind == amun::TypeKind::STRUCT) {
-            auto smaller_token =
-                consume_kind(TokenKind::TOKEN_SMALLER, "Expect < after struct name");
+            auto smaller_token = peek_current();
             auto struct_type = std::static_pointer_cast<amun::StructType>(primary_type);
 
             // Prevent use non generic struct type with any type parameters
@@ -158,20 +157,7 @@ auto amun::Parser::parse_generic_struct_type() -> Shared<amun::Type>
                 throw "Stop";
             }
 
-            std::vector<Shared<amun::Type>> generic_parameters;
-            while (is_source_available() && !is_current_kind(TokenKind::TOKEN_GREATER)) {
-                auto parameter = parse_type();
-                generic_parameters.push_back(parameter);
-
-                if (is_current_kind(TokenKind::TOKEN_COMMA)) {
-                    advanced_token();
-                }
-                else {
-                    break;
-                }
-            }
-
-            assert_kind(TokenKind::TOKEN_GREATER, "Expect > After generic types parameters");
+            auto generic_parameters = parse_generic_arguments_if_exists();
 
             // Make sure generic struct types is used with correct number of parameters
             if (struct_type->generic_parameters.size() != generic_parameters.size()) {

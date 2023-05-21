@@ -183,6 +183,8 @@ class Parser {
 
     auto parse_expressions_directive() -> Shared<Expression>;
 
+    auto parse_generic_arguments_if_exists() -> std::vector<Shared<amun::Type>>;
+
     auto parse_type() -> Shared<amun::Type>;
 
     auto parse_type_with_prefix() -> Shared<amun::Type>;

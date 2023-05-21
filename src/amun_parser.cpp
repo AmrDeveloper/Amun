@@ -1506,12 +1506,11 @@ auto amun::Parser::parse_infix_call_expression() -> Shared<Expression>
     // Parse Infix function call as a call expression
     if (is_current_kind(TokenKind::TOKEN_IDENTIFIER) and
         is_function_declaration_kind(current_token_literal, amun::FunctionKind::INFIX_FUNCTION)) {
-        auto symbol_token = peek_current();
-        auto literal = parse_literal_expression();
-        std::vector<Shared<Expression>> arguments;
-        arguments.push_back(expression);
-        arguments.push_back(parse_infix_call_expression());
-        return std::make_shared<CallExpression>(symbol_token, literal, arguments);
+        auto name_token = peek_current();
+        auto function_name = parse_literal_expression();
+        auto generic_arguments = parse_generic_arguments_if_exists();
+        auto arguments = {expression, parse_infix_call_expression()};
+        return std::make_shared<CallExpression>(name_token, function_name, arguments);
     }
 
     return expression;
@@ -1540,11 +1539,11 @@ auto amun::Parser::parse_prefix_call_expression() -> Shared<Expression>
     auto current_token_literal = peek_current().literal;
     if (is_current_kind(TokenKind::TOKEN_IDENTIFIER) and
         is_function_declaration_kind(current_token_literal, amun::FunctionKind::PREFIX_FUNCTION)) {
-        Token symbol_token = peek_current();
-        auto literal = parse_literal_expression();
-        std::vector<Shared<Expression>> arguments;
-        arguments.push_back(parse_prefix_expression());
-        return std::make_shared<CallExpression>(symbol_token, literal, arguments);
+        auto token = peek_current();
+        auto name = parse_literal_expression();
+        auto generic_arguments = parse_generic_arguments_if_exists();
+        auto arguments = {parse_prefix_expression()};
+        return std::make_shared<CallExpression>(token, name, arguments, generic_arguments);
     }
     return parse_postfix_increment_or_decrement();
 }
@@ -1606,19 +1605,9 @@ auto amun::Parser::parse_call_or_access_expression() -> Shared<Expression>
                 return expression;
             }
 
-            std::vector<Shared<amun::Type>> generic_arguments;
-            auto position = peek_and_advance_token();
-            while (!is_current_kind(TokenKind::TOKEN_GREATER)) {
-                generic_arguments.push_back(parse_type());
-                if (is_current_kind(TokenKind::TOKEN_COMMA)) {
-                    advanced_token();
-                }
-                else {
-                    break;
-                }
-            }
+            auto position = peek_current();
+            auto generic_arguments = parse_generic_arguments_if_exists();
 
-            assert_kind(TokenKind::TOKEN_GREATER, "Expect > after generic parameters types");
             assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect ( after in the end of function call");
 
             std::vector<Shared<Expression>> arguments;
@@ -1709,14 +1698,16 @@ auto amun::Parser::parse_postfix_call_expression() -> Shared<Expression>
 {
     auto expression = parse_initializer_expression();
     auto current_token_literal = peek_current().literal;
+
     if (is_current_kind(TokenKind::TOKEN_IDENTIFIER) and
         is_function_declaration_kind(current_token_literal, amun::FunctionKind::POSTFIX_FUNCTION)) {
-        Token symbol_token = peek_current();
-        auto literal = parse_literal_expression();
-        std::vector<Shared<Expression>> arguments;
-        arguments.push_back(expression);
-        return std::make_shared<CallExpression>(symbol_token, literal, arguments);
+        auto token = peek_current();
+        auto name = parse_literal_expression();
+        auto generic_arguments = parse_generic_arguments_if_exists();
+        auto arguments = {expression};
+        return std::make_shared<CallExpression>(token, name, arguments, generic_arguments);
     }
+
     return expression;
 }
 
@@ -2102,6 +2093,26 @@ auto amun::Parser::parse_value_size_expression() -> Shared<ValueSizeExpression>
     auto value = parse_expression();
     assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect `)` after value_size type");
     return std::make_shared<ValueSizeExpression>(value);
+}
+
+auto amun::Parser::parse_generic_arguments_if_exists() -> std::vector<Shared<amun::Type>>
+{
+    std::vector<Shared<amun::Type>> generic_arguments;
+    if (is_current_kind(TokenKind::TOKEN_SMALLER)) {
+        advanced_token();
+        while (!is_current_kind(TokenKind::TOKEN_GREATER)) {
+            generic_arguments.push_back(parse_type());
+            if (is_current_kind(TokenKind::TOKEN_COMMA)) {
+                advanced_token();
+            }
+            else {
+                break;
+            }
+        }
+        assert_kind(TokenKind::TOKEN_GREATER, "Expect > after generic arguments types");
+    }
+
+    return generic_arguments;
 }
 
 auto amun::Parser::check_generic_parameter_name(Token name) -> void
