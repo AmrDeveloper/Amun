@@ -6,9 +6,10 @@
 #include "../include/amun_type.hpp"
 
 #include <any>
-#include <assert.h>
+#include <cassert>
 #include <limits>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <string>
 #include <unordered_set>
@@ -924,7 +925,7 @@ auto amun::TypeChecker::visit(ComparisonExpression* node) -> std::any
     }
 
     // Enumerations elements comparasions
-    if (amun::is_enum_element_type(lhs) and amun::is_enum_element_type(rhs)) {
+    if (amun::is_enum_element_type(lhs) && amun::is_enum_element_type(rhs)) {
         if (are_types_equals) {
             return amun::i1_type;
         }
@@ -936,7 +937,7 @@ auto amun::TypeChecker::visit(ComparisonExpression* node) -> std::any
     }
 
     // Pointers comparasions
-    if (amun::is_pointer_type(lhs) and amun::is_pointer_type(rhs)) {
+    if (amun::is_pointer_type(lhs) && amun::is_pointer_type(rhs)) {
         if (are_types_equals) {
             return amun::i1_type;
         }
@@ -949,14 +950,14 @@ auto amun::TypeChecker::visit(ComparisonExpression* node) -> std::any
     }
 
     // Pointer vs null comparaisons and set null pointer base type
-    if (amun::is_pointer_type(lhs) and amun::is_null_type(rhs)) {
+    if (amun::is_pointer_type(lhs) && amun::is_null_type(rhs)) {
         auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->right);
         null_expr->null_base_type = lhs;
         return amun::i1_type;
     }
 
     // Null vs Pointer comparaisons and set null pointer base type
-    if (amun::is_null_type(lhs) and amun::is_pointer_type(rhs)) {
+    if (amun::is_null_type(lhs) && amun::is_pointer_type(rhs)) {
         auto null_expr = std::dynamic_pointer_cast<NullExpression>(node->left);
         null_expr->null_base_type = rhs;
         return amun::i1_type;
@@ -964,7 +965,7 @@ auto amun::TypeChecker::visit(ComparisonExpression* node) -> std::any
 
     // Null vs Null comparaisons, no need to set pointer base, use the default
     // base
-    if (amun::is_null_type(lhs) and amun::is_null_type(rhs)) {
+    if (amun::is_null_type(lhs) && amun::is_null_type(rhs)) {
         return amun::i1_type;
     }
 
@@ -1193,6 +1194,7 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
 {
     auto callee = node->callee;
     auto callee_ast_node_type = node->callee->get_ast_node_type();
+    auto node_span = node->position.position;
 
     // Call function by name for example function();
     if (callee_ast_node_type == AstNodeType::AST_LITERAL) {
@@ -1216,96 +1218,143 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
                     argument->set_type_node(node_amun_type(argument->accept(this)));
                 }
 
-                check_parameters_types(node->position.position, arguments, parameters,
-                                       type->has_varargs, type->varargs_type,
-                                       type->implicit_parameters_count);
+                check_parameters_types(node_span, arguments, parameters, type->has_varargs,
+                                       type->varargs_type, type->implicit_parameters_count);
 
                 return type->return_type;
             }
             else {
-                context->diagnostics.report_error(node->position.position,
+                context->diagnostics.report_error(node_span,
                                                   "Call expression work only with function");
                 throw "Stop";
             }
         }
 
         else if (generic_functions_declaraions.contains(name)) {
-            auto declaraions = generic_functions_declaraions[name];
-            auto generic_parameters = node->generic_arguments;
+            auto function_declaraion = generic_functions_declaraions[name];
+            auto function_prototype = function_declaraion->prototype;
+            auto prototype_parameters = function_prototype->parameters;
+            auto prototype_generic_names = function_prototype->generic_parameters;
 
-            if (generic_parameters.empty()) {
+            auto call_arguments = node->arguments;
+            auto call_generic_arguments = node->generic_arguments;
+
+            if (prototype_parameters.size() != call_arguments.size()) {
                 context->diagnostics.report_error(
-                    node->position.position, name +
-                                                 " is a generic function and must be called with "
-                                                 "generic paramters <..>");
+                    node_span, "Invalid number of arguments, expect " +
+                                   std::to_string(prototype_parameters.size()) + " but got " +
+                                   std::to_string(call_arguments.size()));
                 throw "Stop";
             }
 
-            auto prototype = declaraions->prototype;
-            auto generic_parameter_names = prototype->generic_parameters;
-            auto generic_arguments_count = generic_parameter_names.size();
-            auto generic_parameters_count = generic_parameters.size();
+            auto call_has_generic_arguments = call_generic_arguments.empty();
+            if (call_has_generic_arguments) {
+                if (prototype_parameters.empty()) {
+                    context->diagnostics.report_error(
+                        node_span, "Not enough information to infer generic types variables");
+                    throw "Stop";
+                }
 
+                node->generic_arguments.resize(prototype_generic_names.size());
+
+                int parameter_index = 0;
+                std::set<int> generic_arguments_indeces;
+                for (const auto& parameter : prototype_parameters) {
+                    const auto parameter_type = parameter->type;
+                    const auto resolved_argument = call_arguments[parameter_index]->accept(this);
+                    const auto argument_type = node_amun_type(resolved_argument);
+
+                    if (!amun::is_types_equals(parameter_type, argument_type)) {
+
+                        // Report error when use pass `null` as argment
+                        if (amun::is_null_type(argument_type)) {
+                            context->diagnostics.report_error(node_span,
+                                                              "Not enough information to infer "
+                                                              "generic parameter from null value");
+                            throw "Stop";
+                        }
+
+                        // Report error when use pass `void` as argment
+                        if (amun::is_void_type(argument_type)) {
+                            context->diagnostics.report_error(
+                                node_span, "Can't pass `void` value as argument");
+                            throw "Stop";
+                        }
+
+                        auto result_map = infier_type_by_other_type(parameter_type, argument_type);
+                        for (const auto& type_pair : result_map) {
+                            auto index = index_of(prototype_generic_names, type_pair.first);
+                            if (generic_arguments_indeces.insert(index).second) {
+                                node->generic_arguments[index] = type_pair.second;
+                            }
+                        }
+                    }
+
+                    parameter_index++;
+                }
+
+                if (generic_arguments_indeces.size() != prototype_generic_names.size()) {
+                    context->diagnostics.report_error(
+                        node_span, "Not enough information to infer all generic types variables");
+                    throw "Stop";
+                }
+
+                call_generic_arguments = node->generic_arguments;
+            }
+
+            auto generic_arguments_count = prototype_generic_names.size();
+            auto generic_parameters_count = call_generic_arguments.size();
             if (generic_parameters_count != generic_arguments_count) {
-                context->diagnostics.report_error(node->position.position,
-                                                  "Invalid number of generic paramters expect " +
-                                                      std::to_string(generic_arguments_count) +
-                                                      " but got " +
-                                                      std::to_string(generic_parameters_count));
+                context->diagnostics.report_error(
+                    node_span, "Not enough information to infer all generic types variables");
                 throw "Stop";
             }
 
-            // Register generic paramters types with names
             for (size_t i = 0; i < generic_parameters_count; i++) {
-                generic_types[generic_parameter_names[i]] = generic_parameters[i];
+                generic_types[prototype_generic_names[i]] = call_generic_arguments[i];
             }
 
             auto return_type = resolve_generic_type(
-                prototype->return_type, prototype->generic_parameters, generic_parameters);
+                function_prototype->return_type, prototype_generic_names, call_generic_arguments);
             return_types_stack.push(return_type);
 
             std::vector<Shared<amun::Type>> resolved_parameters;
-            resolved_parameters.reserve(prototype->parameters.size());
-            for (const auto& parameter : prototype->parameters) {
+            resolved_parameters.reserve(prototype_parameters.size());
+            for (const auto& parameter : prototype_parameters) {
                 resolved_parameters.push_back(resolve_generic_type(
-                    parameter->type, prototype->generic_parameters, generic_parameters));
+                    parameter->type, prototype_generic_names, call_generic_arguments));
             }
 
             push_new_scope();
 
             int index = 0;
-            for (auto& parameter : prototype->parameters) {
+            for (auto& parameter : prototype_parameters) {
                 types_table.define(parameter->name.literal, resolved_parameters[index]);
                 index++;
             }
 
-            auto function_body = declaraions->body;
-            function_body->accept(this);
+            function_declaraion->body->accept(this);
             pop_current_scope();
 
             return_types_stack.pop();
 
-            auto arguments = node->arguments;
-            for (auto& argument : node->arguments) {
+            auto arguments = call_arguments;
+            for (auto& argument : arguments) {
                 auto argument_type = node_amun_type(argument->accept(this));
                 argument_type = resolve_generic_type(argument_type);
                 argument->set_type_node(argument_type);
             }
 
-            // Resolve varargs type if it exists
-            if (prototype->varargs_type) {
-                prototype->varargs_type = resolve_generic_type(prototype->varargs_type);
-            }
-
-            check_parameters_types(node->position.position, arguments, resolved_parameters,
-                                   prototype->has_varargs, prototype->varargs_type, 0);
+            check_parameters_types(node_span, arguments, resolved_parameters,
+                                   function_prototype->has_varargs,
+                                   function_prototype->varargs_type, 0);
 
             generic_types.clear();
             return return_type;
         }
 
         else {
-            context->diagnostics.report_error(node->position.position,
+            context->diagnostics.report_error(node_span,
                                               "Can't resolve function call with name " + name);
             throw "Stop";
         }
@@ -1321,8 +1370,8 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
             std::static_pointer_cast<amun::FunctionType>(function_pointer_type->base_type);
         auto parameters = function_type->parameters;
         auto arguments = node->arguments;
-        check_parameters_types(node->position.position, arguments, parameters,
-                               function_type->has_varargs, function_type->varargs_type,
+        check_parameters_types(node_span, arguments, parameters, function_type->has_varargs,
+                               function_type->varargs_type,
                                function_type->implicit_parameters_count);
         node->set_type_node(function_type);
         return function_type->return_type;
@@ -1343,8 +1392,8 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
             argument->set_type_node(node_amun_type(argument->accept(this)));
         }
 
-        check_parameters_types(node->position.position, arguments, parameters,
-                               function_type->has_varargs, function_type->varargs_type,
+        check_parameters_types(node_span, arguments, parameters, function_type->has_varargs,
+                               function_type->varargs_type,
                                function_type->implicit_parameters_count);
 
         node->set_type_node(function_type);
@@ -1366,16 +1415,15 @@ auto amun::TypeChecker::visit(CallExpression* node) -> std::any
             argument->set_type_node(node_amun_type(argument->accept(this)));
         }
 
-        check_parameters_types(node->position.position, arguments, parameters,
-                               function_type->has_varargs, function_type->varargs_type,
+        check_parameters_types(node_span, arguments, parameters, function_type->has_varargs,
+                               function_type->varargs_type,
                                function_type->implicit_parameters_count);
 
         node->set_type_node(function_type);
         return function_type->return_type;
     }
 
-    context->diagnostics.report_error(node->position.position,
-                                      "Unexpected callee type for Call Expression");
+    context->diagnostics.report_error(node_span, "Unexpected callee type for Call Expression");
     throw "Stop";
 }
 
@@ -1944,6 +1992,7 @@ auto amun::TypeChecker::resolve_generic_type(Shared<amun::Type> type,
 
         auto new_struct = std::make_shared<amun::StructType>(
             mangled_name, fields_names, types, structure->generic_parameters, true, true);
+        new_struct->generic_parameters_types = generic_struct->parameters;
         types_table.define(mangled_name, new_struct);
         return new_struct;
     }
@@ -1959,6 +2008,134 @@ auto amun::TypeChecker::resolve_generic_type(Shared<amun::Type> type,
     }
 
     return type;
+}
+
+auto amun::TypeChecker::infier_type_by_other_type(Shared<amun::Type> type, Shared<amun::Type> other)
+    -> std::unordered_map<std::string, Shared<amun::Type>>
+{
+    if (type->type_kind == amun::TypeKind::GENERIC_PARAMETER) {
+        std::unordered_map<std::string, Shared<amun::Type>> resolved_types;
+        auto geneic_parameter = std::static_pointer_cast<amun::GenericParameterType>(type);
+        resolved_types[geneic_parameter->name] = other;
+        return resolved_types;
+    }
+
+    if (amun::is_pointer_type(type) && amun::is_pointer_type(other)) {
+        auto type_ptr = std::static_pointer_cast<amun::PointerType>(type);
+        auto other_ptr = std::static_pointer_cast<amun::PointerType>(other);
+        return infier_type_by_other_type(type_ptr->base_type, other_ptr->base_type);
+    }
+
+    if (amun::is_array_type(type) && amun::is_array_type(other)) {
+        auto type_arr = std::static_pointer_cast<amun::StaticArrayType>(type);
+        auto other_arr = std::static_pointer_cast<amun::StaticArrayType>(other);
+        return infier_type_by_other_type(type_arr->element_type, other_arr->element_type);
+    }
+
+    if (amun::is_generic_struct_type(type) && amun::is_struct_type(other)) {
+        auto type_generic_struct = std::static_pointer_cast<amun::GenericStructType>(type);
+
+        auto type_struct = type_generic_struct->struct_type;
+        auto other_struct = std::static_pointer_cast<amun::StructType>(other);
+
+        int index = 0;
+        std::unordered_map<std::string, Shared<amun::Type>> resolved_types;
+        for (const auto& t : other_struct->generic_parameters_types) {
+            auto result = infier_type_by_other_type(type_generic_struct->parameters[index], t);
+            for (const auto& element : result) {
+                if (!resolved_types.contains(element.first)) {
+                    resolved_types[element.first] = element.second;
+                }
+            }
+            index++;
+        }
+
+        return resolved_types;
+    }
+
+    if (amun::is_generic_struct_type(type) && amun::is_generic_struct_type(other)) {
+        auto type_generic_struct = std::static_pointer_cast<amun::GenericStructType>(type);
+        auto other_generic_struct = std::static_pointer_cast<amun::GenericStructType>(other);
+
+        auto type_struct = type_generic_struct->struct_type;
+        auto other_struct = other_generic_struct->struct_type;
+
+        if (type_struct->name == other_struct->name &&
+            type_struct->fields_types.size() == other_struct->fields_types.size()) {
+            std::unordered_map<std::string, Shared<amun::Type>> resolved_types;
+            size_t index = 0;
+            for (const auto& field_type : type_generic_struct->parameters) {
+                auto other_type = other_generic_struct->parameters[index];
+                auto result = infier_type_by_other_type(field_type, other_type);
+                for (const auto& element : result) {
+                    if (!resolved_types.contains(element.first)) {
+                        resolved_types[element.first] = element.second;
+                    }
+                }
+                index++;
+            }
+            return resolved_types;
+        }
+
+        return {};
+    }
+
+    if (amun::is_tuple_type(type) && amun::is_tuple_type(other)) {
+        auto type_tuple = std::static_pointer_cast<amun::TupleType>(type);
+        auto other_tuple = std::static_pointer_cast<amun::TupleType>(other);
+        if (type_tuple->fields_types.size() == other_tuple->fields_types.size()) {
+            std::unordered_map<std::string, Shared<amun::Type>> resolved_types;
+            size_t index = 0;
+            for (const auto& field_type : type_tuple->fields_types) {
+                auto other_type = other_tuple->fields_types[index];
+                auto result = infier_type_by_other_type(field_type, other_type);
+                for (const auto& element : result) {
+                    if (!resolved_types.contains(element.first)) {
+                        resolved_types[element.first] = element.second;
+                    }
+                }
+                index++;
+            }
+            return resolved_types;
+        }
+
+        return {};
+    }
+
+    if (amun::is_function_pointer_type(type) && amun::is_function_pointer_type(other)) {
+        auto type_ptr = std::static_pointer_cast<amun::PointerType>(type);
+        auto other_ptr = std::static_pointer_cast<amun::PointerType>(other);
+
+        auto type_fptr = std::static_pointer_cast<amun::FunctionType>(type_ptr->base_type);
+        auto other_fptr = std::static_pointer_cast<amun::FunctionType>(other_ptr->base_type);
+
+        if (type_fptr->parameters.size() == other_fptr->parameters.size()) {
+            auto return_type =
+                infier_type_by_other_type(type_fptr->return_type, other_fptr->return_type);
+            std::unordered_map<std::string, Shared<amun::Type>> resolved_types;
+            for (const auto& type : return_type) {
+                resolved_types[type.first] = type.second;
+            }
+
+            int index = 0;
+            for (const auto& parameter : type_fptr->parameters) {
+                auto parameter_result =
+                    infier_type_by_other_type(parameter, other_fptr->parameters[index]);
+                for (const auto& type : parameter_result) {
+                    if (resolved_types.contains(type.first)) {
+                        resolved_types[type.first] = type.second;
+                    }
+                }
+                index++;
+            }
+
+            return resolved_types;
+        }
+
+        return {};
+    }
+
+    return {};
 }
 
 auto amun::TypeChecker::check_complete_switch_cases(Shared<amun::EnumType> enum_type,
@@ -2006,7 +2183,7 @@ auto amun::TypeChecker::check_parameters_types(TokenSpan location,
     const auto parameters_size = parameters.size();
 
     // If hasent varargs, parameters and arguments must be the same size
-    if (not has_varargs && all_arguments_size != parameters_size) {
+    if (!has_varargs && all_arguments_size != parameters_size) {
         context->diagnostics.report_error(
             location, "Invalid number of arguments, expect " + std::to_string(parameters_size) +
                           " but got " + std::to_string(all_arguments_size));

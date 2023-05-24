@@ -334,6 +334,11 @@ auto amun::is_generic_struct_type(Shared<amun::Type> type) -> bool
     return type->type_kind == amun::TypeKind::GENERIC_STRUCT;
 }
 
+auto amun::is_tuple_type(Shared<amun::Type> type) -> bool
+{
+    return type->type_kind == amun::TypeKind::TUPLE;
+}
+
 auto amun::is_boolean_type(Shared<amun::Type> type) -> bool
 {
     if (type->type_kind == amun::TypeKind::NUMBER) {

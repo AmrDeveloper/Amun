@@ -88,7 +88,7 @@ struct FunctionType : public Type {
         : name(std::move(name)), parameters(std::move(parameters)),
           return_type(std::move(return_type)), has_varargs(varargs),
           varargs_type(std::move(varargs_type)), is_intrinsic(is_intrinsic), is_generic(is_generic),
-          generic_names(generic_names)
+          generic_names(std::move(generic_names))
     {
         type_kind = TypeKind::FUNCTION;
     }
@@ -122,6 +122,7 @@ struct StructType : public Type {
     std::vector<std::string> fields_names;
     std::vector<Shared<Type>> fields_types;
     std::vector<std::string> generic_parameters;
+    std::vector<Shared<Type>> generic_parameters_types = {};
     bool is_packed;
     bool is_generic;
     bool is_extern;
@@ -220,6 +221,8 @@ auto is_enum_element_type(Shared<Type> type) -> bool;
 auto is_struct_type(Shared<Type> type) -> bool;
 
 auto is_generic_struct_type(Shared<Type> type) -> bool;
+
+auto is_tuple_type(Shared<amun::Type> type) -> bool;
 
 auto is_boolean_type(Shared<Type> type) -> bool;
 

@@ -129,6 +129,9 @@ class TypeChecker : public TreeVisitor {
                               std::vector<Shared<amun::Type>> generic_parameters = {})
         -> Shared<amun::Type>;
 
+    auto infier_type_by_other_type(Shared<amun::Type> type, Shared<amun::Type> other)
+        -> std::unordered_map<std::string, Shared<amun::Type>>;
+
     auto check_number_limits(const char* literal, amun::NumberKind kind) -> bool;
 
     auto check_missing_return_statement(Shared<Statement> node) -> bool;
