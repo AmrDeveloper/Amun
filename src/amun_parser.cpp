@@ -1157,6 +1157,8 @@ auto amun::Parser::parse_for_statement() -> Shared<Statement>
     // Parse optional element name or it as default
     std::string element_name = "it";
     std::string index_name = "it_index";
+    bool has_custom_index_name = false;
+
     auto expr = parse_expression();
     if (is_current_kind(TokenKind::TOKEN_COLON) || is_current_kind(TokenKind::TOKEN_COMMA)) {
         if (expr->get_ast_node_type() != AstNodeType::AST_LITERAL) {
@@ -1167,6 +1169,8 @@ auto amun::Parser::parse_for_statement() -> Shared<Statement>
 
         if (is_current_kind(TokenKind::TOKEN_COMMA)) {
             index_name = previous_token->literal;
+            has_custom_index_name = true;
+
             // Consume the comma
             advanced_token();
             element_name = consume_kind(TokenKind::TOKEN_IDENTIFIER, "Expect element name").literal;
@@ -1182,6 +1186,14 @@ auto amun::Parser::parse_for_statement() -> Shared<Statement>
 
     // For range statemnet for x .. y
     if (is_current_kind(TokenKind::TOKEN_DOT_DOT)) {
+
+        // For range mustn't accept index name, because element and index are equals
+        if (has_custom_index_name) {
+            context->diagnostics.report_error(keyword.position,
+                                              "for range has no index name to override");
+            throw "Stop";
+        }
+
         advanced_token();
         const auto range_end = parse_expression();
 
