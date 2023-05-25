@@ -1,0 +1,12 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun sum<T> (x T, y T) T = x + y;
+
+fun main() int64 {
+    printf("%d\n", sum(1, 2));
+    printf("%d\n", sum(1_i8, 2_i8));
+    printf("%d\n", sum(1_i16, 2_i16));
+    printf("%d\n", sum(1_i32, 2_i32));
+    printf("%f\n", sum(1.0, 2.0));
+    return 0;
+}

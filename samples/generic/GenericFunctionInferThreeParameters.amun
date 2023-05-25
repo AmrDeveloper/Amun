@@ -1,0 +1,22 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+struct Single<T> {}
+
+struct Pair<X, Y> {}
+
+fun function<X, Y, Z> (x X, y Y, x Z) int64 = 0;
+
+fun main() int64 {
+    function(0, 1, 2);
+    function(true, false, true);
+    function('a', 'b', 'c');
+    function([1, 2, 3], [4, 5, 6], [7, 8, 9]);
+    function("One", "Two", "Three");
+    function(1.1, 2.2, 3.3);
+    function((1, 2, 3), (1.1, 2.2, 3.3), (true, false, true));
+    function(0, true, 'a');
+    function([1, 2, 3], "One", "Two");
+    function(Single<int64>(), Single<int32>(), Single<int32>());
+    function(Pair<int32, int64>(), Pair<int16, int32>(), Pair<int8, int32>());
+    return 0;
+}
