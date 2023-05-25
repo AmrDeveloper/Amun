@@ -23,10 +23,10 @@ fun main() {
 ```
 
 ### Documentation:
-  - [Build](https://amrdeveloper.github.io/amun/build/)
-  - [Compile Options](https://amrdeveloper.github.io/amun/compiler_options/)
-  - [Reference](https://amrdeveloper.github.io/amun/)
-  - [Contribution](https://amrdeveloper.github.io/amun/contribution/)
+  - [Build](https://amun-lang.github.io/docs/build/)
+  - [Compile Options](https://amun-lang.github.io/docs/compiler_options/)
+  - [Reference](https://amun-lang.github.io/docs/)
+  - [Contribution](https://amun-lang.github.io/docs/contribution/)
   - [Samples](samples)
 
 ### Join us
