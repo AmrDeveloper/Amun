@@ -1,0 +1,14 @@
+@extern
+fun printf(format *char, varargs Any) int64;
+
+@postfix
+fun postfix<T> (x T) T = x;
+
+fun main() int64 {
+    var i = 20 postfix<int64>;
+    printf("%d\n", i);
+
+    var j = 20 postfix;
+    printf("%d\n", j);
+    return 0;
+}

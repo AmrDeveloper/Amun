@@ -1,0 +1,13 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+struct Pair<X, Y> {}
+
+@infix
+fun or<X, Y> (e Pair<X, Y>, o Pair<X, Y>) int64 = 0;
+
+fun main() int64 {
+    var e : Pair<int32, bool>;
+    var o : Pair<int32, bool>;
+    var i = e or o;
+    return 0;
+}
