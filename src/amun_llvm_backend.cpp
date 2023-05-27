@@ -2610,14 +2610,11 @@ auto amun::LLVMBackend::create_overloading_function_call(std::string& name,
     return Builder.CreateCall(function, args);
 }
 
-auto amun::LLVMBackend::access_struct_member_pointer(DotExpression* expression) -> llvm::Value*
+auto amun::LLVMBackend::access_struct_member_pointer(llvm::Value* callee_value, llvm::Type* type,
+                                                     int field_index) -> llvm::Value*
 {
-
-    auto callee = expression->callee;
-    auto callee_value = llvm_node_value(callee->accept(this));
-    auto callee_llvm_type = llvm_type_from_amun_type(callee->get_type_node());
-
-    auto index = create_llvm_int32(expression->field_index, true);
+    auto callee_llvm_type = type;
+    auto index = create_llvm_int32(field_index, true);
 
     // Access struct member allocaed on the stack or derefernecs from pointer
     // struct.member or (*struct).member
@@ -2672,9 +2669,22 @@ auto amun::LLVMBackend::access_struct_member_pointer(DotExpression* expression) 
         Builder.CreateStore(callee_value, alloca);
         return Builder.CreateGEP(struct_type, alloca, {zero_int32_value, index});
     }
-
-    internal_compiler_error("Invalid callee type in access_struct_member_pointer");
 }
+
+auto amun::LLVMBackend::access_struct_member_pointer(Expression* callee, int field_index)
+    -> llvm::Value*
+{
+    auto callee_value = llvm_node_value(callee->accept(this));
+    auto callee_type = llvm_type_from_amun_type(callee->get_type_node());
+    return access_struct_member_pointer(callee_value, callee_type, field_index);
+}
+
+auto amun::LLVMBackend::access_struct_member_pointer(DotExpression* expression) -> llvm::Value*
+{
+    auto callee = expression->callee;
+    return access_struct_member_pointer(expression->callee.get(), expression->field_index);
+}
+
 auto amun::LLVMBackend::access_array_element(std::shared_ptr<Expression> node_value,
                                              llvm::Value* index) -> llvm::Value*
 {

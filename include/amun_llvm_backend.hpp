@@ -173,9 +173,15 @@ class LLVMBackend : public TreeVisitor {
     auto create_overloading_function_call(std::string& name, std::vector<llvm::Value*> args)
         -> llvm::Value*;
 
+    auto access_struct_member_pointer(llvm::Value* callee, llvm::Type* type, int field_index)
+        -> llvm::Value*;
+
+    auto access_struct_member_pointer(Expression* callee, int field_index) -> llvm::Value*;
+
     auto access_struct_member_pointer(DotExpression* expression) -> llvm::Value*;
 
-    auto access_array_element(Shared<Expression> array, llvm::Value* index) -> llvm::Value*;
+    auto access_array_element(std::shared_ptr<Expression> node_value, llvm::Value* index)
+        -> llvm::Value*;
 
     auto resolve_generic_function(FunctionDeclaration* node,
                                   std::vector<Shared<amun::Type>> generic_parameters)
