@@ -188,6 +188,37 @@ auto amun::LLVMBackend::visit(FieldDeclaration* node) -> std::any
     return 0;
 }
 
+auto amun::LLVMBackend::visit(DestructuringDeclaraion* node) -> std::any
+{
+    auto tuple_value = llvm_node_value(node->value->accept(this));
+    auto tuple_type = llvm_type_from_amun_type(node->value->get_type_node());
+
+    const auto& variables_names = node->names;
+    const auto& variables_types = node->types;
+    auto number_of_elements = variables_names.size();
+
+    auto current_function = Builder.GetInsertBlock()->getParent();
+
+    for (size_t i = 0; i < number_of_elements; i++) {
+        // Variable information
+        auto variable_name = variables_names[i].literal;
+        auto variable_type = llvm_type_from_amun_type(variables_types[i]);
+
+        // Declare new variable
+        auto alloc_inst = create_entry_block_alloca(current_function, variable_name, variable_type);
+
+        // Load element form struct with index
+        auto value = access_struct_member_pointer(tuple_value, tuple_type, i);
+        auto loaded_value = derefernecs_llvm_pointer(value);
+
+        // Store value in variable and define it inside Allocation instruction table
+        Builder.CreateStore(loaded_value, alloc_inst);
+        alloca_inst_table.define(variable_name, alloc_inst);
+    }
+
+    return 0;
+}
+
 auto amun::LLVMBackend::visit(ConstDeclaration* node) -> std::any { return 0; }
 
 auto amun::LLVMBackend::visit(FunctionPrototype* node) -> std::any

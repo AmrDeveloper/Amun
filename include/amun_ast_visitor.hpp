@@ -5,6 +5,7 @@
 
 class BlockStatement;
 class FieldDeclaration;
+class DestructuringDeclaraion;
 class ConstDeclaration;
 class FunctionPrototype;
 class IntrinsicPrototype;
@@ -29,6 +30,8 @@ class StatementVisitor {
     virtual auto visit(BlockStatement* node) -> std::any = 0;
 
     virtual auto visit(FieldDeclaration* node) -> std::any = 0;
+
+    virtual auto visit(DestructuringDeclaraion* node) -> std::any = 0;
 
     virtual auto visit(ConstDeclaration* node) -> std::any = 0;
 

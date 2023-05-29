@@ -73,6 +73,8 @@ class Parser {
 
     auto parse_field_declaration(bool is_global) -> Shared<FieldDeclaration>;
 
+    auto parse_destructuring_field_declaration(bool is_global) -> Shared<DestructuringDeclaraion>;
+
     auto parse_intrinsic_prototype() -> Shared<IntrinsicPrototype>;
 
     auto parse_function_prototype(amun::FunctionKind kind, bool is_external)

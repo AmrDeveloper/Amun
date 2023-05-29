@@ -29,6 +29,8 @@ class LLVMBackend : public TreeVisitor {
 
     auto visit(FieldDeclaration* node) -> std::any override;
 
+    auto visit(DestructuringDeclaraion* node) -> std::any override;
+
     auto visit(ConstDeclaration* node) -> std::any override;
 
     auto visit(FunctionPrototype* node) -> std::any override;

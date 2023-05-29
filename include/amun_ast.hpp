@@ -15,6 +15,7 @@ enum class AstNodeType {
     // Statements
     AST_BLOCK,
     AST_FIELD_DECLARAION,
+    AST_DESTRUCTURING_DECLARAION,
     AST_PROTOTYPE,
     AST_INTRINSIC,
     AST_FUNCTION,
@@ -119,6 +120,29 @@ class FieldDeclaration : public Statement {
     Token name;
     Shared<amun::Type> type;
     Shared<Expression> value;
+    bool is_global;
+};
+
+class DestructuringDeclaraion : public Statement {
+  public:
+    DestructuringDeclaraion(std::vector<Token> names, std::vector<Shared<amun::Type>> types,
+                            Shared<Expression> value, Token equal_token, bool is_global)
+        : names(std::move(names)), types(std::move(types)), value(std::move(value)),
+          equal_token(std::move(equal_token)), is_global(is_global)
+    {
+    }
+
+    auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
+
+    auto get_ast_node_type() -> AstNodeType override
+    {
+        return AstNodeType::AST_DESTRUCTURING_DECLARAION;
+    }
+
+    std::vector<Token> names;
+    std::vector<Shared<amun::Type>> types;
+    Shared<Expression> value;
+    Token equal_token;
     bool is_global;
 };
 

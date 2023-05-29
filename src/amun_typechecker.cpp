@@ -162,6 +162,52 @@ auto amun::TypeChecker::visit(FieldDeclaration* node) -> std::any
     return 0;
 }
 
+auto amun::TypeChecker::visit(DestructuringDeclaraion* node) -> std::any
+{
+    auto position = node->equal_token.position;
+
+    if (node->is_global) {
+        context->diagnostics.report_error(position, "Can't used it in global scope");
+        throw "Stop";
+    }
+
+    auto value = node_amun_type(node->value->accept(this));
+    if (!amun::is_tuple_type(value)) {
+        context->diagnostics.report_error(position, "value type must be a tuple");
+        throw "Stop";
+    }
+
+    auto tuple_value = std::static_pointer_cast<amun::TupleType>(value);
+    auto tuple_field_types = tuple_value->fields_types;
+    auto tuple_size = tuple_field_types.size();
+
+    if (tuple_field_types.size() != node->names.size()) {
+        context->diagnostics.report_error(position, "number of fields must be equal to tuple size");
+        throw "Stop";
+    }
+
+    for (size_t i = 0; i < tuple_size; i++) {
+        if (amun::is_none_type(node->types[i])) {
+            node->types[i] = resolve_generic_type(tuple_field_types[i]);
+        }
+        else if (!amun::is_types_equals(node->types[i], tuple_field_types[i])) {
+            context->diagnostics.report_error(node->names[i].position,
+                                              "field type must be equal to tuple element type");
+            throw "Stop";
+        }
+
+        bool is_first_defined = types_table.define(node->names[i].literal, node->types[i]);
+        if (!is_first_defined) {
+            context->diagnostics.report_error(node->names[i].position,
+                                              "Field " + node->names[i].literal +
+                                                  " is defined twice in the same scope");
+            throw "Stop";
+        }
+    }
+
+    return 0;
+}
+
 auto amun::TypeChecker::visit(ConstDeclaration* node) -> std::any
 {
     auto name = node->name.literal;

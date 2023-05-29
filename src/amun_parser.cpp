@@ -226,6 +226,9 @@ auto amun::Parser::parse_declaration_statement() -> Shared<Statement>
         return parse_operator_function_declaraion(amun::FunctionKind::NORMAL_FUNCTION);
     }
     case TokenKind::TOKEN_VAR: {
+        if (is_next_kind(TokenKind::TOKEN_OPEN_PAREN)) {
+            return parse_destructuring_field_declaration(true);
+        }
         return parse_field_declaration(true);
     }
     case TokenKind::TOKEN_CONST: {
@@ -252,6 +255,9 @@ auto amun::Parser::parse_statement() -> Shared<Statement>
 {
     switch (peek_current().kind) {
     case TokenKind::TOKEN_VAR: {
+        if (is_next_kind(TokenKind::TOKEN_OPEN_PAREN)) {
+            return parse_destructuring_field_declaration(false);
+        }
         return parse_field_declaration(false);
     }
     case TokenKind::TOKEN_CONST: {
@@ -322,6 +328,43 @@ auto amun::Parser::parse_field_declaration(bool is_global) -> Shared<FieldDeclar
     auto init_value = parse_expression();
     assert_kind(TokenKind::TOKEN_SEMICOLON, "Expect semicolon `;` after field declaration");
     return std::make_shared<FieldDeclaration>(name, amun::none_type, init_value, is_global);
+}
+
+auto amun::Parser::parse_destructuring_field_declaration(bool is_global)
+    -> Shared<DestructuringDeclaraion>
+{
+    assert_kind(TokenKind::TOKEN_VAR, "Expect var keyword.");
+    assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect ( after var keyword.");
+
+    std::vector<Token> names;
+    std::vector<Shared<amun::Type>> types;
+
+    while (!is_current_kind(TokenKind::TOKEN_CLOSE_PAREN)) {
+        auto name =
+            consume_kind(TokenKind::TOKEN_IDENTIFIER, "Expect identifier as variable name.");
+        names.push_back(name);
+
+        if (is_current_kind(TokenKind::TOKEN_COLON)) {
+            advanced_token();
+            types.push_back(parse_type());
+        }
+        else {
+            types.push_back(amun::none_type);
+        }
+
+        if (is_current_kind(TokenKind::TOKEN_COMMA)) {
+            advanced_token();
+        }
+        else {
+            break;
+        }
+    }
+
+    assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after var keyword.");
+    auto equal_token = consume_kind(TokenKind::TOKEN_EQUAL, "Expect = after var keyword.");
+    auto value = parse_expression();
+    assert_kind(TokenKind::TOKEN_SEMICOLON, "Expect semicolon `;` after field declaration");
+    return std::make_shared<DestructuringDeclaraion>(names, types, value, equal_token, is_global);
 }
 
 auto amun::Parser::parse_intrinsic_prototype() -> Shared<IntrinsicPrototype>
