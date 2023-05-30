@@ -1,0 +1,9 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun return_tuple() (int64, int64) = (1, 2);
+
+fun main() int64 {
+    var (x, y) = return_tuple();
+    printf("%d, %d\n", x, y);
+    return 0;
+}

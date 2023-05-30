@@ -1,0 +1,11 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun destructuring_tuple<T>(tuple (T, T)) {
+    var (x, y) = tuple;
+    printf("%d, %d\n", x, y);
+}
+
+fun main() int64 {
+    destructuring_tuple((1, 2));
+    return 0;
+}

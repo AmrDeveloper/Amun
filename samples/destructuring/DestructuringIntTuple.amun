@@ -1,0 +1,7 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var (x, y) = (1, 2);
+    printf("%d, %d\n", x, y);
+    return 0;
+}
