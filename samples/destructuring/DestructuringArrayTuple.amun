@@ -1,0 +1,8 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var (array_one, array_two) = ([1, 2, 3], [4, 5, 6]);
+    for (array_one) printf("%d\n", it);
+    for (array_two) printf("%d\n", it);
+    return 0;
+}
