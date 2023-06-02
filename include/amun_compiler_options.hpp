@@ -20,6 +20,8 @@ struct CompilerOptions {
     bool should_report_warns = false;
     bool convert_warns_to_errors = false;
 
+    bool use_cpu_features = true;
+
     std::vector<std::string> linker_extra_flags;
 };
 

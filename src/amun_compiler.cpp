@@ -173,9 +173,26 @@ auto amun::Compiler::compile_to_object_file_from_source_code(const char* source_
     auto rm = llvm::Optional<llvm::Reloc::Model>();
     llvm::legacy::PassManager pass_manager;
 
-    constexpr auto CPU = "generic";
-    constexpr auto FEATURES = "";
-    auto target_machine = target->createTargetMachine(target_triple, CPU, FEATURES, opt, rm);
+    std::string cpu_name = "generic";
+    std::stringstream cpu_features_str;
+
+    if (context->options.use_cpu_features) {
+        // Get current CPU name and Features
+        cpu_name = llvm::sys::getHostCPUName();
+        llvm::StringMap<bool> host_features;
+        llvm::sys::getHostCPUFeatures(host_features);
+
+        // Append aviable features for this CPU
+        for (const auto& host_feature : host_features) {
+            if (cpu_features_str.rdbuf()->in_avail() > 0) {
+                cpu_features_str << ",";
+            }
+            cpu_features_str << (host_feature.second ? "+" : "-") << host_feature.first().str();
+        }
+    }
+
+    auto features = cpu_features_str.str();
+    auto target_machine = target->createTargetMachine(target_triple, cpu_name, features, opt, rm);
 
     auto file_type = llvm::CGFT_ObjectFile;
     if (target_machine->addPassesToEmitFile(pass_manager, stream, nullptr, file_type, true)) {
