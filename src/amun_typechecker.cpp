@@ -182,7 +182,10 @@ auto amun::TypeChecker::visit(DestructuringDeclaraion* node) -> std::any
     auto tuple_size = tuple_field_types.size();
 
     if (tuple_field_types.size() != node->names.size()) {
-        context->diagnostics.report_error(position, "number of fields must be equal to tuple size");
+        context->diagnostics.report_error(position,
+                                          "number of fields must be equal to tuple size expect " +
+                                              std::to_string(tuple_field_types.size()) +
+                                              " but got " + std::to_string(node->names.size()));
         throw "Stop";
     }
 
