@@ -26,6 +26,13 @@ auto amun::is_types_equals(const Shared<amun::Type>& type, const Shared<amun::Ty
                amun::is_types_equals(type_array->element_type, other_array->element_type);
     }
 
+    if (type_kind == amun::TypeKind::STATIC_VECTOR &&
+        other->type_kind == amun::TypeKind::STATIC_VECTOR) {
+        auto type_vector = std::static_pointer_cast<amun::StaticVectorType>(type);
+        auto other_vector = std::static_pointer_cast<amun::StaticVectorType>(other);
+        return is_types_equals(type_vector->array, other_vector->array);
+    }
+
     if (type_kind == amun::TypeKind::FUNCTION && other->type_kind == amun::TypeKind::FUNCTION) {
         auto type_function = std::static_pointer_cast<amun::FunctionType>(type);
         auto other_function = std::static_pointer_cast<amun::FunctionType>(other);
@@ -146,6 +153,11 @@ auto amun::get_type_literal(const Shared<amun::Type>& type) -> std::string
         auto array_type = std::static_pointer_cast<amun::StaticArrayType>(type);
         return "[" + std::to_string(array_type->size) + "]" +
                amun::get_type_literal(array_type->element_type);
+    }
+
+    if (type_kind == amun::TypeKind::STATIC_VECTOR) {
+        auto vector_type = std::static_pointer_cast<amun::StaticVectorType>(type);
+        return "@vec" + get_type_literal(vector_type->array);
     }
 
     if (type_kind == amun::TypeKind::POINTER) {
@@ -270,6 +282,20 @@ auto amun::is_integer_type(Shared<amun::Type> type) -> bool
         auto number_kind = number_type->number_kind;
         return number_kind != amun::NumberKind::FLOAT_32 &&
                number_kind != amun::NumberKind::FLOAT_64;
+    }
+    return false;
+}
+
+auto amun::is_signed_integer_type(Shared<amun::Type> type) -> bool
+{
+    if (type->type_kind == amun::TypeKind::NUMBER) {
+        auto number_type = std::static_pointer_cast<amun::NumberType>(type);
+        auto number_kind = number_type->number_kind;
+        return number_kind == amun::NumberKind::INTEGER_1 ||
+               number_kind == amun::NumberKind::INTEGER_8 ||
+               number_kind == amun::NumberKind::INTEGER_16 ||
+               number_kind == amun::NumberKind::INTEGER_32 ||
+               number_kind == amun::NumberKind::INTEGER_64;
     }
     return false;
 }

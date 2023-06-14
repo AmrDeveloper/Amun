@@ -3,7 +3,13 @@
 
 #include <unordered_map>
 
-auto amun::Parser::parse_type() -> Shared<amun::Type> { return parse_type_with_prefix(); }
+auto amun::Parser::parse_type() -> Shared<amun::Type>
+{
+    if (is_current_kind(TokenKind::TOKEN_AT)) {
+        return pares_types_directive();
+    }
+    return parse_type_with_prefix();
+}
 
 auto amun::Parser::parse_type_with_prefix() -> Shared<amun::Type>
 {

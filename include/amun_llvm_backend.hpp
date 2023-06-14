@@ -115,6 +115,8 @@ class LLVMBackend : public TreeVisitor {
 
     auto visit(ArrayExpression* node) -> std::any override;
 
+    auto visit(VectorExpression* node) -> std::any override;
+
     auto visit(StringExpression* node) -> std::any override;
 
     auto visit(CharacterExpression* node) -> std::any override;

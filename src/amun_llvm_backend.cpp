@@ -2022,6 +2022,91 @@ auto amun::LLVMBackend::visit(ArrayExpression* node) -> std::any
     return alloca;
 }
 
+auto amun::LLVMBackend::visit(VectorExpression* node) -> std::any
+{
+    auto array = node->array;
+    auto array_type = std::static_pointer_cast<amun::StaticArrayType>(array->type);
+    auto element_type = array_type->element_type;
+    auto number_type = std::static_pointer_cast<amun::NumberType>(element_type);
+    auto number_kind = number_type->number_kind;
+    auto array_values = array->values;
+    auto array_size = array_values.size();
+
+    if (number_kind == amun::NumberKind::U_INTEGER_8) {
+        std::vector<uint8> values;
+        values.reserve(array_size);
+
+        for (auto& value : array_values) {
+            auto number = std::dynamic_pointer_cast<NumberExpression>(value);
+            values.push_back(str_to_int(number->value.literal.c_str()));
+        }
+
+        return llvm::ConstantDataVector::get(llvm_context, values);
+    }
+
+    if (number_kind == amun::NumberKind::U_INTEGER_16) {
+        std::vector<uint16> values;
+        values.reserve(array_size);
+
+        for (auto& value : array_values) {
+            auto number = std::dynamic_pointer_cast<NumberExpression>(value);
+            values.push_back(str_to_int(number->value.literal.c_str()));
+        }
+
+        return llvm::ConstantDataVector::get(llvm_context, values);
+    }
+
+    if (number_kind == amun::NumberKind::U_INTEGER_32) {
+        std::vector<uint32> values;
+        values.reserve(array_size);
+
+        for (auto& value : array_values) {
+            auto number = std::dynamic_pointer_cast<NumberExpression>(value);
+            values.push_back(str_to_int(number->value.literal.c_str()));
+        }
+
+        return llvm::ConstantDataVector::get(llvm_context, values);
+    }
+
+    if (number_kind == amun::NumberKind::U_INTEGER_64) {
+        std::vector<uint64> values;
+        values.reserve(array_size);
+
+        for (auto& value : array_values) {
+            auto number = std::dynamic_pointer_cast<NumberExpression>(value);
+            values.push_back(str_to_int(number->value.literal.c_str()));
+        }
+
+        return llvm::ConstantDataVector::get(llvm_context, values);
+    }
+
+    if (number_kind == amun::NumberKind::FLOAT_32) {
+        std::vector<float32> values;
+        values.reserve(array_size);
+
+        for (auto& value : array_values) {
+            auto number = std::dynamic_pointer_cast<NumberExpression>(value);
+            values.push_back(str_to_float(number->value.literal.c_str()));
+        }
+
+        return llvm::ConstantDataVector::get(llvm_context, values);
+    }
+
+    if (number_kind == amun::NumberKind::FLOAT_64) {
+        std::vector<float64> values;
+        values.reserve(array_size);
+
+        for (auto& value : array_values) {
+            auto number = std::dynamic_pointer_cast<NumberExpression>(value);
+            values.push_back(str_to_float(number->value.literal.c_str()));
+        }
+
+        return llvm::ConstantDataVector::get(llvm_context, values);
+    }
+
+    internal_compiler_error("Invalid number size on Vector Expression");
+}
+
 auto amun::LLVMBackend::visit(StringExpression* node) -> std::any
 {
     std::string literal = node->value.literal;
@@ -2192,6 +2277,14 @@ auto amun::LLVMBackend::llvm_type_from_amun_type(std::shared_ptr<amun::Type> typ
         auto element_type = llvm_type_from_amun_type(amun_array_type->element_type);
         auto size = amun_array_type->size;
         return llvm::ArrayType::get(element_type, size);
+    }
+
+    if (type_kind == amun::TypeKind::STATIC_VECTOR) {
+        auto amun_vec_type = std::static_pointer_cast<amun::StaticVectorType>(type);
+        auto array_type = amun_vec_type->array;
+        auto llvm_element_type = llvm_type_from_amun_type(array_type->element_type);
+        auto length = llvm::ElementCount::get(array_type->size, false);
+        return llvm::VectorType::get(llvm_element_type, length);
     }
 
     if (type_kind == amun::TypeKind::POINTER) {

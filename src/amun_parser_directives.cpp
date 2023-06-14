@@ -144,7 +144,42 @@ auto amun::Parser::parse_expressions_directive() -> Shared<Expression>
         return std::make_shared<StringExpression>(directive_token);
     }
 
+    if (directive_name == "vec") {
+        auto expression = parse_expression();
+        if (expression->get_ast_node_type() != AstNodeType::AST_ARRAY) {
+            context->diagnostics.report_error(posiiton, "Expect Array expression after @vec");
+            throw "Stop";
+        }
+
+        auto array = std::dynamic_pointer_cast<ArrayExpression>(expression);
+        return std::make_shared<VectorExpression>(array);
+    }
+
     context->diagnostics.report_error(posiiton,
                                       "No expression directive with name " + directive_name);
+    throw "Stop";
+}
+
+auto amun::Parser::pares_types_directive() -> Shared<amun::Type>
+{
+    auto hash_token = consume_kind(TokenKind::TOKEN_AT, "Expect `#` before directive name");
+    auto posiiton = hash_token.position;
+
+    if (is_current_kind(TokenKind::TOKEN_IDENTIFIER)) {
+        auto directive = peek_current();
+        auto directive_name = directive.literal;
+
+        if (directive_name == "vec") {
+            auto type = parse_type();
+            if (type->type_kind != TypeKind::STATIC_ARRAY) {
+                context->diagnostics.report_error(posiiton, "Expect array type after @vec");
+                throw "Stop";
+            }
+
+            auto array_type = std::static_pointer_cast<amun::StaticArrayType>(type);
+            return std::make_shared<amun::StaticVectorType>(array_type);
+        }
+    }
+    context->diagnostics.report_error(posiiton, "Expect identifier as directive name");
     throw "Stop";
 }

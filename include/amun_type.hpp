@@ -16,6 +16,7 @@ enum class TypeKind : int8 {
     POINTER,
     FUNCTION,
     STATIC_ARRAY,
+    STATIC_VECTOR,
     STRUCT,
     TUPLE,
     ENUM,
@@ -78,6 +79,14 @@ struct StaticArrayType : public Type {
 
     Shared<Type> element_type;
     size_t size;
+};
+
+struct StaticVectorType : public Type {
+    explicit StaticVectorType(Shared<StaticArrayType> array) : array(std::move(array))
+    {
+        type_kind = TypeKind::STATIC_VECTOR;
+    }
+    Shared<StaticArrayType> array;
 };
 
 struct FunctionType : public Type {
@@ -203,6 +212,8 @@ auto get_type_literal(const Shared<Type>& type) -> std::string;
 auto get_number_kind_literal(NumberKind kind) -> const char*;
 
 auto is_number_type(Shared<Type> type) -> bool;
+
+auto is_signed_integer_type(Shared<Type> type) -> bool;
 
 auto is_unsigned_integer_type(Shared<Type> type) -> bool;
 

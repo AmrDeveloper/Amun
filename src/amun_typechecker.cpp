@@ -1890,6 +1890,22 @@ auto amun::TypeChecker::visit(ArrayExpression* node) -> std::any
     return array_type;
 }
 
+auto amun::TypeChecker::visit(VectorExpression* node) -> std::any
+{
+    auto array = node->array;
+    auto array_type = std::static_pointer_cast<amun::StaticArrayType>(array->type);
+    auto element_type = array_type->element_type;
+
+    if (element_type->type_kind != TypeKind::NUMBER || amun::is_signed_integer_type(element_type)) {
+        auto position = node->array->position.position;
+        context->diagnostics.report_error(position,
+                                          "vector type accept only unsinged number or float types");
+        throw "Stop";
+    }
+
+    return node->get_type_node();
+}
+
 auto amun::TypeChecker::visit(StringExpression* node) -> std::any { return node->get_type_node(); }
 
 auto amun::TypeChecker::visit(CharacterExpression* node) -> std::any

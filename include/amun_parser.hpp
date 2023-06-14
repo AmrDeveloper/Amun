@@ -189,6 +189,8 @@ class Parser {
 
     auto parse_type() -> Shared<amun::Type>;
 
+    auto pares_types_directive() -> Shared<amun::Type>;
+
     auto parse_type_with_prefix() -> Shared<amun::Type>;
 
     auto parse_pointer_to_type() -> Shared<amun::Type>;

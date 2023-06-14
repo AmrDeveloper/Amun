@@ -56,6 +56,7 @@ enum class AstNodeType {
     AST_INDEX,
     AST_ENUM_ELEMENT,
     AST_ARRAY,
+    AST_VECTOR,
     AST_STRING,
     AST_LITERAL,
     AST_NUMBER,
@@ -1036,6 +1037,28 @@ class ArrayExpression : public Expression {
     std::vector<Shared<Expression>> values;
     Shared<amun::Type> type;
     bool is_constants_array = true;
+};
+
+class VectorExpression : public Expression {
+  public:
+    explicit VectorExpression(Shared<ArrayExpression> array) : array(std::move(array)) {}
+
+    auto get_type_node() -> Shared<amun::Type> override
+    {
+        auto type = array->get_type_node();
+        auto array_type = std::static_pointer_cast<amun::StaticArrayType>(type);
+        return std::make_shared<amun::StaticVectorType>(array_type);
+    }
+
+    auto set_type_node(Shared<amun::Type> type) -> void override { array->set_type_node(type); }
+
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
+
+    auto is_constant() -> bool override { return array->is_constant(); }
+
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_VECTOR; }
+
+    Shared<ArrayExpression> array;
 };
 
 class StringExpression : public Expression {

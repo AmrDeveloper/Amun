@@ -94,6 +94,7 @@ class EnumAccessExpression;
 class LiteralExpression;
 class NumberExpression;
 class ArrayExpression;
+class VectorExpression;
 class StringExpression;
 class CharacterExpression;
 class BooleanExpression;
@@ -151,6 +152,8 @@ class ExpressionVisitor {
     virtual auto visit(StringExpression* node) -> std::any = 0;
 
     virtual auto visit(ArrayExpression* node) -> std::any = 0;
+
+    virtual auto visit(VectorExpression* node) -> std::any = 0;
 
     virtual auto visit(CharacterExpression* node) -> std::any = 0;
 
