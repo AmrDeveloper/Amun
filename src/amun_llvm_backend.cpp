@@ -1828,6 +1828,15 @@ auto amun::LLVMBackend::visit(DotExpression* node) -> std::any
         internal_compiler_error("Invalid Array Attribute");
     }
 
+    // Compile time vector attributes
+    if (callee_llvm_type->isVectorTy()) {
+        if (node->field_name.literal == "count") {
+            auto llvm_vector_type = llvm::dyn_cast<llvm::FixedVectorType>(callee_llvm_type);
+            return create_llvm_int64(llvm_vector_type->getNumElements(), true);
+        }
+        internal_compiler_error("Invalid Vector Attribute");
+    }
+
     // Compile String literal attributes
     if (amun::is_pointer_of_type(callee_type, amun::i8_type)) {
         if (node->field_name.literal == "count") {

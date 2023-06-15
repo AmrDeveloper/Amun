@@ -1658,6 +1658,21 @@ auto amun::TypeChecker::visit(DotExpression* node) -> std::any
         throw "Stop";
     }
 
+    if (callee_type_kind == amun::TypeKind::STATIC_VECTOR) {
+        auto attribute_token = node->field_name;
+        auto literal = attribute_token.literal;
+
+        if (literal == "count") {
+            node->is_constants_ = true;
+            node->set_type_node(amun::i64_type);
+            return amun::i64_type;
+        }
+
+        context->diagnostics.report_error(node_position,
+                                          "Unkown Array attribute with name " + literal);
+        throw "Stop";
+    }
+
     if (callee_type_kind == amun::TypeKind::GENERIC_STRUCT) {
         auto generic_type = std::static_pointer_cast<amun::GenericStructType>(callee_type);
         auto resolved_type = resolve_generic_type(generic_type);
