@@ -1,0 +1,10 @@
+fun main() int64 {
+    var u8_vec = @vec[1_u8, 2_u8, 3_u8];
+    var u16_vec = @vec[1_u16, 2_u16, 3_u16];
+    var u32_vec = @vec[1_u32, 2_u32, 3_u32];
+    var u64_vec = @vec[1_u64, 2_u64, 3_u64];
+
+    var f32_vec = @vec[1_f32, 2_f32, 3_f32];
+    var f64_vec = @vec[1_f64, 2_f64, 3_f64];
+    return 0;
+}
