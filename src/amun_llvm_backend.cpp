@@ -2839,7 +2839,15 @@ auto amun::LLVMBackend::access_array_element(std::shared_ptr<Expression> node_va
             auto alloca = llvm::dyn_cast<llvm::AllocaInst>(llvm_node_value(array));
             auto alloca_type = alloca->getAllocatedType();
             auto ptr = Builder.CreateGEP(alloca_type, alloca, {zero_int32_value, index});
-            auto element_type = alloca_type->getArrayElementType();
+            llvm::Type* element_type;
+
+            if (alloca_type->isVectorTy()) {
+                auto vector_type = llvm::dyn_cast<llvm::VectorType>(alloca_type);
+                element_type = vector_type->getElementType();
+            }
+            else {
+                element_type = alloca_type->getArrayElementType();
+            }
 
             if (element_type->isPointerTy() or element_type->isStructTy()) {
                 return ptr;

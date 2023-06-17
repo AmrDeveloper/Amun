@@ -1779,7 +1779,22 @@ auto amun::TypeChecker::visit(IndexExpression* node) -> std::any
         auto array_type = std::static_pointer_cast<amun::StaticArrayType>(callee_type);
         node->set_type_node(array_type->element_type);
 
-        // Check that index is not larger or equal array size
+        // Compile time bounds check
+        if (has_constant_index && constant_index >= array_type->size) {
+            context->diagnostics.report_error(position,
+                                              "Index can't be bigger than or equal array size");
+            throw "Stop";
+        }
+
+        return array_type->element_type;
+    }
+
+    if (callee_type->type_kind == amun::TypeKind::STATIC_VECTOR) {
+        auto vector_type = std::static_pointer_cast<amun::StaticVectorType>(callee_type);
+        auto array_type = vector_type->array;
+        node->set_type_node(array_type->element_type);
+
+        // Compile time bounds check
         if (has_constant_index && constant_index >= array_type->size) {
             context->diagnostics.report_error(position,
                                               "Index can't be bigger than or equal array size");
