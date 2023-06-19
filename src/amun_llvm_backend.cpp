@@ -600,9 +600,18 @@ auto amun::LLVMBackend::visit(ForEachStatement* node) -> std::any
     auto step = create_llvm_int64(1, true);
 
     // Get length of collections depending on type
-    auto length = is_foreach_string
-                      ? create_llvm_string_length(collection)
-                      : create_llvm_int64(collection_type->getArrayNumElements(), true);
+    llvm::Value* length;
+    if (is_foreach_string) {
+        length = create_llvm_string_length(collection);
+    }
+    else if (collection_type->isVectorTy()) {
+        auto vector_type = std::static_pointer_cast<amun::StaticVectorType>(collection_exp_type);
+        auto array_count = vector_type->array->size;
+        length = create_llvm_int64(array_count, true);
+    }
+    else {
+        length = create_llvm_int64(collection_type->getArrayNumElements(), true);
+    }
 
     auto end = create_llvm_integers_bianry(TokenKind::TOKEN_MINUS, length, step);
     auto condition_block = llvm::BasicBlock::Create(llvm_context, "for.cond");
@@ -624,7 +633,20 @@ auto amun::LLVMBackend::visit(ForEachStatement* node) -> std::any
     // Resolve element name to be collection[it_index]
     llvm::AllocaInst* element_alloca;
     const auto element_name = node->element_name;
-    auto element_type = is_foreach_string ? llvm_int8_type : collection_type->getArrayElementType();
+
+    // Detect element type for string, array or vector
+    llvm::Type* element_type;
+    if (collection_type->isVectorTy()) {
+        auto vector_type = std::static_pointer_cast<amun::StaticVectorType>(collection_exp_type);
+        element_type = llvm_type_from_amun_type(vector_type->array->element_type);
+    }
+    else if (collection_type->isArrayTy()) {
+        element_type = collection_type->getArrayElementType();
+    }
+    else {
+        element_type = llvm_int8_type;
+    }
+
     if (node->element_name != "_") {
         element_alloca = create_entry_block_alloca(current_function, element_name, element_type);
     }

@@ -429,7 +429,8 @@ auto amun::TypeChecker::visit(ForEachStatement* node) -> std::any
     auto is_array_type = collection_type->type_kind == amun::TypeKind::STATIC_ARRAY;
     auto is_string_type = amun::is_pointer_of_type(collection_type, amun::i8_type);
 
-    if (!is_array_type && !is_string_type) {
+    if (!is_array_type && !is_string_type &&
+        collection_type->type_kind != TypeKind::STATIC_VECTOR) {
         context->diagnostics.report_error(node->position.position,
                                           "For each expect array or string as paramter");
         throw "Stop";
