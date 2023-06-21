@@ -636,7 +636,7 @@ auto amun::LLVMBackend::visit(ForEachStatement* node) -> std::any
 
     // Detect element type for string, array or vector
     llvm::Type* element_type;
-    if (collection_type->isVectorTy()) {
+    if (collection_exp_type->type_kind == TypeKind::STATIC_VECTOR) {
         auto vector_type = std::static_pointer_cast<amun::StaticVectorType>(collection_exp_type);
         element_type = llvm_type_from_amun_type(vector_type->array->element_type);
     }

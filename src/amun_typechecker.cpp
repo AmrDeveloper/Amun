@@ -428,9 +428,9 @@ auto amun::TypeChecker::visit(ForEachStatement* node) -> std::any
     auto collection_type = node_amun_type(node->collection->accept(this));
     auto is_array_type = collection_type->type_kind == amun::TypeKind::STATIC_ARRAY;
     auto is_string_type = amun::is_pointer_of_type(collection_type, amun::i8_type);
+    auto is_vector_type = collection_type->type_kind == TypeKind::STATIC_VECTOR;
 
-    if (!is_array_type && !is_string_type &&
-        collection_type->type_kind != TypeKind::STATIC_VECTOR) {
+    if (!is_array_type && !is_string_type && !is_vector_type) {
         context->diagnostics.report_error(node->position.position,
                                           "For each expect array or string as paramter");
         throw "Stop";
@@ -445,6 +445,11 @@ auto amun::TypeChecker::visit(ForEachStatement* node) -> std::any
             // If paramter is array, set element type to array elmenet type
             auto array_type = std::static_pointer_cast<amun::StaticArrayType>(collection_type);
             types_table.define(node->element_name, array_type->element_type);
+        }
+        else if (is_vector_type) {
+            // If paramter is vector, set element type to vector elmenet type
+            auto vector_type = std::static_pointer_cast<amun::StaticVectorType>(collection_type);
+            types_table.define(node->element_name, vector_type->array->element_type);
         }
         else {
             // If parameter is string, set element type to char (*int8) type
