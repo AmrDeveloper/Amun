@@ -2,7 +2,7 @@
 
 auto amun::Parser::parse_declaraions_directive() -> Shared<Statement>
 {
-    auto hash_token = consume_kind(TokenKind::TOKEN_AT, "Expect `#` before directive name");
+    auto hash_token = consume_kind(TokenKind::TOKEN_AT, "Expect `@` before directive name");
     auto posiiton = hash_token.position;
 
     if (is_current_kind(TokenKind::TOKEN_IDENTIFIER)) {
@@ -88,7 +88,7 @@ auto amun::Parser::parse_declaraions_directive() -> Shared<Statement>
 
 auto amun::Parser::parse_statements_directive() -> Shared<Statement>
 {
-    auto hash_token = consume_kind(TokenKind::TOKEN_AT, "Expect `#` before directive name");
+    auto hash_token = consume_kind(TokenKind::TOKEN_AT, "Expect `@` before directive name");
     auto directive = consume_kind(TokenKind::TOKEN_IDENTIFIER, "Expect symbol as directive name");
     auto directive_name = directive.literal;
     auto posiiton = directive.position;
@@ -112,7 +112,7 @@ auto amun::Parser::parse_statements_directive() -> Shared<Statement>
 
 auto amun::Parser::parse_expressions_directive() -> Shared<Expression>
 {
-    auto hash_token = consume_kind(TokenKind::TOKEN_AT, "Expect `#` before directive name");
+    auto hash_token = consume_kind(TokenKind::TOKEN_AT, "Expect `@` before directive name");
     auto directive = consume_kind(TokenKind::TOKEN_IDENTIFIER, "Expect symbol as directive name");
     auto directive_name = directive.literal;
     auto posiiton = directive.position;
@@ -162,7 +162,7 @@ auto amun::Parser::parse_expressions_directive() -> Shared<Expression>
 
 auto amun::Parser::pares_types_directive() -> Shared<amun::Type>
 {
-    auto hash_token = consume_kind(TokenKind::TOKEN_AT, "Expect `#` before directive name");
+    auto hash_token = consume_kind(TokenKind::TOKEN_AT, "Expect `@` before directive name");
     auto posiiton = hash_token.position;
 
     if (is_current_kind(TokenKind::TOKEN_IDENTIFIER)) {
@@ -170,6 +170,7 @@ auto amun::Parser::pares_types_directive() -> Shared<amun::Type>
         auto directive_name = directive.literal;
 
         if (directive_name == "vec") {
+            advanced_token();
             auto type = parse_type();
             if (type->type_kind != TypeKind::STATIC_ARRAY) {
                 context->diagnostics.report_error(posiiton, "Expect array type after @vec");
