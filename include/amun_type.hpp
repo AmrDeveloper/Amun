@@ -243,6 +243,8 @@ auto is_function_pointer_type(Shared<Type> type) -> bool;
 
 auto is_array_type(Shared<amun::Type> type) -> bool;
 
+auto is_vector_type(Shared<amun::Type> type) -> bool;
+
 auto is_pointer_type(Shared<Type> type) -> bool;
 
 auto is_void_type(Shared<Type> type) -> bool;

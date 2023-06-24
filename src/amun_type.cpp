@@ -393,6 +393,11 @@ auto amun::is_array_type(Shared<amun::Type> type) -> bool
     return type->type_kind == amun::TypeKind::STATIC_ARRAY;
 }
 
+auto amun::is_vector_type(Shared<amun::Type> type) -> bool
+{
+    return type->type_kind == amun::TypeKind::STATIC_VECTOR;
+}
+
 auto amun::is_pointer_type(Shared<amun::Type> type) -> bool
 {
     return type->type_kind == amun::TypeKind::POINTER;

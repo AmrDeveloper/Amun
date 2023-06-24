@@ -867,6 +867,19 @@ auto amun::TypeChecker::visit(BinaryExpression* node) -> std::any
         throw "Stop";
     }
 
+    // Check that types are vectors and no need for operator overloading
+    if (amun::is_vector_type(lhs) && amun::is_vector_type(rhs)) {
+        if (amun::is_types_equals(lhs, rhs)) {
+            node->set_type_node(lhs);
+            return lhs;
+        }
+
+        context->diagnostics.report_error(
+            position, "Expect vector types to be the same size and type but got " +
+                          amun::get_type_literal(lhs) + " and " + amun::get_type_literal(rhs));
+        throw "Stop";
+    }
+
     // Check if those types has an operator overloading function
     auto function_name = mangle_operator_function(op.kind, {lhs, rhs});
     if (types_table.is_defined(function_name)) {

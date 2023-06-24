@@ -1274,6 +1274,15 @@ auto amun::LLVMBackend::visit(BinaryExpression* node) -> std::any
         return create_llvm_floats_bianry(op, lhs, rhs);
     }
 
+    if (lhs->getType()->isVectorTy() && rhs->getType()->isVectorTy()) {
+        auto vector_type = std::static_pointer_cast<amun::StaticVectorType>(node->type);
+        auto element_type = vector_type->array->element_type;
+        if (amun::is_unsigned_integer_type(element_type)) {
+            return create_llvm_integers_vectors_bianry(op, lhs, rhs);
+        }
+        return create_llvm_floats_vectors_bianry(op, lhs, rhs);
+    }
+
     // Perform overloading function call
     // No need for extra checks after type checker pass
     auto lhs_type = node->left->get_type_node();
@@ -2018,7 +2027,7 @@ auto amun::LLVMBackend::visit(ArrayExpression* node) -> std::any
     auto size = node_values.size();
     if (node->is_constant()) {
         auto llvm_type = llvm_type_from_amun_type(node->get_type_node());
-        auto arrayType = llvm::dyn_cast<llvm::ArrayType>(llvm_type);
+        auto array_type = llvm::dyn_cast<llvm::ArrayType>(llvm_type);
 
         std::vector<llvm::Constant*> values;
         values.reserve(size);
@@ -2026,7 +2035,7 @@ auto amun::LLVMBackend::visit(ArrayExpression* node) -> std::any
             auto llvm_value = llvm_resolve_value(value->accept(this));
             values.push_back(llvm::dyn_cast<llvm::Constant>(llvm_value));
         }
-        return llvm::ConstantArray::get(arrayType, values);
+        return llvm::ConstantArray::get(array_type, values);
     }
 
     auto arrayType = llvm_type_from_amun_type(node->get_type_node());
@@ -2417,6 +2426,56 @@ auto amun::LLVMBackend::create_llvm_integers_bianry(TokenKind op, llvm::Value* l
 
 auto amun::LLVMBackend::create_llvm_floats_bianry(TokenKind op, llvm::Value* left,
                                                   llvm::Value* right) -> llvm::Value*
+{
+    switch (op) {
+    case TokenKind::TOKEN_PLUS: {
+        return Builder.CreateFAdd(left, right, "addtemp");
+    }
+    case TokenKind::TOKEN_MINUS: {
+        return Builder.CreateFSub(left, right, "subtmp");
+    }
+    case TokenKind::TOKEN_STAR: {
+        return Builder.CreateFMul(left, right, "multmp");
+    }
+    case TokenKind::TOKEN_SLASH: {
+        return Builder.CreateFDiv(left, right, "divtmp");
+    }
+    case TokenKind::TOKEN_PERCENT: {
+        return Builder.CreateFRem(left, right, "remtemp");
+    }
+    default: {
+        internal_compiler_error("Invalid binary operator for floating point types");
+    }
+    }
+}
+
+auto amun::LLVMBackend::create_llvm_integers_vectors_bianry(TokenKind op, llvm::Value* left,
+                                                            llvm::Value* right) -> llvm::Value*
+{
+    switch (op) {
+    case TokenKind::TOKEN_PLUS: {
+        return Builder.CreateAdd(left, right, "addtemp");
+    }
+    case TokenKind::TOKEN_MINUS: {
+        return Builder.CreateSub(left, right, "subtmp");
+    }
+    case TokenKind::TOKEN_STAR: {
+        return Builder.CreateMul(left, right, "multmp");
+    }
+    case TokenKind::TOKEN_SLASH: {
+        return Builder.CreateUDiv(left, right, "divtmp");
+    }
+    case TokenKind::TOKEN_PERCENT: {
+        return Builder.CreateURem(left, right, "remtemp");
+    }
+    default: {
+        internal_compiler_error("Invalid binary operator for floating point types");
+    }
+    }
+}
+
+auto amun::LLVMBackend::create_llvm_floats_vectors_bianry(TokenKind op, llvm::Value* left,
+                                                          llvm::Value* right) -> llvm::Value*
 {
     switch (op) {
     case TokenKind::TOKEN_PLUS: {
