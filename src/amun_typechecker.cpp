@@ -1037,6 +1037,19 @@ auto amun::TypeChecker::visit(ComparisonExpression* node) -> std::any
         return amun::i1_type;
     }
 
+    // Check that types are vectors and no need for operator overloading
+    if (amun::is_vector_type(lhs) && amun::is_vector_type(rhs)) {
+        if (amun::is_types_equals(lhs, rhs)) {
+            node->set_type_node(lhs);
+            return amun::i1_type;
+        }
+
+        context->diagnostics.report_error(
+            position, "Expect vector types to be the same size and type but got " +
+                          amun::get_type_literal(lhs) + " and " + amun::get_type_literal(rhs));
+        throw "Stop";
+    }
+
     // Can't compare null value with non pointer value
     if (amun::is_null_type(lhs) || amun::is_null_type(rhs)) {
         context->diagnostics.report_error(node->operator_token.position,

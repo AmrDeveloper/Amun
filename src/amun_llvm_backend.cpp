@@ -1370,6 +1370,16 @@ auto amun::LLVMBackend::visit(ComparisonExpression* node) -> std::any
         return create_llvm_integers_comparison(op, lhs, rhs);
     }
 
+    // Comparison Operations for vectors types
+    if (lhs->getType()->isVectorTy() && rhs->getType()->isVectorTy()) {
+        auto vector_type = std::static_pointer_cast<amun::StaticVectorType>(node->type);
+        auto element_type = vector_type->array->element_type;
+        if (amun::is_unsigned_integer_type(element_type)) {
+            return create_llvm_unsigned_integers_comparison(op, lhs, rhs);
+        }
+        return create_llvm_floats_comparison(op, lhs, rhs);
+    }
+
     // Perform overloading function call
     // No need for extra checks after type checker pass
     auto lhs_type = node->left->get_type_node();
