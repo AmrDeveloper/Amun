@@ -1,0 +1,53 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var vec1 = @vec[1_u64, 2_u64, 3_u64];
+    var vec2 = @vec[1_u64, 2_u64, 3_u64];
+
+    {
+        printf("Vec1 + Vec2: ");
+        var vec3 = vec1 + vec2;
+        for (vec3) {
+            printf("%u ", it);
+        }
+        printf("\n");
+    }
+
+    {
+        printf("Vec1 - Vec2: ");
+        var vec3 = vec1 - vec2;
+        for (vec3) {
+            printf("%u ", it);
+        }
+        printf("\n");
+    }
+
+    {
+        printf("Vec1 * Vec2: ");
+        var vec3 = vec1 * vec2;
+        for (vec3) {
+            printf("%u ", it);
+        }
+        printf("\n");
+    }
+
+    {
+        printf("Vec1 / Vec2: ");
+        var vec3 = vec1 / vec2;
+        for (vec3) {
+            printf("%u ", it);
+        }
+        printf("\n");
+    }
+
+    {
+        printf("Vec1 % Vec2: ");
+        var vec3 = vec1 % vec2;
+        for (vec3) {
+            printf("%u ", it);
+        }
+        printf("\n");
+    }
+
+    return 0;
+}

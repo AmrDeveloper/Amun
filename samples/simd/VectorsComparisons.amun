@@ -1,0 +1,15 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var v1 = @vec[1_u64, 2_u64, 3_u64];
+    var v2 = @vec[2_u64, 4_u64, 5_u64];
+
+    printf("v1 == v2 %d\n", v1 == v2);
+    printf("v1 != v2 %d\n", v1 != v2);
+    printf("v1 >  v2 %d\n", v1 > v2);
+    printf("v1 >= v2 %d\n", v1 >= v2);
+    printf("v1 <  v2 %d\n", v1 < v2);
+    printf("v1 <= v2 %d\n", v1 <= v2);
+
+    return 0;
+}
