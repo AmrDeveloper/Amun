@@ -1,0 +1,19 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var vec = @vec[1_u8, 2_u8, 3_u8];
+    
+    printf("vec[0] before %u\n", vec[0]);
+    vec[0] = 3_u8;
+    printf("vec[0] before %u\n", vec[0]);
+
+
+    printf("vec[1] before %u\n", vec[1]);
+    vec[1] = 6_u8;
+    printf("vec[1] before %u\n", vec[1]);
+
+    printf("vec[2] before %u\n", vec[2]);
+    vec[2] = 9_u8;
+    printf("vec[2] before %u\n", vec[2]);
+    return 0;
+}
