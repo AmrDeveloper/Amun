@@ -1,0 +1,23 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var vec = @vec[1_u8, 2_u8, 3_u8];
+    for (vec) {
+        printf("vec[%d] = %u\t", it_index, it);
+    }
+
+    printf("\n");
+
+    for (element : vec) {
+        printf("vec[%d] = %u\t", it_index, element);
+    }
+
+    printf("\n");
+
+    for (index, element : vec) {
+        printf("vec[%d] = %u\t", index, element);
+    }
+
+    printf("\n");
+    return 0;
+}

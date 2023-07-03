@@ -1,0 +1,13 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun print_vector(vec @vec[3]uint64) {
+    for (vec) {
+        printf("Vec[%d] : %u\n", it_index, it);
+    }
+}
+
+fun main() int64 {
+    var vector = @vec[1_u64, 2_u64, 3_u64];
+    print_vector(vector);
+    return 0;
+}
