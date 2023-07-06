@@ -1300,7 +1300,8 @@ auto amun::LLVMBackend::visit(BitwiseExpression* node) -> std::any
     auto rhs_type = node->right->get_type_node();
     auto op = node->operator_token.kind;
 
-    if (amun::is_integer_type(lhs_type) && amun::is_integer_type(rhs_type)) {
+    if ((amun::is_integer_type(lhs_type) && amun::is_integer_type(rhs_type)) ||
+        (amun::is_vector_type(lhs_type) && amun::is_vector_type(rhs_type))) {
         if (op == TokenKind::TOKEN_OR) {
             return Builder.CreateOr(lhs, rhs);
         }
