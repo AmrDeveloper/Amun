@@ -329,8 +329,15 @@ auto amun::Tokenizer::consume_number() -> Token
 
 auto amun::Tokenizer::consume_hex_number() -> Token
 {
+    auto has_digits = false;
     while (is_hex_digit(peek()) or is_underscore(peek())) {
         advance();
+        has_digits = true;
+    }
+
+    if (!has_digits) {
+        return build_token(TokenKind::TOKEN_INVALID,
+                           "Missing digits after the integer base prefix");
     }
 
     size_t len = current_position - start_position - 1;
@@ -339,7 +346,7 @@ auto amun::Tokenizer::consume_hex_number() -> Token
     auto decimal_value = hex_to_decimal(literal);
 
     if (decimal_value == -1) {
-        return build_token(TokenKind::TOKEN_INVALID, "hex integer literal is too large");
+        return build_token(TokenKind::TOKEN_INVALID, "Hex integer literal is too large");
     }
 
     return build_token(TokenKind::TOKEN_INT, std::to_string(decimal_value));
@@ -347,8 +354,15 @@ auto amun::Tokenizer::consume_hex_number() -> Token
 
 auto amun::Tokenizer::consume_binary_number() -> Token
 {
+    auto has_digits = false;
     while (is_binary_digit(peek()) or is_underscore(peek())) {
         advance();
+        has_digits = true;
+    }
+
+    if (!has_digits) {
+        return build_token(TokenKind::TOKEN_INVALID,
+                           "Missing digits after the integer base prefix");
     }
 
     size_t len = current_position - start_position - 1;
