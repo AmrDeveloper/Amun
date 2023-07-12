@@ -2588,6 +2588,24 @@ auto amun::TypeChecker::check_valid_assignment_right_side(Shared<Expression> nod
         return;
     }
 
+    // Call expression is an invalid right hand side
+    if (left_node_type == AstNodeType::AST_CALL) {
+        context->diagnostics.report_error(position, "invalid left-hand side of assignment");
+        throw "Stop";
+    }
+
+    // Cast expression is an invalid right hand side
+    if (left_node_type == AstNodeType::AST_CAST) {
+        context->diagnostics.report_error(position, "invalid left-hand side of assignment");
+        throw "Stop";
+    }
+
+    // Group expression is an invalid right hand side
+    if (left_node_type == AstNodeType::AST_GROUP) {
+        context->diagnostics.report_error(position, "invalid left-hand side of assignment");
+        throw "Stop";
+    }
+
     // Index expression is a valid right hand side but
     // Make sure to report error if use want to modify string literal using
     // index expression
