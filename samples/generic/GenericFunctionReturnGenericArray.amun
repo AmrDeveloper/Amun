@@ -1,13 +1,12 @@
 @extern fun printf(format *char, varargs Any) int64;
 
-fun make_fixed_array<T>() [5]T {
-    return [1, 2, 3, 4, 5];
+fun return_generic_array<T>(t T) [3]T {
+    return [t, t, t];
 }
 
 fun main() int64 {
-    var array = make_fixed_array<int64>();
-    for (array) {
-        printf("%d\n", it);
-    }
+    var long_ptr : [3]int64 = return_generic_array<int64>(1);
+    var integer_ptr : [3]int32 = return_generic_array<int32>(1i32);
+    var short_ptr : [3]int16 = return_generic_array<int16>(1i16);
     return 0;
 }

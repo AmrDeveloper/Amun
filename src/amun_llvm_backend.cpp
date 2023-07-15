@@ -2393,6 +2393,16 @@ auto amun::LLVMBackend::llvm_type_from_amun_type(std::shared_ptr<amun::Type> typ
         return resolve_generic_struct(generic_struct_type);
     }
 
+    if (type_kind == amun::TypeKind::GENERIC_PARAMETER) {
+        auto generic_paramter = std::static_pointer_cast<amun::GenericParameterType>(type);
+        auto generic_name = generic_paramter->name;
+        if (!this->generic_types.contains(generic_name)) {
+            internal_compiler_error("Trying to resolve an invalid generic parameter name");
+        }
+        auto amun_type = this->generic_types[generic_name];
+        return llvm_type_from_amun_type(amun_type);
+    }
+
     internal_compiler_error("Can't find LLVM Type for this amun Type");
 }
 

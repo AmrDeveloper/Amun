@@ -2066,17 +2066,19 @@ auto amun::TypeChecker::resolve_generic_type(Shared<amun::Type> type,
     // Resolve the base of pointer type
     if (type_kind == amun::TypeKind::POINTER) {
         auto pointer = std::static_pointer_cast<amun::PointerType>(type);
-        pointer->base_type =
-            resolve_generic_type(pointer->base_type, generic_names, generic_parameters);
-        return pointer;
+        auto new_base = resolve_generic_type(pointer->base_type, generic_names, generic_parameters);
+        auto new_ptr = std::make_shared<amun::PointerType>(new_base);
+        return new_ptr;
     }
 
     // Resolve the element type of array type
     if (type_kind == amun::TypeKind::STATIC_ARRAY) {
         auto array = std::static_pointer_cast<amun::StaticArrayType>(type);
-        array->element_type =
+        auto element_type =
             resolve_generic_type(array->element_type, generic_names, generic_parameters);
-        return array;
+        auto length = array->size;
+        auto new_array = std::make_shared<amun::StaticArrayType>(element_type, length);
+        return new_array;
     }
 
     // Resolve function pointer with generic parameters or return type

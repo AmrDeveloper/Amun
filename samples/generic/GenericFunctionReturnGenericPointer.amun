@@ -1,0 +1,19 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+@extern fun malloc(size int64) *void;
+
+fun return_generic_ptr<T>(t T) *T {
+    var memory : *T = cast(*T) malloc(type_size(T));
+    return memory;
+}
+
+fun main() int64 {
+    var long_ptr : *int64 = return_generic_ptr<int64>(1);
+    var integer_ptr : *int32 = return_generic_ptr<int32>(1i32);
+    var short_ptr : *int16 = return_generic_ptr<int16>(1i16);
+
+    printf("%p\n", long_ptr);
+    printf("%p\n", integer_ptr);
+    printf("%p\n", short_ptr);
+    return 0;
+}
