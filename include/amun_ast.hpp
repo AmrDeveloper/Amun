@@ -112,6 +112,7 @@ class FieldDeclaration : public Statement {
     FieldDeclaration(Token name, Shared<amun::Type> type, Shared<Expression> value, bool global)
         : name(std::move(name)), type(std::move(type)), value(std::move(value)), is_global(global)
     {
+        has_explicit_type = this->type->type_kind != amun::TypeKind::NONE;
     }
 
     auto accept(StatementVisitor* visitor) -> std::any override { return visitor->visit(this); }
@@ -122,6 +123,7 @@ class FieldDeclaration : public Statement {
     Shared<amun::Type> type;
     Shared<Expression> value;
     bool is_global;
+    bool has_explicit_type;
 };
 
 class DestructuringDeclaraion : public Statement {

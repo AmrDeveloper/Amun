@@ -43,7 +43,7 @@ auto amun::TypeChecker::visit(BlockStatement* node) -> std::any
 
 auto amun::TypeChecker::visit(FieldDeclaration* node) -> std::any
 {
-    auto left_type = resolve_generic_type(node->type);
+    auto left_type = node->has_explicit_type ? resolve_generic_type(node->type) : amun::none_type;
     auto right_value = node->value;
     auto name = node->name.literal;
 
@@ -2162,6 +2162,39 @@ auto amun::TypeChecker::infier_type_by_other_type(Shared<amun::Type> type, Share
         return resolved_types;
     }
 
+    if (amun::is_function_pointer_type(type) && amun::is_function_pointer_type(other)) {
+        auto type_ptr = std::static_pointer_cast<amun::PointerType>(type);
+        auto other_ptr = std::static_pointer_cast<amun::PointerType>(other);
+
+        auto type_fptr = std::static_pointer_cast<amun::FunctionType>(type_ptr->base_type);
+        auto other_fptr = std::static_pointer_cast<amun::FunctionType>(other_ptr->base_type);
+
+        if (type_fptr->parameters.size() == other_fptr->parameters.size()) {
+            auto return_type =
+                infier_type_by_other_type(type_fptr->return_type, other_fptr->return_type);
+            std::unordered_map<std::string, Shared<amun::Type>> resolved_types;
+            for (const auto& type : return_type) {
+                resolved_types[type.first] = type.second;
+            }
+
+            int index = 0;
+            for (const auto& parameter : type_fptr->parameters) {
+                auto parameter_result =
+                    infier_type_by_other_type(parameter, other_fptr->parameters[index]);
+                for (const auto& type : parameter_result) {
+                    if (!resolved_types.contains(type.first)) {
+                        resolved_types[type.first] = type.second;
+                    }
+                }
+                index++;
+            }
+
+            return resolved_types;
+        }
+
+        return {};
+    }
+
     if (amun::is_pointer_type(type) && amun::is_pointer_type(other)) {
         auto type_ptr = std::static_pointer_cast<amun::PointerType>(type);
         auto other_ptr = std::static_pointer_cast<amun::PointerType>(other);
@@ -2238,39 +2271,6 @@ auto amun::TypeChecker::infier_type_by_other_type(Shared<amun::Type> type, Share
                 }
                 index++;
             }
-            return resolved_types;
-        }
-
-        return {};
-    }
-
-    if (amun::is_function_pointer_type(type) && amun::is_function_pointer_type(other)) {
-        auto type_ptr = std::static_pointer_cast<amun::PointerType>(type);
-        auto other_ptr = std::static_pointer_cast<amun::PointerType>(other);
-
-        auto type_fptr = std::static_pointer_cast<amun::FunctionType>(type_ptr->base_type);
-        auto other_fptr = std::static_pointer_cast<amun::FunctionType>(other_ptr->base_type);
-
-        if (type_fptr->parameters.size() == other_fptr->parameters.size()) {
-            auto return_type =
-                infier_type_by_other_type(type_fptr->return_type, other_fptr->return_type);
-            std::unordered_map<std::string, Shared<amun::Type>> resolved_types;
-            for (const auto& type : return_type) {
-                resolved_types[type.first] = type.second;
-            }
-
-            int index = 0;
-            for (const auto& parameter : type_fptr->parameters) {
-                auto parameter_result =
-                    infier_type_by_other_type(parameter, other_fptr->parameters[index]);
-                for (const auto& type : parameter_result) {
-                    if (resolved_types.contains(type.first)) {
-                        resolved_types[type.first] = type.second;
-                    }
-                }
-                index++;
-            }
-
             return resolved_types;
         }
 
