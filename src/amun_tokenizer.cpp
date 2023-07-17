@@ -214,8 +214,12 @@ auto amun::Tokenizer::scan_next_token() -> Token
             return consume_hex_number();
         }
 
-        if (match('o')) {
+        if (match('b')) {
             return consume_binary_number();
+        }
+
+        if (match('o')) {
+            return consume_octal_number();
         }
 
         return consume_number();
@@ -372,6 +376,31 @@ auto amun::Tokenizer::consume_binary_number() -> Token
 
     if (decimal_value == -1) {
         return build_token(TokenKind::TOKEN_INVALID, "binary integer literal is too large");
+    }
+
+    return build_token(TokenKind::TOKEN_INT, std::to_string(decimal_value));
+}
+
+auto amun::Tokenizer::consume_octal_number() -> Token
+{
+    auto has_digits = false;
+    while (is_octal_digit(peek()) or is_underscore(peek())) {
+        advance();
+        has_digits = true;
+    }
+
+    if (!has_digits) {
+        return build_token(TokenKind::TOKEN_INVALID,
+                           "Missing digits after the integer base prefix");
+    }
+
+    size_t len = current_position - start_position - 1;
+    auto literal = source_code.substr(start_position + 1, len);
+    literal.erase(std::remove(literal.begin(), literal.end(), '_'), literal.end());
+    auto decimal_value = octal_to_decimal(literal);
+
+    if (decimal_value == -1) {
+        return build_token(TokenKind::TOKEN_INVALID, "octal integer literal is too large");
     }
 
     return build_token(TokenKind::TOKEN_INT, std::to_string(decimal_value));
@@ -618,6 +647,8 @@ inline auto amun::Tokenizer::is_hex_digit(char c) -> bool
 
 inline auto amun::Tokenizer::is_binary_digit(char c) -> bool { return '1' == c || '0' == c; }
 
+inline auto amun::Tokenizer::is_octal_digit(char c) -> bool { return '7' >= c && c >= '0'; }
+
 inline auto amun::Tokenizer::is_alpha(char c) -> bool
 {
     if ('z' >= c && c >= 'a') {
@@ -635,7 +666,7 @@ auto amun::Tokenizer::hex_to_int(char c) -> int8_t
     return c <= '9' ? c - '0' : c <= 'F' ? c - 'A' : c - 'a';
 }
 
-auto amun::Tokenizer::hex_to_decimal(const std::string& hex) -> int64_t
+auto amun::Tokenizer::hex_to_decimal(const std::string& hex) -> int64
 {
     try {
         return std::stol(hex, nullptr, 16);
@@ -645,10 +676,20 @@ auto amun::Tokenizer::hex_to_decimal(const std::string& hex) -> int64_t
     }
 }
 
-auto amun::Tokenizer::binary_to_decimal(const std::string& binary) -> int64_t
+auto amun::Tokenizer::binary_to_decimal(const std::string& binary) -> int64
 {
     try {
         return std::stol(binary, nullptr, 2);
+    }
+    catch (...) {
+        return -1;
+    }
+}
+
+auto amun::Tokenizer::octal_to_decimal(const std::string& octal) -> int64
+{
+    try {
+        return std::stol(octal, nullptr, 8);
     }
     catch (...) {
         return -1;

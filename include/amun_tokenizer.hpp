@@ -30,6 +30,8 @@ class Tokenizer {
 
     auto consume_binary_number() -> Token;
 
+    auto consume_octal_number() -> Token;
+
     auto consume_string() -> Token;
 
     auto consume_character() -> Token;
@@ -64,6 +66,8 @@ class Tokenizer {
 
     static auto is_binary_digit(char) -> bool;
 
+    static auto is_octal_digit(char) -> bool;
+
     static auto is_alpha(char) -> bool;
 
     static auto is_alpha_num(char) -> bool;
@@ -72,9 +76,11 @@ class Tokenizer {
 
     static auto hex_to_int(char c) -> int8_t;
 
-    static auto hex_to_decimal(const std::string&) -> int64_t;
+    static auto hex_to_decimal(const std::string&) -> int64;
 
-    static auto binary_to_decimal(const std::string&) -> int64_t;
+    static auto binary_to_decimal(const std::string&) -> int64;
+
+    static auto octal_to_decimal(const std::string&) -> int64;
 
     auto resolve_keyword_token_kind(const char* keyword) -> TokenKind;
 
