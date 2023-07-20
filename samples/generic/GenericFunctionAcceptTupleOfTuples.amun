@@ -1,0 +1,9 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun generic_tuples<T> (x T, y T, z T, tuple (T, T)) {}
+
+fun main() int64 {
+    generic_tuples<(int64, int64)> ((1, 2), (3, 4), (4, 5), ((3, 4), (4, 5)));
+    generic_tuples<(int32, int64)> ((1i32, 2), (1i32, 4), (1i32, 5), ((1i32, 4), (1i32, 5)));
+    return 0;
+}

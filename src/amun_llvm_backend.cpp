@@ -2376,6 +2376,21 @@ auto amun::LLVMBackend::llvm_type_from_amun_type(std::shared_ptr<amun::Type> typ
 
     if (type_kind == amun::TypeKind::TUPLE) {
         auto tuple_type = std::static_pointer_cast<amun::TupleType>(type);
+        if (tuple_type->name == "_tuple_") {
+            std::vector<Shared<amun::Type>> resolved_fileds;
+            for (const auto& field : tuple_type->fields_types) {
+                if (field->type_kind == TypeKind::GENERIC_PARAMETER) {
+                    auto generic_type = std::static_pointer_cast<amun::GenericParameterType>(field);
+                    if (this->generic_types.contains(generic_type->name)) {
+                        resolved_fileds.push_back(this->generic_types[generic_type->name]);
+                        continue;
+                    }
+                }
+                resolved_fileds.push_back(field);
+            }
+            auto new_tuple = "_tuple_" + mangle_types(resolved_fileds);
+            tuple_type = std::make_shared<amun::TupleType>(new_tuple, resolved_fileds);
+        }
         return create_llvm_struct_type(tuple_type->name, tuple_type->fields_types, false, false);
     }
 
@@ -2403,6 +2418,7 @@ auto amun::LLVMBackend::llvm_type_from_amun_type(std::shared_ptr<amun::Type> typ
         return llvm_type_from_amun_type(amun_type);
     }
 
+    amun::loge << "Type -> " << amun::get_type_literal(type) << "\n";
     internal_compiler_error("Can't find LLVM Type for this amun Type");
 }
 

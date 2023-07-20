@@ -813,8 +813,8 @@ auto amun::TypeChecker::visit(TupleExpression* node) -> std::any
         field_types.push_back(node_amun_type(value->accept(this)));
     }
     auto tuple_type = std::make_shared<amun::TupleType>("", field_types);
-    tuple_type->name = mangle_tuple_type(tuple_type);
-    node->set_type_node(tuple_type);
+    tuple_type->name = "_tuple_" + mangle_types(field_types);
+    // node->set_type_node(tuple_type);
     return tuple_type;
 }
 
@@ -2142,11 +2142,14 @@ auto amun::TypeChecker::resolve_generic_type(Shared<amun::Type> type,
     // Resolve the inner types of tuple type
     if (type_kind == amun::TypeKind::TUPLE) {
         auto tuple = std::static_pointer_cast<amun::TupleType>(type);
+        std::vector<Shared<amun::Type>> fields;
         for (auto& field : tuple->fields_types) {
-            field = resolve_generic_type(field, generic_names, generic_parameters);
+            auto resolved_field = resolve_generic_type(field, generic_names, generic_parameters);
+            fields.push_back(resolved_field);
         }
-        tuple->name = mangle_tuple_type(tuple);
-        return tuple;
+        auto tuple_name = "_tuple_" + mangle_types(fields);
+        auto new_tuple = std::make_shared<amun::TupleType>(tuple_name, fields);
+        return new_tuple;
     }
 
     return type;
