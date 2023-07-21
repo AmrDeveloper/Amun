@@ -1,0 +1,11 @@
+struct Node {
+    child *Node;
+    child_arr [3]*Node;
+    child_arr_arr [3][3]*Node;
+    child_arr_arr_arr [3][3][3]*Node;
+}
+
+fun main() int64 {
+    var node : Node;
+    return 0;
+}

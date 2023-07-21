@@ -253,6 +253,9 @@ class LLVMBackend : public TreeVisitor {
     std::stack<llvm::BasicBlock*> break_blocks_stack;
     std::stack<llvm::BasicBlock*> continue_blocks_stack;
 
+    // Track the current struct type to resolve different self reference types
+    llvm::StructType* current_struct_type;
+
     bool has_return_statement = false;
     bool has_break_or_continue_statement = false;
 

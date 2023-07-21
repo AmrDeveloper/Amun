@@ -2340,10 +2340,21 @@ auto amun::LLVMBackend::llvm_type_from_amun_type(std::shared_ptr<amun::Type> typ
 
     if (type_kind == amun::TypeKind::POINTER) {
         auto amun_pointer_type = std::static_pointer_cast<amun::PointerType>(type);
+        auto pointer_base = amun_pointer_type->base_type;
+
         // In llvm *void should be generated as *i8
-        if (amun_pointer_type->base_type->type_kind == amun::TypeKind::VOID) {
+        if (pointer_base->type_kind == amun::TypeKind::VOID) {
             return llvm_void_ptr_type;
         }
+
+        // Check if it's a self reference to the current struct type
+        if (pointer_base->type_kind == amun::TypeKind::STRUCT) {
+            auto amun_struct_type = std::static_pointer_cast<amun::StructType>(pointer_base);
+            if (amun_struct_type->name == current_struct_type->getName()) {
+                return current_struct_type->getPointerTo();
+            }
+        }
+
         auto point_to_type = llvm_type_from_amun_type(amun_pointer_type->base_type);
         return llvm::PointerType::get(point_to_type, 0);
     }
@@ -2418,7 +2429,6 @@ auto amun::LLVMBackend::llvm_type_from_amun_type(std::shared_ptr<amun::Type> typ
         return llvm_type_from_amun_type(amun_type);
     }
 
-    amun::loge << "Type -> " << amun::get_type_literal(type) << "\n";
     internal_compiler_error("Can't find LLVM Type for this amun Type");
 }
 
@@ -2803,6 +2813,7 @@ auto amun::LLVMBackend::create_llvm_struct_type(std::string name,
     }
 
     auto* struct_llvm_type = llvm::StructType::create(llvm_context, name);
+    current_struct_type = struct_llvm_type;
 
     // External mean that this struct is opaque to be used for type safe c libraries
     if (is_extern) {
@@ -2814,36 +2825,6 @@ auto amun::LLVMBackend::create_llvm_struct_type(std::string name,
     struct_fields.reserve(members.size());
 
     for (const auto& field : members) {
-
-        // Handle case where field type is pointer to the current struct
-        if (field->type_kind == amun::TypeKind::POINTER) {
-            auto pointer = std::static_pointer_cast<amun::PointerType>(field);
-            if (pointer->base_type->type_kind == amun::TypeKind::STRUCT) {
-                auto struct_ty = std::static_pointer_cast<amun::StructType>(pointer->base_type);
-                if (struct_ty->name == name) {
-                    struct_fields.push_back(struct_llvm_type->getPointerTo());
-                    continue;
-                }
-            }
-        }
-
-        // Handle case where field type is array of pointers to the current struct
-        if (field->type_kind == amun::TypeKind::STATIC_ARRAY) {
-            auto array = std::static_pointer_cast<amun::StaticArrayType>(field);
-            if (array->element_type->type_kind == amun::TypeKind::POINTER) {
-                auto pointer = std::static_pointer_cast<amun::PointerType>(array->element_type);
-                if (pointer->base_type->type_kind == amun::TypeKind::STRUCT) {
-                    auto struct_ty = std::static_pointer_cast<amun::StructType>(pointer->base_type);
-                    if (struct_ty->name == name) {
-                        auto struct_ptr_ty = struct_llvm_type->getPointerTo();
-                        auto array_type = create_llvm_array_type(struct_ptr_ty, array->size);
-                        struct_fields.push_back(array_type);
-                        continue;
-                    }
-                }
-            }
-        }
-
         struct_fields.push_back(llvm_type_from_amun_type(field));
     }
 

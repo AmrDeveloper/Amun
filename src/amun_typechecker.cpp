@@ -814,7 +814,7 @@ auto amun::TypeChecker::visit(TupleExpression* node) -> std::any
     }
     auto tuple_type = std::make_shared<amun::TupleType>("", field_types);
     tuple_type->name = "_tuple_" + mangle_types(field_types);
-    // node->set_type_node(tuple_type);
+    node->set_type_node(tuple_type);
     return tuple_type;
 }
 

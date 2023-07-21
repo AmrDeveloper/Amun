@@ -868,25 +868,8 @@ auto amun::Parser::parse_structure_declaration(bool is_packed, bool is_extern)
 
         const auto fields_size = fields_types.size();
         for (size_t i = 0; i < fields_size; i++) {
-            const auto field_type = fields_types[i];
-
-            // If Field type is pointer to none that mean it point to struct itself
-            if (amun::is_pointer_of_type(field_type, amun::none_type)) {
-                // Update field type from *None to *Itself
-                structure_type->fields_types[i] = struct_pointer_ty;
-                current_struct_unknown_fields--;
-                continue;
-            }
-
-            // Update field type from [?]*None to [?]*Itself
-            if (amun::is_array_of_type(field_type, amun::none_ptr_type)) {
-                auto array_type = std::static_pointer_cast<amun::StaticArrayType>(field_type);
-                array_type->element_type = struct_pointer_ty;
-
-                structure_type->fields_types[i] = array_type;
-                current_struct_unknown_fields--;
-                continue;
-            }
+            auto field_type = resolve_field_self_reference(fields_types[i], struct_pointer_ty);
+            structure_type->fields_types[i] = field_type;
         }
     }
 
@@ -2336,6 +2319,51 @@ auto amun::Parser::is_valid_intrinsic_name(std::string& name) -> bool
     }
 
     return true;
+}
+
+auto amun::Parser::resolve_field_self_reference(Shared<amun::Type> field_type,
+                                                Shared<amun::PointerType> current_struct_ptr_type)
+    -> Shared<amun::Type>
+{
+    // If Field type is pointer to none that mean it point to struct itself
+    if (field_type->type_kind == TypeKind::POINTER) {
+        auto pointer_type = std::static_pointer_cast<amun::PointerType>(field_type);
+        if (pointer_type->base_type->type_kind == TypeKind::NONE) {
+            current_struct_unknown_fields--;
+            return current_struct_ptr_type;
+        }
+        pointer_type->base_type =
+            resolve_field_self_reference(pointer_type->base_type, current_struct_ptr_type);
+        return pointer_type;
+    }
+
+    // Update element type for Array type
+    if (field_type->type_kind == TypeKind::STATIC_ARRAY) {
+        auto array_type = std::static_pointer_cast<amun::StaticArrayType>(field_type);
+        array_type->element_type =
+            resolve_field_self_reference(array_type->element_type, current_struct_ptr_type);
+        return array_type;
+    }
+
+    // Update Arguments and return type for Function type
+    if (field_type->type_kind == TypeKind::FUNCTION) {
+        auto function_type = std::static_pointer_cast<amun::FunctionType>(field_type);
+
+        // Resolve return type
+        function_type->return_type =
+            resolve_field_self_reference(function_type->return_type, current_struct_ptr_type);
+
+        // Resolve parameters
+        auto size = function_type->parameters.size();
+        for (size_t i = 0; i < size; i++) {
+            function_type->parameters[i] =
+                resolve_field_self_reference(function_type->parameters[i], current_struct_ptr_type);
+        }
+
+        return function_type;
+    }
+
+    return field_type;
 }
 
 auto amun::Parser::advanced_token() -> void

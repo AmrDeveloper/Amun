@@ -226,6 +226,10 @@ class Parser {
 
     auto is_valid_intrinsic_name(std::string& name) -> bool;
 
+    auto resolve_field_self_reference(Shared<amun::Type> field_type,
+                                      Shared<amun::PointerType> current_struct_ptr_type)
+        -> Shared<amun::Type>;
+
     auto advanced_token() -> void;
 
     auto peek_and_advance_token() -> Token;
