@@ -1,0 +1,10 @@
+import "cstdio"
+
+fun main() int64 {
+   var multi = "
+   Hello, it's me
+   it's Amr
+   ";
+   printf("%s\n", multi);
+   return 0;
+}

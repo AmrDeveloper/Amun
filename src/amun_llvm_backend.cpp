@@ -1129,7 +1129,7 @@ auto amun::LLVMBackend::visit(TupleExpression* node) -> std::any
     auto alloc_inst = Builder.CreateAlloca(tuple_type);
 
     size_t argument_index = 0;
-    for (auto& argument : node->values) {
+    for (const auto& argument : node->values) {
         auto argument_value = llvm_resolve_value(argument->accept(this));
         auto index = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, argument_index, true));
         auto member_ptr = Builder.CreateGEP(tuple_type, alloc_inst, {zero_int32_value, index});

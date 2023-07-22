@@ -241,8 +241,6 @@ class LLVMBackend : public TreeVisitor {
     std::unordered_map<std::string, llvm::Constant*> constants_string_pool;
     std::unordered_map<std::string, llvm::Type*> structures_types_map;
 
-    std::unordered_map<std::string, llvm::StructType*> generated_tuples;
-
     // Generic function declaraions and parameters
     std::unordered_map<std::string, FunctionDeclaration*> functions_declaraions;
     std::unordered_map<std::string, Shared<amun::Type>> generic_types;
