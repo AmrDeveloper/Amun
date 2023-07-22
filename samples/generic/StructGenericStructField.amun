@@ -1,7 +1,7 @@
 @extern fun printf(format *char, varargs Any) int64;
 
-struct Container <T> {
-   value T;
+struct Container <Z> {
+   value Z;
 }
 
 struct ParentContainer <T> {

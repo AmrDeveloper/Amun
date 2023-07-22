@@ -2109,7 +2109,11 @@ auto amun::TypeChecker::resolve_generic_type(Shared<amun::Type> type,
         for (auto& parameter : generic_struct_param) {
             if (parameter->type_kind == amun::TypeKind::GENERIC_PARAMETER) {
                 auto generic_type = std::static_pointer_cast<amun::GenericParameterType>(parameter);
-                if (generic_types.contains(generic_type->name)) {
+                auto index = index_of(generic_names, generic_type->name);
+                if (index != -1) {
+                    generic_struct->parameters[i] = generic_parameters[index];
+                }
+                else {
                     generic_struct->parameters[i] = generic_types[generic_type->name];
                 }
             }
