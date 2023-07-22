@@ -1,0 +1,10 @@
+struct Node {
+    tuple (*Node, *Node);
+    tuple_tuple ((*Node, *Node), (*Node, *Node));
+    tuple_tuple_tuple (((*Node, *Node), (*Node, *Node)), ((*Node, *Node), (*Node, *Node)));
+}
+
+fun main() int64 {
+    var node : Node;
+    return 0;
+}

@@ -2813,7 +2813,11 @@ auto amun::LLVMBackend::create_llvm_struct_type(std::string name,
     }
 
     auto* struct_llvm_type = llvm::StructType::create(llvm_context, name);
-    current_struct_type = struct_llvm_type;
+
+    // Track last structure declaraion not tuples because you can't self reference tuples
+    if (!name.starts_with("_tuple")) {
+        current_struct_type = struct_llvm_type;
+    }
 
     // External mean that this struct is opaque to be used for type safe c libraries
     if (is_extern) {
@@ -2825,6 +2829,20 @@ auto amun::LLVMBackend::create_llvm_struct_type(std::string name,
     struct_fields.reserve(members.size());
 
     for (const auto& field : members) {
+
+        // Resolve if tuple field is a self reference pointer to the current class
+        if (field->type_kind == TypeKind::POINTER) {
+            auto pointer_type = std::static_pointer_cast<amun::PointerType>(field);
+            auto base = pointer_type->base_type;
+            if (base->type_kind == TypeKind::STRUCT) {
+                auto struct_type = std::static_pointer_cast<amun::StructType>(base);
+                if (current_struct_type && current_struct_type->getName() == struct_type->name) {
+                    struct_fields.push_back(current_struct_type->getPointerTo());
+                    continue;
+                }
+            }
+        }
+
         struct_fields.push_back(llvm_type_from_amun_type(field));
     }
 

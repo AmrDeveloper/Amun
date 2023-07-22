@@ -2363,6 +2363,16 @@ auto amun::Parser::resolve_field_self_reference(Shared<amun::Type> field_type,
         return function_type;
     }
 
+    if (field_type->type_kind == TypeKind::TUPLE) {
+        auto tuple_type = std::static_pointer_cast<amun::TupleType>(field_type);
+        auto fields_size = tuple_type->fields_types.size();
+        for (size_t i = 0; i < fields_size; i++) {
+            tuple_type->fields_types[i] =
+                resolve_field_self_reference(tuple_type->fields_types[i], current_struct_ptr_type);
+        }
+        return tuple_type;
+    }
+
     return field_type;
 }
 
@@ -2439,4 +2449,6 @@ auto amun::Parser::is_right_shift_operator(Token first, Token second) -> bool
 auto amun::Parser::is_source_available() -> bool
 {
     return peek_current().kind != TokenKind::TOKEN_END_OF_FILE;
+}
+nKind::TOKEN_END_OF_FILE;
 }
