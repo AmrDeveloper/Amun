@@ -2101,6 +2101,15 @@ auto amun::Parser::parse_cast_expression() -> Shared<CastExpression>
     auto cast_keyword = consume_kind(TokenKind::TOKEN_CAST, "Expect cast keyword");
     assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect `(` after cast keyword");
     auto target_type = parse_type();
+
+    // Support syntax cast(T, value)
+    if (is_current_kind(TokenKind::TOKEN_COMMA)) {
+        advanced_token();
+        auto expression = parse_expression();
+        assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect `)` after cast type");
+        return std::make_shared<CastExpression>(cast_keyword, target_type, expression);
+    }
+
     assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect `)` after cast type");
     auto expression = parse_expression();
     return std::make_shared<CastExpression>(cast_keyword, target_type, expression);
@@ -2449,6 +2458,4 @@ auto amun::Parser::is_right_shift_operator(Token first, Token second) -> bool
 auto amun::Parser::is_source_available() -> bool
 {
     return peek_current().kind != TokenKind::TOKEN_END_OF_FILE;
-}
-nKind::TOKEN_END_OF_FILE;
 }
