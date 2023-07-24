@@ -2265,7 +2265,7 @@ inline auto amun::LLVMBackend::llvm_number_value(const std::string& value_litear
     }
     case amun::NumberKind::U_INTEGER_8: {
         auto value = std::stoi(value_litearl);
-        return llvm::ConstantInt::get(llvm_int8_type, value, true);
+        return llvm::ConstantInt::get(llvm_int8_type, value, false);
     }
     case amun::NumberKind::INTEGER_16: {
         auto value = std::stoi(value_litearl);
@@ -2273,26 +2273,26 @@ inline auto amun::LLVMBackend::llvm_number_value(const std::string& value_litear
     }
     case amun::NumberKind::U_INTEGER_16: {
         auto value = std::stoi(value_litearl);
-        return llvm::ConstantInt::get(llvm_int16_type, value, true);
+        return llvm::ConstantInt::get(llvm_int16_type, value, false);
     }
     case amun::NumberKind::INTEGER_32: {
         auto value = std::stoi(value_litearl);
         return llvm::ConstantInt::get(llvm_int32_type, value);
     }
     case amun::NumberKind::U_INTEGER_32: {
-        auto value = std::stoi(value_litearl);
-        return llvm::ConstantInt::get(llvm_int32_type, value, true);
+        auto value = std::strtol(value_litearl.c_str(), nullptr, 0);
+        return llvm::ConstantInt::get(llvm_int32_type, value, false);
     }
     case amun::NumberKind::INTEGER_64: {
         auto value = std::strtoll(value_litearl.c_str(), nullptr, 0);
         return llvm::ConstantInt::get(llvm_int64_type, value);
     }
     case amun::NumberKind::U_INTEGER_64: {
-        auto value = std::strtoll(value_litearl.c_str(), nullptr, 0);
-        return llvm::ConstantInt::get(llvm_int64_type, value, true);
+        auto value = std::strtoull(value_litearl.c_str(), nullptr, 0);
+        return llvm::ConstantInt::get(llvm_int64_type, value, false);
     }
     case amun::NumberKind::FLOAT_32: {
-        auto value = std::stod(value_litearl);
+        auto value = std::stof(value_litearl);
         return llvm::ConstantFP::get(llvm_float32_type, value);
     }
     case amun::NumberKind::FLOAT_64: {
