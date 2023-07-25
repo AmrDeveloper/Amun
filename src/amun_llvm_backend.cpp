@@ -1633,8 +1633,24 @@ auto amun::LLVMBackend::visit(CallExpression* node) -> std::any
                 if (argument->get_ast_node_type() == AstNodeType::AST_LITERAL) {
                     auto argument_type = llvm_type_from_amun_type(argument->get_type_node());
                     auto loaded_value = Builder.CreateLoad(argument_type, value);
+
+                    // Varargs function like `printf` deal with float32 as float64,
+                    // Must perform implicit casting to float64 to get printed result
+                    if (loaded_value->getType()->isFloatTy()) {
+                        auto double_value = Builder.CreateFPCast(loaded_value, llvm_float64_type);
+                        arguments_values.push_back(double_value);
+                        continue;
+                    }
+
                     arguments_values.push_back(loaded_value);
                     continue;
+                }
+
+                // Varargs function like `printf` deal with float32 as float64,
+                // Must perform implicit casting to float64 to get printed result
+                if (value->getType()->isFloatTy()) {
+                    auto double_value = Builder.CreateFPCast(value, llvm_float64_type);
+                    arguments_values.push_back(double_value);
                 }
 
                 arguments_values.push_back(value);
