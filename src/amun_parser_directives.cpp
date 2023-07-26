@@ -155,6 +155,68 @@ auto amun::Parser::parse_expressions_directive() -> Shared<Expression>
         return std::make_shared<VectorExpression>(array);
     }
 
+    if (directive_name == "max_value") {
+        assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect `(` after @max_value");
+        auto type = parse_type();
+        assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect `)` after @max_value type");
+
+        if (type->type_kind != TypeKind::NUMBER) {
+            context->diagnostics.report_error(posiiton, "@max_value expect only number types");
+            throw "Stop";
+        }
+
+        auto number_type = std::static_pointer_cast<amun::NumberType>(type);
+
+        Token max_value;
+        max_value.kind = number_kind_token_kind[number_type->number_kind];
+        max_value.position = posiiton;
+
+        if (is_integer_type(number_type)) {
+            max_value.literal = std::to_string(integers_kind_max_value[number_type->number_kind]);
+        }
+        else {
+            if (number_type->number_kind == NumberKind::FLOAT_32) {
+                max_value.literal = std::to_string(std::numeric_limits<float32>::max());
+            }
+            else {
+                max_value.literal = std::to_string(std::numeric_limits<float64>::max());
+            }
+        }
+
+        return std::make_shared<NumberExpression>(max_value, number_type);
+    }
+
+    if (directive_name == "min_value") {
+        assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect `(` after @min_value");
+        auto type = parse_type();
+        assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect `)` after @min_value type");
+
+        if (type->type_kind != TypeKind::NUMBER) {
+            context->diagnostics.report_error(posiiton, "@min_value expect only number types");
+            throw "Stop";
+        }
+
+        auto number_type = std::static_pointer_cast<amun::NumberType>(type);
+
+        Token min_value;
+        min_value.kind = number_kind_token_kind[number_type->number_kind];
+        min_value.position = posiiton;
+
+        if (is_integer_type(number_type)) {
+            min_value.literal = std::to_string(integers_kind_min_value[number_type->number_kind]);
+        }
+        else {
+            if (number_type->number_kind == NumberKind::FLOAT_32) {
+                min_value.literal = std::to_string(std::numeric_limits<float32>::lowest());
+            }
+            else {
+                min_value.literal = std::to_string(std::numeric_limits<float64>::lowest());
+            }
+        }
+
+        return std::make_shared<NumberExpression>(min_value, number_type);
+    }
+
     context->diagnostics.report_error(posiiton,
                                       "No expression directive with name " + directive_name);
     throw "Stop";

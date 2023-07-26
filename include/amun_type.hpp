@@ -1,7 +1,9 @@
 #pragma once
 
+#include "amun_basic.hpp"
 #include "amun_token.hpp"
 
+#include <limits>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -54,6 +56,48 @@ static std::unordered_map<NumberKind, int> number_kind_width = {
     {NumberKind::U_INTEGER_64, 64},
 
     {NumberKind::FLOAT_32, 32},     {NumberKind::FLOAT_64, 64},
+};
+
+static std::unordered_map<NumberKind, TokenKind> number_kind_token_kind = {
+    {NumberKind::INTEGER_1, TokenKind::TOKEN_INT1},
+    {NumberKind::INTEGER_8, TokenKind::TOKEN_INT8},
+    {NumberKind::INTEGER_16, TokenKind::TOKEN_INT16},
+    {NumberKind::INTEGER_32, TokenKind::TOKEN_INT32},
+    {NumberKind::INTEGER_64, TokenKind::TOKEN_INT64},
+
+    {NumberKind::U_INTEGER_8, TokenKind::TOKEN_UINT8},
+    {NumberKind::U_INTEGER_16, TokenKind::TOKEN_UINT16},
+    {NumberKind::U_INTEGER_32, TokenKind::TOKEN_UINT32},
+    {NumberKind::U_INTEGER_64, TokenKind::TOKEN_UINT64},
+
+    {NumberKind::FLOAT_32, TokenKind::TOKEN_FLOAT32},
+    {NumberKind::FLOAT_64, TokenKind::TOKEN_FLOAT64},
+};
+
+static std::unordered_map<NumberKind, uint64> integers_kind_max_value = {
+    {NumberKind::INTEGER_1, 1},
+    {NumberKind::INTEGER_8, std::numeric_limits<int8>::max()},
+    {NumberKind::INTEGER_16, std::numeric_limits<int16>::max()},
+    {NumberKind::INTEGER_32, std::numeric_limits<int32>::max()},
+    {NumberKind::INTEGER_64, std::numeric_limits<int64>::max()},
+
+    {NumberKind::U_INTEGER_8, std::numeric_limits<uint8>::max()},
+    {NumberKind::U_INTEGER_16, std::numeric_limits<uint16>::max()},
+    {NumberKind::U_INTEGER_32, std::numeric_limits<uint32>::max()},
+    {NumberKind::U_INTEGER_64, std::numeric_limits<uint64>::max()},
+};
+
+static std::unordered_map<NumberKind, int64> integers_kind_min_value = {
+    {NumberKind::INTEGER_1, 0},
+    {NumberKind::INTEGER_8, std::numeric_limits<int8>::min()},
+    {NumberKind::INTEGER_16, std::numeric_limits<int16>::min()},
+    {NumberKind::INTEGER_32, std::numeric_limits<int32>::min()},
+    {NumberKind::INTEGER_64, std::numeric_limits<int64>::min()},
+
+    {NumberKind::U_INTEGER_8, 0},
+    {NumberKind::U_INTEGER_16, 0},
+    {NumberKind::U_INTEGER_32, 0},
+    {NumberKind::U_INTEGER_64, 0},
 };
 
 struct NumberType : public Type {
