@@ -1,0 +1,16 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() {
+    printf("%llu\n", @max_value(int8));
+    printf("%llu\n", @max_value(int16));
+    printf("%llu\n", @max_value(int32));
+    printf("%llu\n", @max_value(int64));
+
+    printf("%llu\n", @max_value(uint8));
+    printf("%llu\n", @max_value(uint16));
+    printf("%llu\n", @max_value(uint32));
+    printf("%llu\n", @max_value(uint64));
+
+    printf("%f\n",  @max_value(float32));
+    printf("%lf\n", @max_value(float64));
+}

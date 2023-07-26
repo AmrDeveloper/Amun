@@ -1,0 +1,16 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() {
+    printf("%hhd\n", @min_value(int8));
+    printf("%hd\n", @min_value(int16));
+    printf("%d\n", @min_value(int32));
+    printf("%ld\n", @min_value(int64));
+
+    printf("%llu\n", @min_value(uint8));
+    printf("%llu\n", @min_value(uint16));
+    printf("%llu\n", @min_value(uint32));
+    printf("%llu\n", @min_value(uint64));
+
+    printf("%f\n",  @min_value(float32));
+    printf("%lf\n", @min_value(float64));
+}
