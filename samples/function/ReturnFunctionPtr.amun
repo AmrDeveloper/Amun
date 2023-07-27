@@ -5,12 +5,12 @@ fun function() int64 {
     return 0;
 }
 
-fun functionReturnFunctionPtr() *() int64 {
+fun functionReturnFunctionPtr() fun () int64 {
     return &function;
 }
 
 fun main() int64 {
-    var returedFunction : *() int64 = functionReturnFunctionPtr();
+    var returedFunction : fun () int64 = functionReturnFunctionPtr();
     returedFunction();
     return 0;
 }

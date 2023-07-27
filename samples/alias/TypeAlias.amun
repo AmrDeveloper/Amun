@@ -6,7 +6,7 @@ struct Pair <T> {
 }
 
 type IPair = Pair<int64>;
-type Function = *() void;
+type Function = fun () void;
 type Integer = int64;
 
 fun eval(f Function) void {

@@ -1,6 +1,6 @@
 struct Node {
-    function *(*Node) *Node;
-    function_function *(*(*Node) *Node) *Node;
+    function fun (*Node) *Node;
+    function_function fun (fun (*Node) *Node) *Node;
 }
 
 fun main() int64 {

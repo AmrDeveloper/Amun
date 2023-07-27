@@ -14,7 +14,7 @@ fun power(x int64, y int64) int64 {
     return x * y;
 }
 
-fun binaryOperation(x int64, y int64, function *(int64, int64) int64) int64 {
+fun binaryOperation(x int64, y int64, function fun (int64, int64) int64) int64 {
     return function(x, y);
 }
 
@@ -22,20 +22,16 @@ fun main() int64 {
     var x = 6;
     var y = 7;
     var plusResult : int64 = binaryOperation(x, y, &plus);
-    printf("x + y = %i", plusResult);
-    puts("");
-
+    printf("x + y = %i\n", plusResult);
+    
     var minusResult : int64 = binaryOperation(x, y, &minus);
-    printf("x - y = %i", minusResult);
-    puts("");
+    printf("x - y = %i\n", minusResult);
 
     var powerResult : int64 = binaryOperation(x, y, &power);
-    printf("x * y = %i", powerResult);
-    puts("");
+    printf("x * y = %i\n", powerResult);
 
-    var sumer : *(int64, int64) int64 = &plus;
+    var sumer : fun (int64, int64) int64 = &plus;
     var sumResulter : int64 = sumer(1, 1);
-    printf("%i", sumResulter);
-    puts("");
+    printf("%i\n", sumResulter);
     return 0;
 }

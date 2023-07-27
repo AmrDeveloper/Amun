@@ -1,7 +1,7 @@
 @extern fun printf(format *char, varargs Any) int64;
 
 fun generic_function<T> () {
-    var lambda : *(T) T = { (x T) T -> 
+    var lambda : fun (T) T = { (x T) T -> 
         printf("%d\n", x);
         return x;
     };

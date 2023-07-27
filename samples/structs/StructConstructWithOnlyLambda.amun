@@ -1,7 +1,7 @@
 @extern fun printf(format *char, varargs Any) int64;
 
 struct Callable {
-    callback *() void;
+    callback fun () void;
 }
 
 fun main() int64 {

@@ -9,7 +9,7 @@ struct Point {
     y int64;
 }
 
-fun let(p *Point, callback *() void) void {
+fun let(p *Point, callback fun () void) void {
     if (p != null) {
         callback();
     }

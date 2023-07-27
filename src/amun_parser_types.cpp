@@ -13,6 +13,11 @@ auto amun::Parser::parse_type() -> Shared<amun::Type>
 
 auto amun::Parser::parse_type_with_prefix() -> Shared<amun::Type>
 {
+    // Parse function pointer type
+    if (is_current_kind(TokenKind::TOKEN_FUN)) {
+        return parse_function_ptr_type();
+    }
+
     // Parse pointer type
     if (is_current_kind(TokenKind::TOKEN_STAR)) {
         return parse_pointer_to_type();
@@ -33,41 +38,42 @@ auto amun::Parser::parse_type_with_prefix() -> Shared<amun::Type>
 
 auto amun::Parser::parse_pointer_to_type() -> Shared<amun::Type>
 {
-    auto star_token = consume_kind(TokenKind::TOKEN_STAR, "Pointer type must start with *");
-
-    // Parse function pointer type
-    if (is_current_kind(TokenKind::TOKEN_OPEN_PAREN)) {
-        auto function_type = parse_function_type();
-        return std::make_shared<amun::PointerType>(function_type);
-    }
-
-    auto base_type = parse_type_with_prefix();
-    return std::make_shared<amun::PointerType>(base_type);
+    assert_kind(TokenKind::TOKEN_STAR, "Pointer type must be started with *");
+    return std::make_shared<amun::PointerType>(parse_type_with_prefix());
 }
 
-auto amun::Parser::parse_function_type() -> Shared<amun::Type>
+auto amun::Parser::parse_function_ptr_type() -> Shared<amun::Type>
 {
-    auto paren = consume_kind(TokenKind::TOKEN_OPEN_PAREN, "Function type expect to start with (");
-
-    std::vector<Shared<amun::Type>> parameters_types;
-    while (is_source_available() && not is_current_kind(TokenKind::TOKEN_CLOSE_PAREN)) {
-        parameters_types.push_back(parse_type());
-        if (is_current_kind(TokenKind::TOKEN_COMMA)) {
-            advanced_token();
-        }
-    }
-    assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after function type parameters");
+    assert_kind(TokenKind::TOKEN_FUN, "Expect `fun` keyword at the start of function ptr");
+    auto paren = peek_current();
+    auto parameters_types = parse_list_of_types();
     auto return_type = parse_type();
-    return std::make_shared<amun::FunctionType>(paren, parameters_types, return_type);
+    auto function_type = std::make_shared<amun::FunctionType>(paren, parameters_types, return_type);
+    return std::make_shared<amun::PointerType>(function_type);
 }
 
 auto amun::Parser::parse_tuple_type() -> Shared<amun::Type>
 {
-    auto paren = consume_kind(TokenKind::TOKEN_OPEN_PAREN, "tuple type expect to start with (");
+    auto paren = peek_current();
+    auto field_types = parse_list_of_types();
 
-    std::vector<Shared<amun::Type>> field_types;
-    while (is_source_available() && not is_current_kind(TokenKind::TOKEN_CLOSE_PAREN)) {
-        field_types.push_back(parse_type());
+    if (field_types.size() < 2) {
+        context->diagnostics.report_error(paren.position, "Tuple type must has at least 2 types");
+        throw "Stop";
+    }
+
+    auto tuple_type = std::make_shared<amun::TupleType>("", field_types);
+    tuple_type->name = mangle_tuple_type(tuple_type);
+    return tuple_type;
+}
+
+auto amun::Parser::parse_list_of_types() -> std::vector<Shared<amun::Type>>
+{
+    assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect `(` before types");
+
+    std::vector<Shared<amun::Type>> types;
+    while (is_source_available() && !is_current_kind(TokenKind::TOKEN_CLOSE_PAREN)) {
+        types.push_back(parse_type());
         if (is_current_kind(TokenKind::TOKEN_COMMA)) {
             advanced_token();
         }
@@ -76,17 +82,9 @@ auto amun::Parser::parse_tuple_type() -> Shared<amun::Type>
         }
     }
 
-    assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after tuple values");
+    assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect `)` after types");
 
-    if (field_types.size() < 2) {
-        context->diagnostics.report_error(paren.position,
-                                          "Can't create tuple type with less than 2 types");
-        throw "Stop";
-    }
-
-    auto tuple_type = std::make_shared<amun::TupleType>("", field_types);
-    tuple_type->name = mangle_tuple_type(tuple_type);
-    return tuple_type;
+    return types;
 }
 
 auto amun::Parser::parse_fixed_size_array_type() -> Shared<amun::Type>

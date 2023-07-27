@@ -1,6 +1,6 @@
 @extern fun printf(format *char, varargs Any) int64;
 
-type Function = *() void;
+type Function = fun () void;
 
 fun eval(f Function) void {
     f();

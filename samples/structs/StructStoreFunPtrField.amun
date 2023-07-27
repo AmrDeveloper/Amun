@@ -1,7 +1,7 @@
 @extern fun printf(format *char, varargs Any) int64;
 
 struct Functional {
-    action *() void;
+    action fun () void;
 }
 
 fun say_hello() void {

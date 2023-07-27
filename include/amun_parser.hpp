@@ -195,9 +195,11 @@ class Parser {
 
     auto parse_pointer_to_type() -> Shared<amun::Type>;
 
-    auto parse_function_type() -> Shared<amun::Type>;
+    auto parse_function_ptr_type() -> Shared<amun::Type>;
 
     auto parse_tuple_type() -> Shared<amun::Type>;
+
+    auto parse_list_of_types() -> std::vector<Shared<amun::Type>>;
 
     auto parse_fixed_size_array_type() -> Shared<amun::Type>;
 

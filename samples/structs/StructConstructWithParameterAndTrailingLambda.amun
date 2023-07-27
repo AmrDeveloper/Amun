@@ -3,7 +3,7 @@
 struct Callable {
     x int64;
     y int64;
-    callback *() void;
+    callback fun () void;
 }
 
 fun main() int64 {
