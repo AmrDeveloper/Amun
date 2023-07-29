@@ -72,7 +72,6 @@ class StatementVisitor {
 
 class IfExpression;
 class SwitchExpression;
-class GroupExpression;
 class TupleExpression;
 class AssignExpression;
 class BinaryExpression;
@@ -106,8 +105,6 @@ class ExpressionVisitor {
     virtual auto visit(IfExpression* node) -> std::any = 0;
 
     virtual auto visit(SwitchExpression* node) -> std::any = 0;
-
-    virtual auto visit(GroupExpression* node) -> std::any = 0;
 
     virtual auto visit(TupleExpression* node) -> std::any = 0;
 

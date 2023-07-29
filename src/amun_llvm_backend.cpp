@@ -1118,11 +1118,6 @@ auto amun::LLVMBackend::visit(SwitchExpression* node) -> std::any
     return phi_node;
 }
 
-auto amun::LLVMBackend::visit(GroupExpression* node) -> std::any
-{
-    return node->expression->accept(this);
-}
-
 auto amun::LLVMBackend::visit(TupleExpression* node) -> std::any
 {
     auto tuple_type = llvm_type_from_amun_type(node->type);

@@ -69,8 +69,6 @@ class TypeChecker : public TreeVisitor {
 
     auto visit(SwitchExpression* node) -> std::any override;
 
-    auto visit(GroupExpression* node) -> std::any override;
-
     auto visit(TupleExpression* node) -> std::any override;
 
     auto visit(AssignExpression* node) -> std::any override;

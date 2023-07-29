@@ -37,7 +37,6 @@ enum class AstNodeType {
     // Expressions
     AST_IF_EXPRESSION,
     AST_SWITCH_EXPRESSION,
-    AST_GROUP,
     AST_TUPLE,
     AST_ASSIGN,
     AST_BINARY,
@@ -558,27 +557,6 @@ class SwitchExpression : public Expression {
     std::vector<Shared<Expression>> switch_cases;
     std::vector<Shared<Expression>> switch_cases_values;
     Shared<Expression> default_value;
-    Shared<amun::Type> type;
-};
-
-class GroupExpression : public Expression {
-  public:
-    explicit GroupExpression(Shared<Expression> expression) : expression(expression)
-    {
-        type = expression->get_type_node();
-    }
-
-    auto get_type_node() -> Shared<amun::Type> override { return expression->get_type_node(); }
-
-    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
-
-    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
-
-    auto is_constant() -> bool override { return expression->is_constant(); }
-
-    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_GROUP; }
-
-    Shared<Expression> expression;
     Shared<amun::Type> type;
 };
 

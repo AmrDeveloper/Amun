@@ -71,8 +71,6 @@ class LLVMBackend : public TreeVisitor {
 
     auto visit(IfExpression* node) -> std::any override;
 
-    auto visit(GroupExpression* node) -> std::any override;
-
     auto visit(TupleExpression* node) -> std::any override;
 
     auto visit(AssignExpression* node) -> std::any override;

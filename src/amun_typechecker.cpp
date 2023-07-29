@@ -800,11 +800,6 @@ auto amun::TypeChecker::visit(SwitchExpression* node) -> std::any
     return expected_type;
 }
 
-auto amun::TypeChecker::visit(GroupExpression* node) -> std::any
-{
-    return node->expression->accept(this);
-}
-
 auto amun::TypeChecker::visit(TupleExpression* node) -> std::any
 {
     std::vector<Shared<amun::Type>> field_types;
@@ -2609,12 +2604,6 @@ auto amun::TypeChecker::check_valid_assignment_right_side(Shared<Expression> nod
         throw "Stop";
     }
 
-    // Group expression is an invalid right hand side
-    if (left_node_type == AstNodeType::AST_GROUP) {
-        context->diagnostics.report_error(position, "invalid left-hand side of assignment");
-        throw "Stop";
-    }
-
     // Index expression is a valid right hand side but
     // Make sure to report error if use want to modify string literal using
     // index expression
@@ -2632,57 +2621,51 @@ auto amun::TypeChecker::check_valid_assignment_right_side(Shared<Expression> nod
         }
     }
 
-    // Prefix unary expression is a valid right hand side but only if token is *
+    // Prefix unary expression is a valid left hand side but only if token is *
     if (left_node_type == AstNodeType::AST_PREFIX_UNARY) {
         auto prefix_unary = std::static_pointer_cast<PrefixUnaryExpression>(node);
         if (prefix_unary->operator_token.kind == TokenKind::TOKEN_STAR) {
             return;
         }
 
-        context->diagnostics.report_error(position, "Invalid right hand side for");
+        context->diagnostics.report_error(position, "invalid left-hand side of assignment");
         throw "Stop";
     }
 
-    // Character literal can't be used as right hand side for assignment
+    // Character literal can't be used as left hand side for assignment
     // expression
     if (left_node_type == AstNodeType::AST_CHARACTER) {
-        context->diagnostics.report_error(position, "char literal is invalid right hand "
-                                                    "side for assignment expression");
+        context->diagnostics.report_error(position, "invalid left-hand side of assignment");
         throw "Stop";
     }
 
-    // Boolean value can't be used as right hand side for assignment expression
+    // Boolean value can't be used as left hand side for assignment expression
     if (left_node_type == AstNodeType::AST_BOOL) {
-        context->diagnostics.report_error(position, "boolean value is invalid right hand "
-                                                    "side for assignment expression");
+        context->diagnostics.report_error(position, "invalid left-hand side of assignment");
         throw "Stop";
     }
 
-    // Number value can't be used as right hand side for assignment expression
+    // Number value can't be used as left hand side for assignment expression
     if (left_node_type == AstNodeType::AST_NUMBER) {
-        context->diagnostics.report_error(position, "number value is invalid right hand "
-                                                    "side for assignment expression");
+        context->diagnostics.report_error(position, "invalid left-hand side of assignment");
         throw "Stop";
     }
 
-    // String value can't be used as right hand side for assignment expression
+    // String value can't be used as left hand side for assignment expression
     if (left_node_type == AstNodeType::AST_STRING) {
-        context->diagnostics.report_error(position, "string literal is invalid right hand side for "
-                                                    "assignment expression");
+        context->diagnostics.report_error(position, "invalid left-hand side of assignment");
         throw "Stop";
     }
 
-    // Enum element can't be used as right hand side for assignment expression
+    // Enum element can't be used as left hand side for assignment expression
     if (left_node_type == AstNodeType::AST_ENUM_ELEMENT) {
-        context->diagnostics.report_error(position, "Enum element is invalid right hand "
-                                                    "side for assignment expression");
+        context->diagnostics.report_error(position, "invalid left-hand side of assignment");
         throw "Stop";
     }
 
-    // Null literal can't be used as right hand side for assignment expression
+    // Null literal can't be used as left hand side for assignment expression
     if (left_node_type == AstNodeType::AST_NULL) {
-        context->diagnostics.report_error(position, "Null literal is invalid right hand "
-                                                    "side for assignment expression");
+        context->diagnostics.report_error(position, "invalid left-hand side of assignment");
         throw "Stop";
     }
 }

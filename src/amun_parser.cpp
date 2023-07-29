@@ -2079,7 +2079,7 @@ auto amun::Parser::parse_group_or_tuple_expression() -> Shared<Expression>
     }
 
     assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) at the end of group expression");
-    return std::make_shared<GroupExpression>(expression);
+    return expression;
 }
 
 auto amun::Parser::parse_array_expression() -> Shared<ArrayExpression>
