@@ -98,7 +98,20 @@ auto amun::Parser::parse_fixed_size_array_type() -> Shared<amun::Type>
         throw "Stop";
     }
 
-    const auto size = parse_number_expression();
+    // Can't use `parse_number_expression` directly because it may be a const identifier
+    // it will resolved to number for example
+    //
+    // const SIZE = 10;
+    // var array : [SIZE]int64;
+    //
+    const auto size_expression = parse_expression();
+    if (size_expression->get_ast_node_type() != AstNodeType::AST_NUMBER) {
+        context->diagnostics.report_error(bracket.position,
+                                          "Array size must be an integer constants");
+        throw "Stop";
+    }
+
+    const auto size = std::dynamic_pointer_cast<NumberExpression>(size_expression);
     if (!amun::is_integer_type(size->get_type_node())) {
         context->diagnostics.report_error(bracket.position,
                                           "Array size must be an integer constants");
