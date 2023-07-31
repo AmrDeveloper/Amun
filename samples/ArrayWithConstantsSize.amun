@@ -1,0 +1,14 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+const LENGTH = 5;
+
+fun iterate(array [LENGTH]int64) {
+    for (array) {
+        printf("array[%d] = %d\n", it_index, it);
+    }
+}
+
+fun main() {
+    var array : [LENGTH]int64 = [1, 2, 3, 4, 5];
+    iterate(array);
+}
