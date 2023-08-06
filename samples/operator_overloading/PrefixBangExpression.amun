@@ -5,7 +5,7 @@ struct Long {
 }
 
 @prefix operator ! (f Long) bool {
-    return if (f.value > 0) true else false;
+    return if (f.value > 0) {true} else {false};
 }
 
 fun main() {

@@ -1,7 +1,7 @@
 @extern fun printf(format *char, varargs Any) int64;
 
 fun max_min(x int64, y int64) (int64, int64) {
-    return if (x > y) (x, y) else (y, x);
+    return if (x > y) { (x, y) } else { (y, x) };
 }
 
 fun main() int64 {

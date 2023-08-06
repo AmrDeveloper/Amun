@@ -78,7 +78,7 @@ fun main() int64 {
     var first_player = true;
     
     while (!is_game_end) {
-        var player_number = if (first_player) 1 else 2;
+        var player_number = if (first_player) { 1 } else { 2 };
         printf("Player number %d start", player_number);
 
         draw_board();
@@ -96,7 +96,7 @@ fun main() int64 {
             continue;
         }
 
-        square[choice] = if (first_player) 'x' else 'o';
+        square[choice] = if (first_player) {'x'} else {'o'};
         is_game_end = check_win();
         first_player = !first_player;
 

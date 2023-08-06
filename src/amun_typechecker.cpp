@@ -704,25 +704,40 @@ auto amun::TypeChecker::visit(ExpressionStatement* node) -> std::any
 
 auto amun::TypeChecker::visit(IfExpression* node) -> std::any
 {
-    auto condition = node_amun_type(node->condition->accept(this));
-    if (not amun::is_number_type(condition)) {
-        context->diagnostics.report_error(node->if_token.position,
-                                          "If Expression condition mush be a number but got " +
-                                              amun::get_type_literal(condition));
-        throw "Stop";
+    const auto branches_count = node->tokens.size();
+    Shared<amun::Type> node_type = amun::none_type;
+
+    // Check branches
+    for (size_t i = 0; i < branches_count; i++) {
+
+        // Check branch condition
+        auto condition = node_amun_type(node->conditions[i]->accept(this));
+        if (not amun::is_number_type(condition)) {
+            context->diagnostics.report_error(node->tokens[i].position,
+                                              "If Expression condition mush be a number but got " +
+                                                  amun::get_type_literal(condition));
+            throw "Stop";
+        }
+
+        // Check branch return value
+        auto value = node_amun_type(node->values[i]->accept(this));
+        if (i == 0) {
+            node_type = value;
+            continue;
+        }
+
+        // Check value missmatch vs the previous value
+        if (!amun::is_types_equals(node_type, value)) {
+            context->diagnostics.report_error(node->tokens[i].position,
+                                              "If Expression Type missmatch expect " +
+                                                  amun::get_type_literal(node_type) + " but got " +
+                                                  amun::get_type_literal(value));
+            throw "Stop";
+        }
     }
 
-    auto if_value = node_amun_type(node->if_expression->accept(this));
-    auto else_value = node_amun_type(node->else_expression->accept(this));
-    if (!amun::is_types_equals(if_value, else_value)) {
-        context->diagnostics.report_error(node->if_token.position,
-                                          "If Expression Type missmatch expect " +
-                                              amun::get_type_literal(if_value) + " but got " +
-                                              amun::get_type_literal(else_value));
-        throw "Stop";
-    }
-    node->set_type_node(if_value);
-    return if_value;
+    node->set_type_node(node_type);
+    return node_type;
 }
 
 auto amun::TypeChecker::visit(SwitchExpression* node) -> std::any
@@ -1630,7 +1645,7 @@ auto amun::TypeChecker::visit(DotExpression* node) -> std::any
         }
 
         auto tuple_type = std::static_pointer_cast<amun::TupleType>(callee_type);
-        auto field_index = node->field_index;
+        size_t field_index = node->field_index;
 
         if (field_index >= tuple_type->fields_types.size()) {
             context->diagnostics.report_error(node_position, "No tuple field with index " +
@@ -1878,13 +1893,13 @@ auto amun::TypeChecker::visit(LiteralExpression* node) -> std::any
         if (type_literal == "Dn") {
             // Check if it declared in any outer scope
             auto outer_variable_pair = types_table.lookup_with_level(name);
-            auto declared_scope_level = outer_variable_pair.second;
+            size_t declared_scope_level = outer_variable_pair.second;
 
             value = outer_variable_pair.first;
 
             // Check if it not global variable, need to perform implicit capture
             // for this variable
-            if (declared_scope_level != 0 && declared_scope_level < types_table.size() - 2) {
+            if (declared_scope_level != 0 && (declared_scope_level < types_table.size() - 2)) {
                 auto type = node_amun_type(value);
                 types_table.define(name, type);
                 lambda_implicit_parameters.top().push_back({name, type});

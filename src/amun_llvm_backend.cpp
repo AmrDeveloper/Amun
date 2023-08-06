@@ -24,8 +24,7 @@
 #include <string>
 #include <vector>
 
-auto amun::LLVMBackend::compile(std::string module_name,
-                                std::shared_ptr<CompilationUnit> compilation_unit)
+auto amun::LLVMBackend::compile(std::string module_name, Shared<CompilationUnit> compilation_unit)
     -> std::unique_ptr<llvm::Module>
 {
     llvm_module = std::make_unique<llvm::Module>(module_name, llvm_context);
@@ -995,37 +994,56 @@ auto amun::LLVMBackend::visit(IfExpression* node) -> std::any
         return resolve_constant_if_expression(std::make_shared<IfExpression>(*node));
     }
 
-    auto function = Builder.GetInsertBlock()->getParent();
+    const auto blocks_count = node->tokens.size();
+    auto* value_type = llvm_type_from_amun_type(node->get_type_node());
 
-    auto condition = llvm_resolve_value(node->condition->accept(this));
+    std::vector<llvm::BasicBlock*> llvm_branches(blocks_count);
+    std::vector<llvm::Value*> llvm_values(blocks_count);
 
-    llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(llvm_context, "then", function);
-    llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(llvm_context, "else");
-    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(llvm_context, "ifcont");
-    Builder.CreateCondBr(condition, thenBB, elseBB);
+    // Create blocks and collect values in arrays
+    for (size_t i = 0; i < blocks_count; i++) {
+        llvm_branches[i] = llvm::BasicBlock::Create(llvm_context);
+        llvm_values[i] = llvm_resolve_value(node->values[i]->accept(this));
+    }
 
-    Builder.SetInsertPoint(thenBB);
-    auto then_value = llvm_node_value(node->if_expression->accept(this));
+    auto* function = Builder.GetInsertBlock()->getParent();
 
-    Builder.CreateBr(mergeBB);
-    thenBB = Builder.GetInsertBlock();
+    // Merge branch is the branch which contains the phi node used as a destination
+    // if current case has the same value as argument value
+    // or no case match the argument value so default branch will perfrom jump to it
+    auto* merge_branch = llvm::BasicBlock::Create(llvm_context);
 
-    function->getBasicBlockList().push_back(elseBB);
-    Builder.SetInsertPoint(elseBB);
+    auto* first_branch = llvm_branches[0];
+    Builder.CreateBr(first_branch);
+    function->getBasicBlockList().push_back(first_branch);
+    Builder.SetInsertPoint(first_branch);
 
-    auto else_value = llvm_node_value(node->else_expression->accept(this));
+    for (size_t i = 1; i < blocks_count; i++) {
+        auto* current_branch = llvm_branches[i];
+        auto* condition = llvm_resolve_value(node->conditions[i - 1]->accept(this));
 
-    Builder.CreateBr(mergeBB);
-    elseBB = Builder.GetInsertBlock();
+        // Jump to the merge block if condition is true,
+        // else jump to next branch (case)
+        Builder.CreateCondBr(condition, merge_branch, current_branch);
 
-    function->getBasicBlockList().push_back(mergeBB);
-    Builder.SetInsertPoint(mergeBB);
+        // condition first then branch
+        function->getBasicBlockList().push_back(current_branch);
+        Builder.SetInsertPoint(current_branch);
+    }
 
-    llvm::PHINode* pn = Builder.CreatePHI(then_value->getType(), 2, "iftmp");
-    pn->addIncoming(then_value, thenBB);
-    pn->addIncoming(else_value, elseBB);
+    // Un conditional jump from the default branch to the merge branch
+    Builder.CreateBr(merge_branch);
 
-    return pn;
+    // Insert the merge branch and make it the insert point to generate the phi node
+    function->getBasicBlockList().push_back(merge_branch);
+    Builder.SetInsertPoint(merge_branch);
+
+    // Create A phi nodes with all resolved values and their basic blocks
+    auto* phi_node = Builder.CreatePHI(value_type, blocks_count);
+    for (size_t i = 0; i < blocks_count; i++) {
+        phi_node->addIncoming(llvm_values[i], llvm_branches[i]);
+    }
+    return phi_node;
 }
 
 auto amun::LLVMBackend::visit(SwitchExpression* node) -> std::any
@@ -1343,7 +1361,8 @@ auto amun::LLVMBackend::visit(ComparisonExpression* node) -> std::any
         return create_llvm_floats_comparison(op, lhs, rhs);
     }
 
-    // Comparison Operations for pointers types thay points to the same type, no need for casting
+    // Comparison Operations for pointers types thay points to the same type, no need for
+    // casting
     if (lhs->getType()->isPointerTy() && rhs->getType()->isPointerTy()) {
 
         // Can be optimized by checking if both sides are String literal expression
@@ -2313,7 +2332,7 @@ inline auto amun::LLVMBackend::llvm_number_value(const std::string& value_litear
     }
 }
 
-auto amun::LLVMBackend::llvm_type_from_amun_type(std::shared_ptr<amun::Type> type) -> llvm::Type*
+auto amun::LLVMBackend::llvm_type_from_amun_type(Shared<amun::Type> type) -> llvm::Type*
 {
     amun::TypeKind type_kind = type->type_kind;
     if (type_kind == amun::TypeKind::NUMBER) {
@@ -2695,8 +2714,8 @@ auto amun::LLVMBackend::create_llvm_strings_comparison(TokenKind op, llvm::Value
     }
 }
 
-auto amun::LLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> operand,
-                                                    bool is_prefix) -> llvm::Value*
+auto amun::LLVMBackend::create_llvm_value_increment(Shared<Expression> operand, bool is_prefix)
+    -> llvm::Value*
 {
     auto number_type = std::static_pointer_cast<amun::NumberType>(operand->get_type_node());
     auto constants_one = llvm_number_value("1", number_type->number_kind);
@@ -2749,8 +2768,8 @@ auto amun::LLVMBackend::create_llvm_value_increment(std::shared_ptr<Expression> 
     internal_compiler_error("Unary expression with non global or alloca type");
 }
 
-auto amun::LLVMBackend::create_llvm_value_decrement(std::shared_ptr<Expression> operand,
-                                                    bool is_prefix) -> llvm::Value*
+auto amun::LLVMBackend::create_llvm_value_decrement(Shared<Expression> operand, bool is_prefix)
+    -> llvm::Value*
 {
     auto number_type = std::static_pointer_cast<amun::NumberType>(operand->get_type_node());
     auto constants_one = llvm_number_value("1", number_type->number_kind);
@@ -2946,8 +2965,8 @@ auto amun::LLVMBackend::access_struct_member_pointer(DotExpression* expression) 
     return access_struct_member_pointer(expression->callee.get(), expression->field_index);
 }
 
-auto amun::LLVMBackend::access_array_element(std::shared_ptr<Expression> node_value,
-                                             llvm::Value* index) -> llvm::Value*
+auto amun::LLVMBackend::access_array_element(Shared<Expression> node_value, llvm::Value* index)
+    -> llvm::Value*
 {
     auto values = node_value->get_type_node();
 
@@ -3063,8 +3082,7 @@ auto amun::LLVMBackend::access_array_element(std::shared_ptr<Expression> node_va
     internal_compiler_error("Invalid Index expression");
 }
 
-auto amun::LLVMBackend::resolve_constant_expression(std::shared_ptr<Expression> value)
-    -> llvm::Constant*
+auto amun::LLVMBackend::resolve_constant_expression(Shared<Expression> value) -> llvm::Constant*
 {
     auto field_type = value->get_type_node();
 
@@ -3090,8 +3108,8 @@ auto amun::LLVMBackend::resolve_constant_expression(std::shared_ptr<Expression> 
     return llvm::dyn_cast<llvm::Constant>(llvm_value);
 }
 
-auto amun::LLVMBackend::resolve_constant_index_expression(
-    std::shared_ptr<IndexExpression> expression) -> llvm::Constant*
+auto amun::LLVMBackend::resolve_constant_index_expression(Shared<IndexExpression> expression)
+    -> llvm::Constant*
 {
     auto llvm_array = llvm_node_value(expression->value->accept(this));
     auto index_value = expression->index->accept(this);
@@ -3130,21 +3148,23 @@ auto amun::LLVMBackend::resolve_constant_index_expression(
     internal_compiler_error("Invalid type in resolve_global_index_expression");
 }
 
-auto amun::LLVMBackend::resolve_constant_if_expression(std::shared_ptr<IfExpression> expression)
+auto amun::LLVMBackend::resolve_constant_if_expression(Shared<IfExpression> expression)
     -> llvm::Constant*
 {
-    auto condition = llvm_resolve_value(expression->condition->accept(this));
-    auto constant_condition = llvm::dyn_cast<llvm::Constant>(condition);
-    if (constant_condition->isZeroValue()) {
-        return llvm::dyn_cast<llvm::Constant>(
-            llvm_resolve_value(expression->else_expression->accept(this)));
+    auto count = expression->tokens.size();
+    for (size_t i = 0; i < count; i++) {
+        auto condition = llvm_resolve_value(expression->conditions[i]->accept(this));
+        auto constant_condition = llvm::dyn_cast<llvm::Constant>(condition);
+        if (constant_condition->isOneValue()) {
+            auto value = llvm_resolve_value(expression->values[i]->accept(this));
+            return llvm::dyn_cast<llvm::Constant>(value);
+        }
     }
-    return llvm::dyn_cast<llvm::Constant>(
-        llvm_resolve_value(expression->if_expression->accept(this)));
+    return nullptr;
 }
 
-auto amun::LLVMBackend::resolve_constant_switch_expression(
-    std::shared_ptr<SwitchExpression> expression) -> llvm::Constant*
+auto amun::LLVMBackend::resolve_constant_switch_expression(Shared<SwitchExpression> expression)
+    -> llvm::Constant*
 {
     auto argument = llvm_resolve_value(expression->argument->accept(this));
     auto constant_argument = llvm::dyn_cast<llvm::Constant>(argument);
@@ -3270,7 +3290,7 @@ inline auto amun::LLVMBackend::create_entry_block_alloca(llvm::Function* functio
 auto amun::LLVMBackend::create_switch_case_branch(llvm::SwitchInst* switch_inst,
                                                   llvm::Function* current_function,
                                                   llvm::BasicBlock* basic_block,
-                                                  std::shared_ptr<SwitchCase> switch_case) -> void
+                                                  Shared<SwitchCase> switch_case) -> void
 {
     auto branch_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
     Builder.SetInsertPoint(branch_block);
@@ -3340,8 +3360,7 @@ inline auto amun::LLVMBackend::is_lambda_function_name(const std::string& name) 
 
 inline auto amun::LLVMBackend::is_global_block() -> bool { return is_on_global_scope; }
 
-inline auto amun::LLVMBackend::execute_defer_call(std::shared_ptr<amun::DeferCall>& defer_call)
-    -> void
+inline auto amun::LLVMBackend::execute_defer_call(Shared<amun::DeferCall>& defer_call) -> void
 {
     if (defer_call->defer_kind == amun::DeferCallKind::DEFER_FUNCTION_CALL) {
         auto fun_call = std::static_pointer_cast<amun::DeferFunctionCall>(defer_call);

@@ -1,0 +1,9 @@
+@extern fun printf(format *char, value int64) int64;
+
+fun main() int64 {
+    var condition1 = false;
+    var condition2 = true;
+    var value = if (condition1) { 10 } else if (condition2) { 20 } else { 20 };
+    printf("%i\n", value);
+    return 0;
+}

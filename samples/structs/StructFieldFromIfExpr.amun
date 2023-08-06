@@ -11,8 +11,8 @@ fun get_node() Node {
 }
 
 fun main() int64 {
-    var node = if (true) get_node() else get_node();
+    var node = if (true) { get_node() } else { get_node() };
     printf("%d\n", node.value);
-    printf("%d\n", (if (true) get_node() else get_node()).value);
+    printf("%d\n", (if (true) { get_node() } else { get_node() }).value);
     return 0;
 }

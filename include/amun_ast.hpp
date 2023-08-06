@@ -481,13 +481,11 @@ class ExpressionStatement : public Statement {
 
 class IfExpression : public Expression {
   public:
-    IfExpression(Token if_token, Token else_token, Shared<Expression> condition,
-                 Shared<Expression> if_expression, Shared<Expression> else_expression)
-        : if_token(std::move(if_token)), else_token(std::move(else_token)),
-          condition(std::move(condition)), if_expression(if_expression),
-          else_expression(std::move(else_expression))
+    IfExpression(std::vector<Token> tokens, std::vector<Shared<Expression>> conditions,
+                 std::vector<Shared<Expression>> values)
+        : tokens(std::move(tokens)), conditions(std::move(conditions)), values(std::move(values))
     {
-        type = if_expression->get_type_node();
+        type = amun::none_type;
     }
 
     auto get_type_node() -> Shared<amun::Type> override { return type; }
@@ -498,17 +496,26 @@ class IfExpression : public Expression {
 
     auto is_constant() -> bool override
     {
-        return condition->is_constant() && if_expression->is_constant() &&
-               else_expression->is_constant();
+        for (const auto& condition : conditions) {
+            if (!condition->is_constant()) {
+                return false;
+            }
+        }
+
+        for (const auto& value : values) {
+            if (!value->is_constant()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_IF_EXPRESSION; }
 
-    Token if_token;
-    Token else_token;
-    Shared<Expression> condition;
-    Shared<Expression> if_expression;
-    Shared<Expression> else_expression;
+    std::vector<Token> tokens;
+    std::vector<Shared<Expression>> conditions;
+    std::vector<Shared<Expression>> values;
     Shared<amun::Type> type;
 };
 
@@ -534,19 +541,20 @@ class SwitchExpression : public Expression {
     auto is_constant() -> bool override
     {
         if (argument->is_constant()) {
-            for (auto& switch_case : switch_cases) {
+            for (const auto& switch_case : switch_cases) {
                 if (!switch_case->is_constant()) {
                     return false;
                 }
             }
 
-            for (auto& switch_value : switch_cases_values) {
+            for (const auto& switch_value : switch_cases_values) {
                 if (!switch_value->is_constant()) {
                     return false;
                 }
             }
             return true;
         }
+        
         return false;
     }
 
@@ -939,7 +947,7 @@ class ValueSizeExpression : public Expression {
 class IndexExpression : public Expression {
   public:
     IndexExpression(Token position, Shared<Expression> value, Shared<Expression> index)
-        : position(std::move(position)), value(std::move(value)), index(index)
+        : position(std::move(position)), value(std::move(value)), index(std::move(index))
     {
         type = std::make_shared<amun::NoneType>();
     }

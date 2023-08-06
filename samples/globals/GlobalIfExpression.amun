@@ -3,7 +3,7 @@
 // Resolve Constants If Expression at Compile time
 var ten = 10;
 var twenty = 20;
-var value = if (true) ten else twenty;
+var value = if (true) {ten} else {twenty};
 
 fun main() int64 {
     printf("%d\n", value);

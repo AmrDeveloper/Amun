@@ -1968,15 +1968,58 @@ auto amun::Parser::parse_literal_expression() -> Shared<LiteralExpression>
 
 auto amun::Parser::parse_if_expression() -> Shared<IfExpression>
 {
-    Token if_token = peek_and_advance_token();
+    std::vector<Token> tokens;
+    std::vector<Shared<Expression>> conditions;
+    std::vector<Shared<Expression>> values;
+    bool has_else_branch = false;
+
+    tokens.push_back(peek_and_advance_token());
     assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect ( before if condition");
-    auto condition = parse_expression();
+    conditions.push_back(parse_expression());
     assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after if condition");
-    auto then_value = parse_expression();
-    Token else_token =
-        consume_kind(TokenKind::TOKEN_ELSE, "Expect `else` keyword after then value.");
-    auto else_value = parse_expression();
-    return std::make_shared<IfExpression>(if_token, else_token, condition, then_value, else_value);
+    assert_kind(TokenKind::TOKEN_OPEN_BRACE, "Expect { at the start of if expression value");
+    values.push_back(parse_expression());
+    assert_kind(TokenKind::TOKEN_CLOSE_BRACE, "Expect } at the end of if expression value");
+
+    while (is_current_kind(TokenKind::TOKEN_ELSE)) {
+        // Consume else token
+        tokens.push_back(peek_and_advance_token());
+
+        // Parse `else if` node
+        if (is_current_kind(TokenKind::TOKEN_IF)) {
+            // Consume if token
+            advanced_token();
+            assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect ( before if condition");
+            conditions.push_back(parse_expression());
+            assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after if condition");
+            assert_kind(TokenKind::TOKEN_OPEN_BRACE,
+                        "Expect { at the start of `else if` expression value");
+            values.push_back(parse_expression());
+            assert_kind(TokenKind::TOKEN_CLOSE_BRACE,
+                        "Expect } at the end of `else if` expression value");
+            continue;
+        }
+
+        // Prevent declaring else branch more than once
+        if (has_else_branch) {
+            context->diagnostics.report_error(
+                peek_current().position, "else branch is declared twice in the same if expression");
+            throw "Stop";
+        }
+
+        // Parse `else` node
+        Token true_token = {
+            .kind = TokenKind::TOKEN_TRUE,
+            .position = peek_current().position,
+        };
+        conditions.push_back(std::make_shared<BooleanExpression>(true_token));
+        assert_kind(TokenKind::TOKEN_OPEN_BRACE, "Expect { at the start of `else` expression value");
+        values.push_back(parse_expression());
+        assert_kind(TokenKind::TOKEN_CLOSE_BRACE, "Expect } at the end of `else` expression value");
+        has_else_branch = true;
+    }
+
+    return std::make_shared<IfExpression>(tokens, conditions, values);
 }
 
 auto amun::Parser::parse_switch_expression() -> Shared<SwitchExpression>
