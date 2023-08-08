@@ -210,10 +210,6 @@ class LLVMBackend : public TreeVisitor {
     auto create_entry_block_alloca(llvm::Function* function, std::string var_name, llvm::Type* type)
         -> llvm::AllocaInst*;
 
-    auto create_switch_case_branch(llvm::SwitchInst* switch_inst, llvm::Function* current_function,
-                                   llvm::BasicBlock* basic_block, Shared<SwitchCase> switch_case)
-        -> void;
-
     auto lookup_function(std::string& name) -> llvm::Function*;
 
     auto is_lambda_function_name(const std::string& name) -> bool;

@@ -386,9 +386,9 @@ class SwitchCase {
 class SwitchStatement : public Statement {
   public:
     SwitchStatement(Token position, Shared<Expression> argument,
-                    std::vector<Shared<SwitchCase>> cases, Shared<SwitchCase> default_case)
+                    std::vector<Shared<SwitchCase>> cases, TokenKind op, bool has_default_case)
         : keyword(std::move(position)), argument(std::move(argument)), cases(std::move(cases)),
-          default_case(std::move(default_case))
+          op(op), has_default_case(has_default_case)
     {
     }
 
@@ -399,8 +399,9 @@ class SwitchStatement : public Statement {
     Token keyword;
     Shared<Expression> argument;
     std::vector<Shared<SwitchCase>> cases;
-    Shared<SwitchCase> default_case;
+    TokenKind op = TokenKind::TOKEN_EQUAL_EQUAL;
 
+    bool has_default_case = false;
     bool should_perform_complete_check = false;
 };
 
@@ -554,7 +555,7 @@ class SwitchExpression : public Expression {
             }
             return true;
         }
-        
+
         return false;
     }
 

@@ -458,9 +458,9 @@ auto amun::LLVMBackend::visit([[maybe_unused]] EnumDeclaration* node) -> std::an
 
 auto amun::LLVMBackend::visit(IfStatement* node) -> std::any
 {
-    auto current_function = Builder.GetInsertBlock()->getParent();
-    auto start_block = llvm::BasicBlock::Create(llvm_context, "if.start");
-    auto end_block = llvm::BasicBlock::Create(llvm_context, "if.end");
+    auto* current_function = Builder.GetInsertBlock()->getParent();
+    auto* start_block = llvm::BasicBlock::Create(llvm_context, "if.start");
+    auto* end_block = llvm::BasicBlock::Create(llvm_context, "if.end");
 
     Builder.CreateBr(start_block);
     current_function->getBasicBlockList().push_back(start_block);
@@ -468,17 +468,17 @@ auto amun::LLVMBackend::visit(IfStatement* node) -> std::any
 
     auto conditional_blocks = node->conditional_blocks;
     auto conditional_blocks_size = conditional_blocks.size();
-    for (unsigned long i = 0; i < conditional_blocks_size; i++) {
-        auto true_block = llvm::BasicBlock::Create(llvm_context, "if.true");
+    for (size_t i = 0; i < conditional_blocks_size; i++) {
+        auto* true_block = llvm::BasicBlock::Create(llvm_context, "if.true");
         current_function->getBasicBlockList().push_back(true_block);
 
-        auto false_branch = end_block;
+        auto* false_branch = end_block;
         if (i + 1 < conditional_blocks_size) {
             false_branch = llvm::BasicBlock::Create(llvm_context, "if.false");
             current_function->getBasicBlockList().push_back(false_branch);
         }
 
-        auto condition = llvm_resolve_value(conditional_blocks[i]->condition->accept(this));
+        auto* condition = llvm_resolve_value(conditional_blocks[i]->condition->accept(this));
         Builder.CreateCondBr(condition, true_block, false_branch);
         Builder.SetInsertPoint(true_block);
 
@@ -487,20 +487,24 @@ auto amun::LLVMBackend::visit(IfStatement* node) -> std::any
         pop_alloca_inst_scope();
 
         // If there are not return, break or continue statement, must branch end block
-        if (not has_break_or_continue_statement && not has_return_statement)
+        if (not has_break_or_continue_statement && not has_return_statement) {
             Builder.CreateBr(end_block);
-        else
+        }
+        else {
             has_return_statement = false;
+        }
 
         Builder.SetInsertPoint(false_branch);
     }
 
     current_function->getBasicBlockList().push_back(end_block);
 
-    if (has_break_or_continue_statement)
+    if (has_break_or_continue_statement) {
         has_break_or_continue_statement = false;
-    else
+    }
+    else {
         Builder.SetInsertPoint(end_block);
+    }
 
     return 0;
 }
@@ -789,28 +793,77 @@ auto amun::LLVMBackend::visit(WhileStatement* node) -> std::any
 
 auto amun::LLVMBackend::visit(SwitchStatement* node) -> std::any
 {
-    auto current_function = Builder.GetInsertBlock()->getParent();
-    auto argument = node->argument;
-    auto llvm_value = llvm_resolve_value(argument->accept(this));
-    auto basic_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
-    auto switch_inst = Builder.CreateSwitch(llvm_value, basic_block);
+    size_t blocks_count = node->cases.size();
+    std::vector<llvm::BasicBlock*> llvm_branches;
+    std::vector<llvm::Value*> llvm_values;
+    std::vector<Shared<Statement>> bodies;
 
-    auto switch_cases = node->cases;
-    auto switch_cases_size = switch_cases.size();
-
-    // Generate code for each switch case
-    for (size_t i = 0; i < switch_cases_size; i++) {
-        auto switch_case = switch_cases[i];
-        create_switch_case_branch(switch_inst, current_function, basic_block, switch_case);
+    // Create blocks and collect values in arrays
+    for (size_t i = 0; i < blocks_count; i++) {
+        auto current_case = node->cases[i]->values;
+        for (const auto& case_value : current_case) {
+            llvm_branches.push_back(llvm::BasicBlock::Create(llvm_context));
+            llvm_values.push_back(llvm_resolve_value(case_value->accept(this)));
+            bodies.push_back(node->cases[i]->body);
+        }
     }
 
-    // Generate code for default cases is exists
-    auto default_branch = node->default_case;
-    if (default_branch) {
-        create_switch_case_branch(switch_inst, current_function, basic_block, default_branch);
+    auto* start_block = llvm::BasicBlock::Create(llvm_context, "if.start");
+    auto* end_block = llvm::BasicBlock::Create(llvm_context, "if.end");
+
+    auto* current_function = Builder.GetInsertBlock()->getParent();
+
+    Builder.CreateBr(start_block);
+    current_function->getBasicBlockList().push_back(start_block);
+    Builder.SetInsertPoint(start_block);
+
+    auto* argument = llvm_resolve_value(node->argument->accept(this));
+
+    for (size_t i = 0; i < blocks_count; i++) {
+        auto* true_block = llvm::BasicBlock::Create(llvm_context, "if.true");
+        current_function->getBasicBlockList().push_back(true_block);
+
+        auto* false_branch = end_block;
+        if (i + 1 < blocks_count) {
+            false_branch = llvm::BasicBlock::Create(llvm_context, "if.false");
+            current_function->getBasicBlockList().push_back(false_branch);
+        }
+
+        llvm::Value* condition;
+        if (node->has_default_case && (i == blocks_count - 1)) {
+            condition = create_llvm_int1(true);
+        }
+        else {
+            condition = create_llvm_integers_comparison(node->op, argument, llvm_values[i]);
+        }
+
+        Builder.CreateCondBr(condition, true_block, false_branch);
+        Builder.SetInsertPoint(true_block);
+
+        push_alloca_inst_scope();
+        bodies[i]->accept(this);
+        pop_alloca_inst_scope();
+
+        // If there are not return, break or continue statement, must branch end block
+        if (not has_break_or_continue_statement && not has_return_statement) {
+            Builder.CreateBr(end_block);
+        }
+        else {
+            has_return_statement = false;
+        }
+
+        Builder.SetInsertPoint(false_branch);
     }
 
-    Builder.SetInsertPoint(basic_block);
+    current_function->getBasicBlockList().push_back(end_block);
+
+    if (has_break_or_continue_statement) {
+        has_break_or_continue_statement = false;
+    }
+    else {
+        Builder.SetInsertPoint(end_block);
+    }
+
     return 0;
 }
 
@@ -3285,58 +3338,6 @@ inline auto amun::LLVMBackend::create_entry_block_alloca(llvm::Function* functio
 {
     llvm::IRBuilder<> builder_object(&function->getEntryBlock(), function->getEntryBlock().begin());
     return builder_object.CreateAlloca(type, nullptr, var_name);
-}
-
-auto amun::LLVMBackend::create_switch_case_branch(llvm::SwitchInst* switch_inst,
-                                                  llvm::Function* current_function,
-                                                  llvm::BasicBlock* basic_block,
-                                                  Shared<SwitchCase> switch_case) -> void
-{
-    auto branch_block = llvm::BasicBlock::Create(llvm_context, "", current_function);
-    Builder.SetInsertPoint(branch_block);
-
-    bool body_has_return_statement = false;
-
-    auto branch_body = switch_case->body;
-
-    // If switch body is block, check if the last node is return statement or not,
-    // if it not block, check if it return statement or not
-    if (branch_body->get_ast_node_type() == AstNodeType::AST_BLOCK) {
-        auto block = std::dynamic_pointer_cast<BlockStatement>(branch_body);
-        auto nodes = block->statements;
-        if (not nodes.empty()) {
-            body_has_return_statement =
-                nodes.back()->get_ast_node_type() == AstNodeType::AST_RETURN;
-        }
-    }
-    else {
-        body_has_return_statement = branch_body->get_ast_node_type() == AstNodeType::AST_RETURN;
-    }
-
-    // Visit the case branch in sub scope
-    push_alloca_inst_scope();
-    branch_body->accept(this);
-    pop_alloca_inst_scope();
-
-    // Create branch only if current block hasn't return node
-    if (not body_has_return_statement) {
-        Builder.CreateBr(basic_block);
-    }
-
-    // Normal switch case branch with value and body
-    auto switch_case_values = switch_case->values;
-    if (not switch_case_values.empty()) {
-        // Map all values for this case with single branch block
-        for (auto& switch_case_value : switch_case_values) {
-            auto value = llvm_node_value(switch_case_value->accept(this));
-            auto integer_value = llvm::dyn_cast<llvm::ConstantInt>(value);
-            switch_inst->addCase(integer_value, branch_block);
-        }
-        return;
-    }
-
-    // Default switch case branch with body and no value
-    switch_inst->setDefaultDest(branch_block);
 }
 
 auto amun::LLVMBackend::lookup_function(std::string& name) -> llvm::Function*

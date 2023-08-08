@@ -510,90 +510,90 @@ auto amun::TypeChecker::visit(SwitchStatement* node) -> std::any
     // Check that all cases values are integers or enum element, and no
     // duplication
     std::unordered_set<std::string> cases_values;
-    for (auto& branch : node->cases) {
+
+    size_t case_index = 0;
+    size_t cases_count = node->cases.size();
+
+    for (const auto& branch : node->cases) {
         auto values = branch->values;
         auto branch_position = branch->position.position;
 
-        // Check each value of this case
-        for (auto& value : values) {
-            auto value_node_type = value->get_ast_node_type();
-            if (value_node_type == AstNodeType::AST_ENUM_ELEMENT) {
-                if (is_argment_enum_type) {
-                    auto enum_access = std::dynamic_pointer_cast<EnumAccessExpression>(value);
-                    auto enum_element = std::static_pointer_cast<amun::EnumElementType>(argument);
-                    if (enum_access->enum_name.literal != enum_element->enum_name) {
-                        context->diagnostics.report_error(
-                            branch_position, "Switch argument and case are elements of "
-                                             "different enums " +
-                                                 enum_element->enum_name + " and " +
-                                                 enum_access->enum_name.literal);
-                        throw "Stop";
+        // Check values only if it not the default branch
+        if (!node->has_default_case || (case_index != (cases_count - 1))) {
+            // Check each value of this case
+            for (auto& value : values) {
+                auto value_node_type = value->get_ast_node_type();
+                if (value_node_type == AstNodeType::AST_ENUM_ELEMENT) {
+                    if (is_argment_enum_type) {
+                        auto enum_access = std::dynamic_pointer_cast<EnumAccessExpression>(value);
+                        auto enum_element =
+                            std::static_pointer_cast<amun::EnumElementType>(argument);
+                        if (enum_access->enum_name.literal != enum_element->enum_name) {
+                            context->diagnostics.report_error(
+                                branch_position, "Switch argument and case are elements of "
+                                                 "different enums " +
+                                                     enum_element->enum_name + " and " +
+                                                     enum_access->enum_name.literal);
+                            throw "Stop";
+                        }
+
+                        auto enum_index_string = std::to_string(enum_access->enum_element_index);
+                        if (!cases_values.insert(enum_index_string).second) {
+                            context->diagnostics.report_error(branch_position,
+                                                              "Switch can't has more than case "
+                                                              "with the same constants value");
+                            throw "Stop";
+                        }
+
+                        continue;
                     }
 
-                    auto enum_index_string = std::to_string(enum_access->enum_element_index);
-                    if (!cases_values.insert(enum_index_string).second) {
-                        context->diagnostics.report_error(branch_position,
-                                                          "Switch can't has more than case "
-                                                          "with the same constants value");
-                        throw "Stop";
+                    context->diagnostics.report_error(
+                        branch_position, "Switch argument is enum type and expect all cases to "
+                                         "be the same type");
+                    throw "Stop";
+                }
+
+                if (value_node_type == AstNodeType::AST_NUMBER) {
+                    if (is_argument_num_type) {
+                        // If it a number type we must check that it integer
+                        auto value_type = node_amun_type(value->accept(this));
+                        if (!amun::is_number_type(value_type)) {
+                            context->diagnostics.report_error(
+                                branch_position, "Switch case value must be an integer but found " +
+                                                     amun::get_type_literal(value_type));
+                            throw "Stop";
+                        }
+
+                        auto number = std::dynamic_pointer_cast<NumberExpression>(value);
+                        if (!cases_values.insert(number->value.literal).second) {
+                            context->diagnostics.report_error(branch_position,
+                                                              "Switch can't has more than case "
+                                                              "with the same constants value");
+                            throw "Stop";
+                        }
+
+                        continue;
                     }
 
-                    continue;
+                    context->diagnostics.report_error(
+                        branch_position, "Switch argument is integer type and expect all cases "
+                                         "to be the same type");
+                    throw "Stop";
                 }
 
                 context->diagnostics.report_error(
-                    branch_position, "Switch argument is enum type and expect all cases to "
-                                     "be the same type");
+                    branch_position, "Switch case type must be integer or enum element");
                 throw "Stop";
             }
-
-            if (value_node_type == AstNodeType::AST_NUMBER) {
-                if (is_argument_num_type) {
-                    // If it a number type we must check that it integer
-                    auto value_type = node_amun_type(value->accept(this));
-                    if (!amun::is_number_type(value_type)) {
-                        context->diagnostics.report_error(
-                            branch_position, "Switch case value must be an integer but found " +
-                                                 amun::get_type_literal(value_type));
-                        throw "Stop";
-                    }
-
-                    auto number = std::dynamic_pointer_cast<NumberExpression>(value);
-                    if (!cases_values.insert(number->value.literal).second) {
-                        context->diagnostics.report_error(branch_position,
-                                                          "Switch can't has more than case "
-                                                          "with the same constants value");
-                        throw "Stop";
-                    }
-
-                    continue;
-                }
-
-                context->diagnostics.report_error(
-                    branch_position, "Switch argument is integer type and expect all cases "
-                                     "to be the same type");
-                throw "Stop";
-            }
-
-            context->diagnostics.report_error(branch_position,
-                                              "Switch case type must be integer or enum element");
-            throw "Stop";
         }
 
         // Check the branch body once inside new scope
         push_new_scope();
         branch->body->accept(this);
         pop_current_scope();
-    }
 
-    // Check default branch body if exists inside new scope
-    bool has_else_branch = false;
-    auto else_branch = node->default_case;
-    if (else_branch) {
-        push_new_scope();
-        else_branch->body->accept(this);
-        pop_current_scope();
-        has_else_branch = true;
+        case_index++;
     }
 
     // If argument and cases types are enum elements and switch has @complete
@@ -603,7 +603,7 @@ auto amun::TypeChecker::visit(SwitchStatement* node) -> std::any
         auto enum_element = std::static_pointer_cast<amun::EnumElementType>(argument);
         auto enum_name = enum_element->enum_name;
         auto enum_type = context->enumerations[enum_element->enum_name];
-        check_complete_switch_cases(enum_type, cases_values, has_else_branch, position);
+        check_complete_switch_cases(enum_type, cases_values, node->has_default_case, position);
     }
 
     return 0;
@@ -2571,12 +2571,12 @@ auto amun::TypeChecker::check_missing_return_statement(Shared<Statement> node) -
 
         else if (node_kind == AstNodeType::AST_SWITCH_STATEMENT) {
             auto switch_statement = std::dynamic_pointer_cast<SwitchStatement>(statement);
-            auto default_body = switch_statement->default_case;
-            if (default_body == nullptr) {
+            if (!switch_statement->has_default_case) {
                 return false;
             }
 
-            if (!check_missing_return_statement(default_body->body)) {
+            if (!check_missing_return_statement(
+                    switch_statement->cases[switch_statement->cases.size() - 1]->body)) {
                 continue;
             }
 

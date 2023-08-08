@@ -1,0 +1,11 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var x = 10;
+    switch (x, >) {
+        1 -> printf("%d > %d\n", x, 1);
+        20 -> printf("%d > %d\n", x, 20);
+        else -> printf("Default branch\n");
+    }
+    return 0;
+}

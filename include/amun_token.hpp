@@ -367,6 +367,12 @@ static std::unordered_set<TokenKind> overloading_postfix_operators = {
     TokenKind::TOKEN_MINUS_MINUS,
 };
 
+static std::unordered_set<TokenKind> comparisons_operators = {
+    TokenKind::TOKEN_EQUAL,         TokenKind::TOKEN_EQUAL_EQUAL,   TokenKind::TOKEN_BANG_EQUAL,
+    TokenKind::TOKEN_GREATER,       TokenKind::TOKEN_GREATER_EQUAL, TokenKind::TOKEN_SMALLER,
+    TokenKind::TOKEN_SMALLER_EQUAL,
+};
+
 // A list of operators that created from two tokens for example ++, ==, !=, << ...etc
 // This list will used in the parser to check if use write them with speace in the middle
 // Note: a - -b is not an error it's minus with and unary expression

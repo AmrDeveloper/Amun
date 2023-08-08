@@ -211,6 +211,8 @@ class Parser {
 
     auto parse_identifier_type() -> Shared<amun::Type>;
 
+    auto parse_switch_operator() -> TokenKind;
+
     auto check_function_kind_paramters_count(FunctionKind kind, int count, TokenSpan span) -> void;
 
     auto check_generic_parameter_name(Token name) -> void;

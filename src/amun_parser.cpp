@@ -1276,21 +1276,21 @@ auto amun::Parser::parse_while_statement() -> Shared<WhileStatement>
 
 auto amun::Parser::parse_switch_statement() -> Shared<SwitchStatement>
 {
-    auto keyword = consume_kind(TokenKind::TOKEN_SWITCH, "Expect switch keyword.");
+    auto keyword = consume_kind(TokenKind::TOKEN_SWITCH, "Expect `switch` keyword.");
 
     assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect ( before switch argument");
     auto argument = parse_expression();
+    TokenKind op = parse_switch_operator();
     assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after switch argument");
-
     assert_kind(TokenKind::TOKEN_OPEN_BRACE, "Expect { after switch value");
 
     std::vector<Shared<SwitchCase>> switch_cases;
     Shared<SwitchCase> default_branch = nullptr;
-    bool has_default_branch = false;
+    bool has_default_case = false;
     while (is_source_available() and !is_current_kind(TokenKind::TOKEN_CLOSE_BRACE)) {
         std::vector<Shared<Expression>> values;
         if (is_current_kind(TokenKind::TOKEN_ELSE)) {
-            if (has_default_branch) {
+            if (has_default_case) {
                 context->diagnostics.report_error(
                     keyword.position, "Switch statementscan't has more than one default branch");
                 throw "Stop";
@@ -1300,8 +1300,9 @@ auto amun::Parser::parse_switch_statement() -> Shared<SwitchStatement>
             consume_kind(TokenKind::TOKEN_RIGHT_ARROW,
                          "Expect -> after else keyword in switch default branch");
             auto default_body = parse_statement();
+            values.push_back(argument);
             default_branch = std::make_shared<SwitchCase>(else_keyword, values, default_body);
-            has_default_branch = true;
+            has_default_case = true;
             continue;
         }
 
@@ -1319,8 +1320,14 @@ auto amun::Parser::parse_switch_statement() -> Shared<SwitchStatement>
         auto switch_case = std::make_shared<SwitchCase>(right_arrow, values, branch);
         switch_cases.push_back(switch_case);
     }
+
     assert_kind(TokenKind::TOKEN_CLOSE_BRACE, "Expect } after switch Statement last branch");
-    return std::make_shared<SwitchStatement>(keyword, argument, switch_cases, default_branch);
+
+    if (has_default_case) {
+        switch_cases.push_back(default_branch);
+    }
+
+    return std::make_shared<SwitchStatement>(keyword, argument, switch_cases, op, has_default_case);
 }
 
 auto amun::Parser::parse_expression_statement() -> Shared<ExpressionStatement>
@@ -2013,7 +2020,8 @@ auto amun::Parser::parse_if_expression() -> Shared<IfExpression>
             .position = peek_current().position,
         };
         conditions.push_back(std::make_shared<BooleanExpression>(true_token));
-        assert_kind(TokenKind::TOKEN_OPEN_BRACE, "Expect { at the start of `else` expression value");
+        assert_kind(TokenKind::TOKEN_OPEN_BRACE,
+                    "Expect { at the start of `else` expression value");
         values.push_back(parse_expression());
         assert_kind(TokenKind::TOKEN_CLOSE_BRACE, "Expect } at the end of `else` expression value");
         has_else_branch = true;
@@ -2203,6 +2211,24 @@ auto amun::Parser::parse_generic_arguments_if_exists() -> std::vector<Shared<amu
     }
 
     return generic_arguments;
+}
+
+auto amun::Parser::parse_switch_operator() -> TokenKind
+{
+    if (is_current_kind(TokenKind::TOKEN_COMMA)) {
+        advanced_token();
+        Token op_token = peek_and_advance_token();
+        auto op_kind = op_token.kind;
+        if (!comparisons_operators.contains(op_kind)) {
+            context->diagnostics.report_error(
+                op_token.position, "Switch operator must be a comparions operators only");
+            throw "Stop";
+        }
+
+        return op_kind;
+    }
+
+    return TokenKind::TOKEN_EQUAL_EQUAL;
 }
 
 auto amun::Parser::check_generic_parameter_name(Token name) -> void
