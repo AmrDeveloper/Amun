@@ -1115,54 +1115,49 @@ auto amun::LLVMBackend::visit(SwitchExpression* node) -> std::any
     auto else_branch = node->default_value;
 
     // The number of cases that has a value (not default case)
-    auto cases_size = cases.size();
+    auto blocks_count = cases.size();
 
     // The number of all values (cases and default case values)
-    auto values_size = cases_size;
-
+    auto total_blocks_count = blocks_count;
     if (else_branch) {
-        values_size += 1;
+        total_blocks_count += 1;
     }
 
     // The value type for all cases values
-    auto value_type = llvm_type_from_amun_type(node->get_type_node());
-    auto function = Builder.GetInsertBlock()->getParent();
-    auto argument = llvm_resolve_value(node->argument->accept(this));
+    auto* value_type = llvm_type_from_amun_type(node->get_type_node());
+    auto* function = Builder.GetInsertBlock()->getParent();
+    auto* argument = llvm_resolve_value(node->argument->accept(this));
 
-    // Create basic blocks that match the number of cases even the default case
-    std::vector<llvm::BasicBlock*> llvm_branches(values_size);
-    for (size_t i = 0; i < values_size; i++) {
+    std::vector<llvm::Value*> llvm_values(blocks_count);
+    std::vector<llvm::BasicBlock*> llvm_branches(total_blocks_count);
+
+    for (size_t i = 0; i < blocks_count; i++) {
         llvm_branches[i] = llvm::BasicBlock::Create(llvm_context);
-    }
-
-    // Resolve all values before creating any branch or jumps
-    std::vector<llvm::Value*> llvm_values(values_size);
-    for (size_t i = 0; i < cases_size; i++) {
         llvm_values[i] = llvm_resolve_value(values[i]->accept(this));
     }
 
-    // Resolve the else value if declared
     if (else_branch) {
-        llvm_values[cases_size] = llvm_resolve_value(else_branch->accept(this));
+        llvm_values.push_back(llvm_resolve_value(else_branch->accept(this)));
+        llvm_branches[blocks_count] = llvm::BasicBlock::Create(llvm_context);
     }
 
     // Merge branch is the branch which contains the phi node used as a destination
     // if current case has the same value as argument value
     // or no case match the argument value so default branch will perfrom jump to it
-    auto merge_branch = llvm::BasicBlock::Create(llvm_context);
+    auto* merge_branch = llvm::BasicBlock::Create(llvm_context);
 
     // Un conditional jump to the first block and make it the current insert point
-    auto first_branch = llvm_branches[0];
+    auto* first_branch = llvm_branches[0];
     Builder.CreateBr(first_branch);
     function->getBasicBlockList().push_back(first_branch);
     Builder.SetInsertPoint(first_branch);
 
-    for (size_t i = 1; i < values_size; i++) {
-        auto current_branch = llvm_branches[i];
+    for (size_t i = 1; i < total_blocks_count; i++) {
+        auto* current_branch = llvm_branches[i];
 
         // Compare the argument value with current case
-        auto case_value = llvm_node_value(cases[i - 1]->accept(this));
-        auto condition = Builder.CreateICmpEQ(argument, case_value);
+        auto* case_value = llvm_node_value(cases[i - 1]->accept(this));
+        auto* condition = create_llvm_integers_comparison(node->op, argument, case_value);
 
         // Jump to the merge block if current case equal to argument,
         // else jump to next branch (case)
@@ -1181,11 +1176,10 @@ auto amun::LLVMBackend::visit(SwitchExpression* node) -> std::any
     Builder.SetInsertPoint(merge_branch);
 
     // Create A phi nodes with all resolved values and their basic blocks
-    auto phi_node = Builder.CreatePHI(value_type, values_size);
-    for (size_t i = 0; i < values_size; i++) {
+    auto* phi_node = Builder.CreatePHI(value_type, total_blocks_count);
+    for (size_t i = 0; i < total_blocks_count; i++) {
         phi_node->addIncoming(llvm_values[i], llvm_branches[i]);
     }
-
     return phi_node;
 }
 
@@ -3219,20 +3213,47 @@ auto amun::LLVMBackend::resolve_constant_if_expression(Shared<IfExpression> expr
 auto amun::LLVMBackend::resolve_constant_switch_expression(Shared<SwitchExpression> expression)
     -> llvm::Constant*
 {
-    auto argument = llvm_resolve_value(expression->argument->accept(this));
-    auto constant_argument = llvm::dyn_cast<llvm::Constant>(argument);
+    auto op = expression->op;
+    auto* argument = llvm_resolve_value(expression->argument->accept(this));
+    auto* constant_argument = llvm::dyn_cast<llvm::Constant>(argument);
     auto switch_cases = expression->switch_cases;
     auto cases_size = switch_cases.size();
     for (size_t i = 0; i < cases_size; i++) {
         auto switch_case = switch_cases[i];
-        auto case_value = llvm_resolve_value(switch_case->accept(this));
-        auto constant_case = llvm::dyn_cast<llvm::Constant>(case_value);
-        if (constant_argument == constant_case) {
-            auto value = llvm_resolve_value(expression->switch_cases_values[i]->accept(this));
+        auto* case_value = llvm_resolve_value(switch_case->accept(this));
+        auto* constant_case = llvm::dyn_cast<llvm::Constant>(case_value);
+
+        if (op == TokenKind::TOKEN_EQUAL_EQUAL && constant_argument == constant_case) {
+            auto* value = llvm_resolve_value(expression->switch_cases_values[i]->accept(this));
+            return llvm::dyn_cast<llvm::Constant>(value);
+        }
+
+        if (op == TokenKind::TOKEN_BANG_EQUAL && constant_argument != constant_case) {
+            auto* value = llvm_resolve_value(expression->switch_cases_values[i]->accept(this));
+            return llvm::dyn_cast<llvm::Constant>(value);
+        }
+
+        if (op == TokenKind::TOKEN_GREATER && constant_argument > constant_case) {
+            auto* value = llvm_resolve_value(expression->switch_cases_values[i]->accept(this));
+            return llvm::dyn_cast<llvm::Constant>(value);
+        }
+
+        if (op == TokenKind::TOKEN_GREATER_EQUAL && constant_argument >= constant_case) {
+            auto* value = llvm_resolve_value(expression->switch_cases_values[i]->accept(this));
+            return llvm::dyn_cast<llvm::Constant>(value);
+        }
+
+        if (op == TokenKind::TOKEN_SMALLER && constant_argument >= constant_case) {
+            auto* value = llvm_resolve_value(expression->switch_cases_values[i]->accept(this));
+            return llvm::dyn_cast<llvm::Constant>(value);
+        }
+
+        if (op == TokenKind::TOKEN_SMALLER_EQUAL && constant_argument >= constant_case) {
+            auto* value = llvm_resolve_value(expression->switch_cases_values[i]->accept(this));
             return llvm::dyn_cast<llvm::Constant>(value);
         }
     }
-    auto default_value = llvm_resolve_value(expression->default_value->accept(this));
+    auto* default_value = llvm_resolve_value(expression->default_value->accept(this));
     return llvm::dyn_cast<llvm::Constant>(default_value);
 }
 

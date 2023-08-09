@@ -525,10 +525,10 @@ class SwitchExpression : public Expression {
     SwitchExpression(Token switch_token, Shared<Expression> argument,
                      std::vector<Shared<Expression>> switch_cases,
                      std::vector<Shared<Expression>> switch_cases_values,
-                     Shared<Expression> default_value)
+                     Shared<Expression> default_value, TokenKind op)
         : keyword(std::move(switch_token)), argument(std::move(argument)),
           switch_cases(std::move(switch_cases)), switch_cases_values(switch_cases_values),
-          default_value(std::move(default_value))
+          default_value(std::move(default_value)), op(op)
     {
         type = switch_cases_values[0]->get_type_node();
     }
@@ -567,6 +567,7 @@ class SwitchExpression : public Expression {
     std::vector<Shared<Expression>> switch_cases_values;
     Shared<Expression> default_value;
     Shared<amun::Type> type;
+    TokenKind op;
 };
 
 class TupleExpression : public Expression {

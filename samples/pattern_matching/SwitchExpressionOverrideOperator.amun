@@ -1,0 +1,12 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var x = 10;
+    var value = switch (x, <) {
+        0, 2, 4, 6, 8 -> 1;
+        11 -> 2;
+        else -> 0;
+    };
+    printf("Value -> %d\n", value);
+    return 0;
+}

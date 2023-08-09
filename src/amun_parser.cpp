@@ -2035,6 +2035,7 @@ auto amun::Parser::parse_switch_expression() -> Shared<SwitchExpression>
     auto keyword = consume_kind(TokenKind::TOKEN_SWITCH, "Expect switch keyword.");
     assert_kind(TokenKind::TOKEN_OPEN_PAREN, "Expect ( before swich argument");
     auto argument = parse_expression();
+    auto op = parse_switch_operator();
     assert_kind(TokenKind::TOKEN_CLOSE_PAREN, "Expect ) after swich argument");
     assert_kind(TokenKind::TOKEN_OPEN_BRACE, "Expect { after switch value");
     std::vector<Shared<Expression>> cases;
@@ -2104,7 +2105,7 @@ auto amun::Parser::parse_switch_expression() -> Shared<SwitchExpression>
     }
 
     assert_kind(TokenKind::TOKEN_CLOSE_BRACE, "Expect } after switch Statement last branch");
-    return std::make_shared<SwitchExpression>(keyword, argument, cases, values, default_value);
+    return std::make_shared<SwitchExpression>(keyword, argument, cases, values, default_value, op);
 }
 
 auto amun::Parser::parse_group_or_tuple_expression() -> Shared<Expression>
