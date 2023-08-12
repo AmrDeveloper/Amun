@@ -99,6 +99,7 @@ class CharacterExpression;
 class BooleanExpression;
 class NullExpression;
 class UndefinedExpression;
+class InfinityExpression;
 
 class ExpressionVisitor {
   public:
@@ -159,6 +160,8 @@ class ExpressionVisitor {
     virtual auto visit(NullExpression* node) -> std::any = 0;
 
     virtual auto visit(UndefinedExpression* node) -> std::any = 0;
+
+    virtual auto visit(InfinityExpression* node) -> std::any = 0;
 };
 
 class TreeVisitor : public StatementVisitor, public ExpressionVisitor {};

@@ -2260,8 +2260,14 @@ auto amun::LLVMBackend::visit(NullExpression* node) -> std::any
 
 auto amun::LLVMBackend::visit(UndefinedExpression* node) -> std::any
 {
-    auto llvm_type = llvm_type_from_amun_type(node->base_type);
+    auto* llvm_type = llvm_type_from_amun_type(node->base_type);
     return llvm::UndefValue::get(llvm_type);
+}
+
+auto amun::LLVMBackend::visit(InfinityExpression* node) -> std::any
+{
+    auto* type = llvm_type_from_amun_type(node->get_type_node());
+    return llvm::ConstantFP::getInfinity(type);
 }
 
 auto amun::LLVMBackend::llvm_node_value(std::any any_value) -> llvm::Value*

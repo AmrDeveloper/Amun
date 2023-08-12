@@ -1,0 +1,7 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    printf("%d\n", ((1f64 / 0f64) == @infinity64));
+    printf("%d\n", (-(1f64 / 0f64) == -@infinity64));
+    return 0;
+}

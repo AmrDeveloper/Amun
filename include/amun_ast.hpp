@@ -63,6 +63,7 @@ enum class AstNodeType {
     AST_BOOL,
     AST_NULL,
     AST_UNDEFINED,
+    AST_INFINITY,
 };
 
 struct AstNode {
@@ -1182,4 +1183,21 @@ class UndefinedExpression : public Expression {
 
     Token keyword;
     Shared<amun::Type> base_type = amun::none_type;
+};
+
+class InfinityExpression : public Expression {
+  public:
+    explicit InfinityExpression(Shared<amun::Type> type) : type(std::move(type)) {}
+
+    auto get_type_node() -> Shared<amun::Type> override { return type; }
+
+    auto set_type_node(Shared<amun::Type> new_type) -> void override { type = new_type; }
+
+    auto accept(ExpressionVisitor* visitor) -> std::any override { return visitor->visit(this); }
+
+    auto is_constant() -> bool override { return true; }
+
+    auto get_ast_node_type() -> AstNodeType override { return AstNodeType::AST_INFINITY; }
+
+    Shared<amun::Type> type;
 };

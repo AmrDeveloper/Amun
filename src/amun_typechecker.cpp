@@ -2007,6 +2007,11 @@ auto amun::TypeChecker::visit(UndefinedExpression* node) -> std::any
     return node->get_type_node();
 }
 
+auto amun::TypeChecker::visit(InfinityExpression* node) -> std::any
+{
+    return node->get_type_node();
+}
+
 auto amun::TypeChecker::node_amun_type(std::any any_type) -> Shared<amun::Type>
 {
     if (any_type.type() == typeid(Shared<amun::FunctionType>)) {

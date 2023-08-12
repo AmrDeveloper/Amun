@@ -217,6 +217,14 @@ auto amun::Parser::parse_expressions_directive() -> Shared<Expression>
         return std::make_shared<NumberExpression>(min_value, number_type);
     }
 
+    if (directive_name == "infinity32") {
+        return std::make_shared<InfinityExpression>(amun::f32_type);
+    }
+
+    if (directive_name == "infinity" || directive_name == "infinity64") {
+        return std::make_shared<InfinityExpression>(amun::f64_type);
+    }
+
     context->diagnostics.report_error(posiiton,
                                       "No expression directive with name " + directive_name);
     throw "Stop";
