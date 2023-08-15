@@ -1431,9 +1431,9 @@ auto amun::Parser::parse_equality_expression() -> Shared<Expression>
     auto expression = parse_comparison_expression();
     while (is_current_kind(TokenKind::TOKEN_EQUAL_EQUAL) ||
            is_current_kind(TokenKind::TOKEN_BANG_EQUAL)) {
-        Token operator_token = peek_and_advance_token();
+        Token op = peek_and_advance_token();
         auto right = parse_comparison_expression();
-        expression = std::make_shared<ComparisonExpression>(expression, operator_token, right);
+        expression = std::make_shared<ComparisonExpression>(expression, op, right);
     }
     return expression;
 }
@@ -1445,10 +1445,28 @@ auto amun::Parser::parse_comparison_expression() -> Shared<Expression>
            is_current_kind(TokenKind::TOKEN_GREATER_EQUAL) ||
            is_current_kind(TokenKind::TOKEN_SMALLER) ||
            is_current_kind(TokenKind::TOKEN_SMALLER_EQUAL)) {
-        Token operator_token = peek_and_advance_token();
+
+        Token op = peek_and_advance_token();
         auto right = parse_bitwise_shift_expression();
-        expression = std::make_shared<ComparisonExpression>(expression, operator_token, right);
+
+        // If lhs is a comparison expression we can perform concatnation expression
+        // example: a < b < c
+        // Will be parsed as (a < b) logical and (b < c)
+        if (expression->get_ast_node_type() == AstNodeType::AST_COMPARISON) {
+            auto left_comprison = std::dynamic_pointer_cast<ComparisonExpression>(expression);
+            auto new_left = left_comprison->right;
+            auto comparison = std::make_shared<ComparisonExpression>(new_left, op, right);
+            Token logical_op = {
+                .kind = TokenKind::TOKEN_AND_AND,
+                .position = op.position,
+            };
+            expression = std::make_shared<LogicalExpression>(expression, logical_op, comparison);
+            continue;
+        }
+
+        expression = std::make_shared<ComparisonExpression>(expression, op, right);
     }
+
     return expression;
 }
 

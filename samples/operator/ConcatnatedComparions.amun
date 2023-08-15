@@ -1,0 +1,8 @@
+@extern fun printf(format *char, varargs Any) int64;
+
+fun main() int64 {
+    var x = 10;
+    printf("%d\n", 1 < x < 11);
+    printf("%d\n", 1 < x <= 10);
+    return 0;
+}
