@@ -1307,7 +1307,7 @@ auto amun::LLVMBackend::visit(AssignExpression* node) -> std::any
     if (auto unary_expression = std::dynamic_pointer_cast<PrefixUnaryExpression>(left_node)) {
         auto opt = unary_expression->operator_token.kind;
         if (opt == TokenKind::TOKEN_STAR) {
-            auto rvalue = llvm_node_value(node->right->accept(this));
+            auto rvalue = llvm_resolve_value(node->right->accept(this));
             auto pointer = llvm_node_value(unary_expression->right->accept(this));
             auto load = Builder.CreateLoad(pointer->getType()->getPointerElementType(), pointer);
             Builder.CreateStore(rvalue, load);
