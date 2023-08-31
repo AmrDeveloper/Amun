@@ -6,6 +6,7 @@
 #include "../include/amun_parser.hpp"
 #include "../include/amun_typechecker.hpp"
 
+#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/Triple.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/MC/TargetRegistry.h>
@@ -84,7 +85,7 @@ auto amun::Compiler::compile_source_code(const char* source_file) -> int
 
     // Check if this target is available
     std::string lookup_target_error;
-    auto target = llvm::TargetRegistry::lookupTarget(target_triple, lookup_target_error);
+    const auto* target = llvm::TargetRegistry::lookupTarget(target_triple, lookup_target_error);
     if (!lookup_target_error.empty()) {
         std::cout << lookup_target_error << '\n';
         return EXIT_FAILURE;
@@ -96,7 +97,7 @@ auto amun::Compiler::compile_source_code(const char* source_file) -> int
 
     constexpr auto CPU = "generic";
     constexpr auto FEATURES = "";
-    auto target_machine = target->createTargetMachine(target_triple, CPU, FEATURES, opt, rm);
+    auto* target_machine = target->createTargetMachine(target_triple, CPU, FEATURES, opt, rm);
 
     auto file_type = llvm::CGFT_ObjectFile;
     if (target_machine->addPassesToEmitFile(pass_manager, stream, nullptr, file_type, true)) {
@@ -163,7 +164,7 @@ auto amun::Compiler::compile_to_object_file_from_source_code(const char* source_
 
     // Check if this target is available
     std::string lookup_target_error;
-    auto target = llvm::TargetRegistry::lookupTarget(target_triple, lookup_target_error);
+    const auto* target = llvm::TargetRegistry::lookupTarget(target_triple, lookup_target_error);
     if (!lookup_target_error.empty()) {
         std::cout << lookup_target_error << '\n';
         return EXIT_FAILURE;
@@ -192,7 +193,7 @@ auto amun::Compiler::compile_to_object_file_from_source_code(const char* source_
     }
 
     auto features = cpu_features_str.str();
-    auto target_machine = target->createTargetMachine(target_triple, cpu_name, features, opt, rm);
+    auto* target_machine = target->createTargetMachine(target_triple, cpu_name, features, opt, rm);
 
     auto file_type = llvm::CGFT_ObjectFile;
     if (target_machine->addPassesToEmitFile(pass_manager, stream, nullptr, file_type, true)) {
