@@ -1308,8 +1308,11 @@ auto amun::LLVMBackend::visit(AssignExpression* node) -> std::any
         auto opt = unary_expression->operator_token.kind;
         if (opt == TokenKind::TOKEN_STAR) {
             auto rvalue = llvm_resolve_value(node->right->accept(this));
+            auto unary_right_type = unary_expression->right->get_type_node();
+            auto pointer_type = std::static_pointer_cast<amun::PointerType>(unary_right_type);
+            auto pointer_base_type = llvm_type_from_amun_type(pointer_type->base_type);
             auto pointer = llvm_node_value(unary_expression->right->accept(this));
-            auto load = Builder.CreateLoad(pointer->getType()->getPointerElementType(), pointer);
+            auto load = Builder.CreateLoad(pointer_base_type, pointer);
             Builder.CreateStore(rvalue, load);
             return rvalue;
         }
@@ -2114,19 +2117,20 @@ auto amun::LLVMBackend::visit(ArrayExpression* node) -> std::any
     auto node_values = node->values;
     auto size = node_values.size();
     if (node->is_constant()) {
-        auto llvm_type = llvm_type_from_amun_type(node->get_type_node());
-        auto array_type = llvm::dyn_cast<llvm::ArrayType>(llvm_type);
+        auto* llvm_type = llvm_type_from_amun_type(node->get_type_node());
+        auto* array_type = llvm::dyn_cast<llvm::ArrayType>(llvm_type);
 
         std::vector<llvm::Constant*> values;
         values.reserve(size);
         for (auto& value : node_values) {
-            auto llvm_value = llvm_resolve_value(value->accept(this));
+            auto* llvm_value = llvm_resolve_value(value->accept(this));
             values.push_back(llvm::dyn_cast<llvm::Constant>(llvm_value));
         }
         return llvm::ConstantArray::get(array_type, values);
     }
 
-    auto arrayType = llvm_type_from_amun_type(node->get_type_node());
+    auto* array_type = llvm_type_from_amun_type(node->get_type_node());
+    auto* array_element_type = array_type->getArrayElementType();
 
     std::vector<llvm::Value*> values;
     values.reserve(size);
@@ -2134,14 +2138,15 @@ auto amun::LLVMBackend::visit(ArrayExpression* node) -> std::any
         values.push_back(llvm_resolve_value(value->accept(this)));
     }
 
-    auto alloca = Builder.CreateAlloca(arrayType);
+    auto* alloca = Builder.CreateAlloca(array_type);
     for (size_t i = 0; i < size; i++) {
-        auto index = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, i, true));
-        auto ptr = Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero_int32_value, index});
+        auto* index = llvm::ConstantInt::get(llvm_context, llvm::APInt(32, i, true));
+        auto* ptr =
+            Builder.CreateGEP(alloca->getAllocatedType(), alloca, {zero_int32_value, index});
 
-        auto value = values[i];
+        auto* value = values[i];
         if (value->getType() == ptr->getType()) {
-            value = Builder.CreateLoad(value->getType()->getPointerElementType(), value);
+            value = Builder.CreateLoad(array_element_type, value);
         }
 
         Builder.CreateStore(value, ptr);
